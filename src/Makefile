@@ -22,7 +22,7 @@ SSL_DIR = ../openssl
 # Flags passed to the preprocessor.
 # Set Google Test's header directory as a system directory, such that
 # the compiler doesn't generate warnings in Google Test headers.
-CPPFLAGS += -isystem $(SSL_DIR)/include -isystem $(SSL_DIR)
+CPPFLAGS += -isystem $(SSL_DIR)/include -system $(SSL_DIR)/crypto/include -isystem $(SSL_DIR)
 
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g -Wall -Wextra -Wconversion -pthread -std=c++11
@@ -33,7 +33,8 @@ TOOL = sevtool
 
 # All OpenSSL headers. Usually you shouldn't change this.
 SSL_HEADERS = $(SSL_DIR)/include/openssl/*.h \
-              $(SSL_DIR)/include/internal/*.h
+              $(SSL_DIR)/include/internal/*.h\
+			  $(SSL_DIR)/crypto/include/internal/*.h
 
 # House-keeping build targets.
 
