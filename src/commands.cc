@@ -15,7 +15,6 @@
  * ************************************************************************/
 
 #include "commands.h"
-#include "sevapi.h"
 #include "sevcert.h"
 #include "sevcore.h"
 #include <linux/types.h>
@@ -23,23 +22,23 @@
 #include <stdio.h>          // printf
 #include <stdlib.h>         // malloc
 
-int Command::factory_reset()
+SEV_ERROR_CODE Command::factory_reset()
 {
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
 
     cmd_ret = gSEVDevice.factory_reset();
 
     return cmd_ret;
 }
 
-int Command::platform_status()
+SEV_ERROR_CODE Command::platform_status()
 {
     sev_user_data_status data;
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
 
     cmd_ret = gSEVDevice.platform_status(&data);
 
-    if(cmd_ret == SEV_RET_SUCCESS) {
+    if(cmd_ret == STATUS_SUCCESS) {
         // Print ID arrays
         printf("api_major:\t%d\n", data.api_major);
         printf("api_minor:\t%d\n", data.api_minor);
@@ -52,27 +51,30 @@ int Command::platform_status()
     return cmd_ret;
 }
 
-int Command::pek_gen()
+SEV_ERROR_CODE Command::pek_gen()
 {
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
 
     cmd_ret = gSEVDevice.pek_gen();
 
     return cmd_ret;
 }
 
-int Command::pek_csr()
+SEV_ERROR_CODE Command::pek_csr()
 {
     sev_user_data_pek_csr data;
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
 
     // Populate PEKCSR buffer with CSRLength = 0
-    void* PEKMem = malloc(sizeof(SEV_CERT));
+    void *PEKMem = malloc(sizeof(SEV_CERT));
     SEV_CERT PEKcsr;
+
+    if(!PEKMem)
+        return ERROR_RESOURCE_LIMIT;
 
     cmd_ret = gSEVDevice.pek_csr(&data, PEKMem, &PEKcsr);
 
-    if(cmd_ret == SEV_RET_SUCCESS) {
+    if(cmd_ret == STATUS_SUCCESS) {
         // Print off the cert
         PrintCert(&PEKcsr);
         PrintCertHex((void*)&PEKcsr);
@@ -84,26 +86,29 @@ int Command::pek_csr()
     return cmd_ret;
 }
 
-int Command::pdh_gen()
+SEV_ERROR_CODE Command::pdh_gen()
 {
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
 
     cmd_ret = gSEVDevice.pdh_gen();
 
     return cmd_ret;
 }
 
-int Command::pdh_cert_export()
+SEV_ERROR_CODE Command::pdh_cert_export()
 {
     sev_user_data_pdh_cert_export data;
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
 
-    void* PDHCertMem = malloc(sizeof(SEV_CERT));
-    void* CertChainMem = malloc(sizeof(SEV_CERT_CHAIN_BUF));
+    void *PDHCertMem = malloc(sizeof(SEV_CERT));
+    void *CertChainMem = malloc(sizeof(SEV_CERT_CHAIN_BUF));
+
+    if(!PDHCertMem || !CertChainMem)
+        return ERROR_RESOURCE_LIMIT;
 
     cmd_ret = gSEVDevice.pdh_cert_export(&data, PDHCertMem, CertChainMem);
 
-    if(cmd_ret == SEV_RET_SUCCESS) {
+    if(cmd_ret == STATUS_SUCCESS) {
         // PrintCert((SEV_CERT*)PDHCertMem);
         // printf("pdh_cert_len: %d bytes\n", data.pdh_cert_len);
         PrintCertHex(PDHCertMem);
@@ -118,25 +123,30 @@ int Command::pdh_cert_export()
     return cmd_ret;
 }
 
-int Command::pek_cert_import()
+SEV_ERROR_CODE Command::pek_cert_import()
 {
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
 
     sev_user_data_pdh_cert_export pdh_cert_export_data;  // pdh_cert_export
-    void* PDHCertMem = malloc(sizeof(SEV_CERT));
-    void* CertChainMem = malloc(sizeof(SEV_CERT_CHAIN_BUF));
+    void *PDHCertMem = malloc(sizeof(SEV_CERT));
+    void *CertChainMem = malloc(sizeof(SEV_CERT_CHAIN_BUF));
 
     sev_user_data_pek_csr pek_csr_data;                  // pek_csr
-    void* PEKMem = malloc(sizeof(SEV_CERT));
+    void *PEKMem = malloc(sizeof(SEV_CERT));
     SEV_CERT PEKcsr;
 
     sev_user_data_pek_cert_import pek_cert_import_data;  // pek_cert_import
 
     sev_user_data_pdh_cert_export pdh_cert_export_data2; // pdh_cert_export
-    void* PDHCertMem2 = malloc(sizeof(SEV_CERT));
-    void* CertChainMem2 = malloc(sizeof(SEV_CERT_CHAIN_BUF));
+    void *PDHCertMem2 = malloc(sizeof(SEV_CERT));
+    void *CertChainMem2 = malloc(sizeof(SEV_CERT_CHAIN_BUF));
 
     do {
+        if(!PDHCertMem || !CertChainMem || !PEKMem || !PDHCertMem2 || !CertChainMem2) {
+            cmd_ret = ERROR_RESOURCE_LIMIT;
+            break;
+        }
+
         cmd_ret = gSEVDevice.SetSelfOwned();
         if(cmd_ret != STATUS_SUCCESS)
             break;
@@ -175,20 +185,21 @@ int Command::pek_cert_import()
 }
 
 // Must always pass in 128 bytes array, because of how linux /dev/sev ioctl works
-int Command::get_id()
+SEV_ERROR_CODE Command::get_id()
 {
     sev_user_data_get_id data;
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
 
     cmd_ret = gSEVDevice.get_id(&data);
 
-    if(cmd_ret == SEV_RET_SUCCESS) {
+    if(cmd_ret == STATUS_SUCCESS) {
         // Print ID arrays
         printf("GetID:\n");
         for(uint8_t i = 0; i < sizeof(data.socket1); i++)
         {
             printf("%02x", data.socket1[i]);
         }
+        printf("\n");
         for(uint8_t i = 0; i < sizeof(data.socket2); i++)
         {
             printf("%02x", data.socket2[i]);
@@ -198,18 +209,3 @@ int Command::get_id()
 
     return cmd_ret;
 }
-
-// ask brijesh how to force re-load of firmware.
-// put fw in correct place, unload driver, and reload driver. on driver reloading,
-//  it will look for firmware and download it if its there
-
-// GuestOwner creates guest owner DH key. only user gen key
-
-// Need OCA priv key?
-// Yes. And you should use the standard OpenSSL (OpenSSH?) command line tools to
-//  generate a key pair, and use those tools to sign the CSR, then use sev-tool to
-//  reformat the signed cert in to PEK_CERT_IMPORT form.
-// That’s going to be tricky… we’ll have to talk a bit about that. We’ll want to
-//  assume that sev-tool cannot see the private key (since it SHOULD be in an HSM).
-//  So we may need to reformat the CSR so the signature generated by the external
-//  tool is usable with IMPORT.

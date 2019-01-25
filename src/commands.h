@@ -17,6 +17,7 @@
 #ifndef commands_h
 #define commands_h
 
+#include "sevapi.h"
 #include "x509cert.h"
 #include "linux/psp-sev.h"
 
@@ -28,14 +29,14 @@ public:
     Command() {};
     ~Command() {};
 
-    int factory_reset();
-    int platform_status();
-    int pek_gen();
-    int pek_csr();
-    int pdh_gen();
-    int pdh_cert_export();
-    int pek_cert_import();
-    int get_id();
+    SEV_ERROR_CODE factory_reset(void);
+    SEV_ERROR_CODE platform_status(void);
+    SEV_ERROR_CODE pek_gen(void);
+    SEV_ERROR_CODE pek_csr(void);
+    SEV_ERROR_CODE pdh_gen(void);
+    SEV_ERROR_CODE pdh_cert_export(void);
+    SEV_ERROR_CODE pek_cert_import(void);
+    SEV_ERROR_CODE get_id(void);
 };
 
 #endif /* sevcert_h */

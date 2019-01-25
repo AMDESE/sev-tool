@@ -25,7 +25,7 @@
 #include <stdexcept>        // for std::runtime_error()
 
 // The single instance of the SEVDevice class that everyone can
-// access to get the mFd of the special SEV FW API test suite driver.
+// access to get the mFd of the kernel driver.
 SEVDevice gSEVDevice;
 
 SEVDevice::SEVDevice()
@@ -44,19 +44,19 @@ SEVDevice::~SEVDevice()
     mFd = -1;
 }
 
-int SEVDevice::sev_ioctl(int cmd, void* data, int* sev_ret)
+int SEVDevice::sev_ioctl(int cmd, void* data, SEV_ERROR_CODE *cmd_ret)
 {
-	int ioctl_ret = -1;
-	sev_issue_cmd arg;
+    int ioctl_ret = -1;
+    sev_issue_cmd arg;
 
 	arg.cmd = cmd;
 	arg.data = (uint64_t)data;
 
-	ioctl_ret = ioctl(gSEVDevice.GetFD(), SEV_ISSUE_CMD, &arg);
-	*sev_ret = arg.error;
-	if(ioctl_ret != 0) {    // Sometimes you expect it to fail
-		// printf("Error: cmd %#x ioctl_ret=%d (%#x)\n", cmd, ioctl_ret, arg.error);
-	}
+    ioctl_ret = ioctl(gSEVDevice.GetFD(), SEV_ISSUE_CMD, &arg);
+    *cmd_ret = (SEV_ERROR_CODE)arg.error; // Convert Linux's sev_ret_code to our SEV_ERROR_CODE
+    if(ioctl_ret != 0) {    // Sometimes you expect it to fail
+        // printf("Error: cmd %#x ioctl_ret=%d (%#x)\n", cmd, ioctl_ret, arg.error);
+    }
 
 	return ioctl_ret;
 }
@@ -65,10 +65,10 @@ int SEVDevice::sev_ioctl(int cmd, void* data, int* sev_ret)
 // platform_status doesn't exactly match the spec (should be Owner
 // and Config as separate params), so I'm not exactly sure what it is.
 // It can probably be used to see if the owner changed
-int SEVDevice::SetSelfOwned()
+SEV_ERROR_CODE SEVDevice::SetSelfOwned()
 {
     sev_user_data_status plat_stat_data;
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
 
     do {
         cmd_ret = gSEVDevice.factory_reset();
@@ -94,17 +94,17 @@ int SEVDevice::SetSelfOwned()
 // platform_status doesn't exactly match the spec (should be Owner
 // and Config as separate params), so I'm not exactly sure what it is.
 // It can probably be used to see if the owner changed
-int SEVDevice::SetExternallyOwned()
+SEV_ERROR_CODE SEVDevice::SetExternallyOwned()
 {
-    int cmd_ret = STATUS_SUCCESS;//ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;//ERROR_UNSUPPORTED;
 
     return cmd_ret;
 }
 
-int SEVDevice::factory_reset()
+SEV_ERROR_CODE SEVDevice::factory_reset()
 {
     uint32_t data;      // Can't pass null
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
     int ioctl_ret = -1;
 
     // Set struct to 0
@@ -121,9 +121,9 @@ int SEVDevice::factory_reset()
     return cmd_ret;
 }
 
-int SEVDevice::platform_status(sev_user_data_status* data)
+SEV_ERROR_CODE SEVDevice::platform_status(sev_user_data_status *data)
 {
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
     int ioctl_ret = -1;
 
     // Set struct to 0
@@ -140,10 +140,10 @@ int SEVDevice::platform_status(sev_user_data_status* data)
     return cmd_ret;
 }
 
-int SEVDevice::pek_gen()
+SEV_ERROR_CODE SEVDevice::pek_gen()
 {
     uint32_t data;      // Can't pass null
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
     int ioctl_ret = -1;
 
     // Set struct to 0
@@ -176,9 +176,9 @@ bool SEVDevice::validate_pek_csr(SEV_CERT *PEKcsr)
     }
 }
 
-int SEVDevice::pek_csr(sev_user_data_pek_csr* data, void* PEKMem, SEV_CERT* PEKcsr)
+SEV_ERROR_CODE SEVDevice::pek_csr(sev_user_data_pek_csr *data, void *PEKMem, SEV_CERT *PEKcsr)
 {
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
     int ioctl_ret = -1;
 
     // Set struct to 0
@@ -214,10 +214,10 @@ int SEVDevice::pek_csr(sev_user_data_pek_csr* data, void* PEKMem, SEV_CERT* PEKc
     return cmd_ret;
 }
 
-int SEVDevice::pdh_gen()
+SEV_ERROR_CODE SEVDevice::pdh_gen()
 {
     uint32_t data;      // Can't pass null
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
     int ioctl_ret = -1;
 
     // Set struct to 0
@@ -234,11 +234,10 @@ int SEVDevice::pdh_gen()
     return cmd_ret;
 }
 
-int SEVDevice::pdh_cert_export(sev_user_data_pdh_cert_export* data,
-                               void* PDHCertMem,
-                               void* CertChainMem)
+SEV_ERROR_CODE SEVDevice::pdh_cert_export(sev_user_data_pdh_cert_export *data,
+                               void *PDHCertMem, void *CertChainMem)
 {
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
     int ioctl_ret = -1;
 
     // Set struct to 0
@@ -264,12 +263,15 @@ int SEVDevice::pdh_cert_export(sev_user_data_pdh_cert_export* data,
 #define SEV_DEFAULT_DIR "../psp-sev-assets/"
 #define OCAPrivateKeyFile SEV_DEFAULT_DIR "oca_key.pem"
 #define OCACertFile SEV_DEFAULT_DIR "oca.cert"
-int SEVDevice::pek_cert_import(sev_user_data_pek_cert_import* data, SEV_CERT *PEKcsr)
+SEV_ERROR_CODE SEVDevice::pek_cert_import(sev_user_data_pek_cert_import *data, SEV_CERT *PEKcsr)
 {
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
     int ioctl_ret = -1;
 
-    void* OCACert = malloc(sizeof(SEV_CERT));
+    void *OCACert = malloc(sizeof(SEV_CERT));
+
+    if(!OCACert)
+        return ERROR_RESOURCE_LIMIT;
 
     // Submit the signed cert to PEKCertImport
     memset(data, 0, sizeof(sev_user_data_pek_cert_import)); // Set struct to 0
@@ -311,9 +313,9 @@ int SEVDevice::pek_cert_import(sev_user_data_pek_cert_import* data, SEV_CERT *PE
 }
 
 // Must always pass in 128 bytes array, because of how linux /dev/sev ioctl works
-int SEVDevice::get_id(sev_user_data_get_id* data)
+SEV_ERROR_CODE SEVDevice::get_id(sev_user_data_get_id *data)
 {
-    int cmd_ret = ERROR_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
     int ioctl_ret = -1;
 
     // Set struct to 0

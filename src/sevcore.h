@@ -19,20 +19,11 @@
 
 // This file abstracts sevapi.h in to C++ classes. The implementation is
 // closely tied to the special SEV FW test driver. Hopefully, porting the
-// entire test suite to a new OS with a different driver requires only
+// entire tool to a new OS with a different driver requires only
 // changing this file and the corresponding .cc file.
 
 // Class SEVDevice is for the SEV "device", as manifested by the special
 // SEV FW test driver. struct ioctl_cmd is also defined by that driver.
-// Class SEVMem manages memory accessible by the SEV FW by using the
-// special SEV FW test driver.
-// Class SEVCommand is the base class of the classes defined for each of
-// the SEV FW commands. It provides the Send() and CmdStat() methods to
-// send an SEV FW command and get the status returned by the command.
-// Macro BuildSEVCommandClass() defines a class based on the SEVCommand
-// class for each of the SEV FW commands. Each command's class defines a
-// public member variable "CmdBuf" that is the command's CommandBuffer as
-// defined by the SEV FW API specification.
 
 #include "sevapi.h"
 #include "linux/psp-sev.h"
@@ -61,27 +52,25 @@ public:
     ~SEVDevice();
 
     inline int GetFD(void) { return mFd; }
-    int sev_ioctl(int cmd, void* data, int* sev_ret);
+    int sev_ioctl(int cmd, void *data, SEV_ERROR_CODE *cmd_ret);
 
-    int SetSelfOwned();
-    int SetExternallyOwned();
+    SEV_ERROR_CODE SetSelfOwned(void);
+    SEV_ERROR_CODE SetExternallyOwned(void);
 
-    int factory_reset();
-    int platform_status(sev_user_data_status* data);
-    int pek_gen();
-    int pek_csr(sev_user_data_pek_csr* data, void* PEKMem, SEV_CERT* csr);
-    int pdh_gen();
-    int pdh_cert_export(sev_user_data_pdh_cert_export* data,
-                                   void* PDHCertMem,
-                                void* CertChainMem);
-    int pek_cert_import(sev_user_data_pek_cert_import* data, SEV_CERT *csr);
-    int get_id(sev_user_data_get_id* data);
+    SEV_ERROR_CODE factory_reset(void);
+    SEV_ERROR_CODE platform_status(sev_user_data_status* data);
+    SEV_ERROR_CODE pek_gen(void);
+    SEV_ERROR_CODE pek_csr(sev_user_data_pek_csr* data, void* PEKMem, SEV_CERT* csr);
+    SEV_ERROR_CODE pdh_gen(void);
+    SEV_ERROR_CODE pdh_cert_export(sev_user_data_pdh_cert_export* data,
+                                   void* PDHCertMem, void* CertChainMem);
+    SEV_ERROR_CODE pek_cert_import(sev_user_data_pek_cert_import* data, SEV_CERT *csr);
+    SEV_ERROR_CODE get_id(sev_user_data_get_id* data);
 };
 
 
 // We need precisely one instance of the SEVDevice class.
-// The SEVMem class and the SEVCommand class both need it, so a
-// global...
+// Easiest to make it a global
 extern SEVDevice gSEVDevice;
 
 #endif /* sevcore_h */

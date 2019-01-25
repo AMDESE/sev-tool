@@ -59,7 +59,7 @@ uint32_t map_arg_to_cmd(std::string arg)
 int main(int argc, char** argv)
 {
     Command cmd;
-    int cmd_ret = SEV_RET_UNSUPPORTED;
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
 
     printf("You have entered %i arguments\n", argc);
     if(argc == 1)           // User didnt enter any args
@@ -110,13 +110,10 @@ int main(int argc, char** argv)
         }
     }
 
-    if(cmd_ret == 0)
+    if(cmd_ret == STATUS_SUCCESS)
         printf("command successful\n");
     else
         printf("command unsuccessful: 0x%02x\n", cmd_ret);
-
-      // sev getid
-// factory reset does shutdown, then you can download firmware
 
     return 0;
 }

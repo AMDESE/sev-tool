@@ -1,27 +1,29 @@
-/* ************************************************************************
- * Copyright 2018 Advanced Micro Devices, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * ************************************************************************/
+//-----------------------------------------------------------------------------
+// Copyright 2018 by AMD Inc.  All rights reserved.
+//
+// This document contains proprietary, confidential information that
+// may be used, copied and/or disclosed only as authorized by a
+// valid licensing agreement with AMD Inc. This copyright
+// notice must be retained on all authorized copies.
+//
+// This code is provided "as is".  AMD Inc. makes, and
+// the end user receives, no warranties or conditions, express,
+// implied, statutory or otherwise, and AMD Inc.
+// specifically disclaims any implied warranties of merchantability,
+// non-infringement, or fitness for a particular purpose.
+//
+//-----------------------------------------------------------------------------
 
 #ifndef sevapi_h
 #define sevapi_h
 
 // This file puts in to C/C++ form the definitions from the SEV FW spec.
 // It should remain usable purely from C
+// All SEV API indices are based off SEV API v0.17
 
 #include <stdint.h>
 
+// Chapter 4.3 - Command Identifiers
 typedef enum SEV_API_COMMANDS
 {
     NO_COMMAND          = 0x0,
@@ -37,6 +39,7 @@ typedef enum SEV_API_COMMANDS
     DF_FLUSH            = 0xA,
     DOWNLOAD_FIRMWARE   = 0xB,
     GET_ID              = 0xC,
+    INIT_EX             = 0xD,
     DECOMMISSION        = 0x20,
     ACTIVATE            = 0x21,
     DEACTIVATE          = 0x22,
@@ -61,6 +64,7 @@ typedef enum SEV_API_COMMANDS
     DBG_ENCRYPT         = 0x61,
 } SEV_API_COMMAND_CODE;
 
+// Chapter 5.1.2 - Platform State Machine
 typedef enum SEV_PLATFORM_STATE
 {
     PLATFORM_UNINIT     = 0,
@@ -68,6 +72,7 @@ typedef enum SEV_PLATFORM_STATE
     PLATFORM_WORKING    = 2,
 } SEV_PLATFORM_STATE;
 
+// Chapter 6.1.1 - GSTATE Finite State Machine
 typedef enum SEV_GUEST_STATE
 {
     GUEST_UNINIT        = 0,
@@ -78,6 +83,7 @@ typedef enum SEV_GUEST_STATE
     GUEST_RUPDATE       = 5,
 } SEV_GUEST_STATE;
 
+// Chapter 4.4 - Status Codes
 typedef enum SEV_ERROR_CODE
 {
     STATUS_SUCCESS                  = 0x00,
@@ -102,9 +108,15 @@ typedef enum SEV_ERROR_CODE
     ERROR_HWERROR_PLATFORM          = 0x13,
     ERROR_HWERROR_UNSAFE            = 0x14,
     ERROR_UNSUPPORTED               = 0x15,
+    ERROR_INVALID_PARAM             = 0x16,
+    ERROR_RESOURCE_LIMIT            = 0x17,
 } SEV_ERROR_CODE;
 
-// Definition of API-defined Encryption and HMAC values
+// ------------------------------------------------------------ //
+// --- Definition of API-defined Encryption and HMAC values --- //
+// ------------------------------------------------------------ //
+
+// Chapter 2 - Summary of Keys
 typedef uint8_t AES128Key[128/8];
 typedef uint8_t HMACKey128[128/8];
 typedef uint8_t HMACSHA256[256/8];
@@ -112,13 +124,17 @@ typedef uint8_t HMACSHA512[512/8];
 typedef uint8_t Nonce128[128/8];
 typedef uint8_t IV128[128/8];
 
-// Definition of API-defined PKI structures
+// -------------------------------------------------------------------------- //
+// -- Definition of API-defined Public Key Infrastructure (PKI) structures -- //
+// -------------------------------------------------------------------------- //
 
+// Appendix C.3: SEV Certificates
 #define SEV_RSA_PUBKEY_MAX_BITS     4096
 #define SEV_ECDSA_PUBKEY_MAX_BITS   576
 #define SEV_ECDH_PUBKEY_MAX_BITS    576
 #define SEV_PUBKEY_SIZE             (SEV_RSA_PUBKEY_MAX_BITS/8)
 
+// Appendix C.3.1 Public Key Formats - RSA Public Key
 typedef struct __attribute__ ((__packed__)) SEV_RSA_PUBKEY
 {
     uint32_t    ModulusSize;
@@ -132,6 +148,7 @@ typedef enum SEV_EC {
     SEVECP384    = 2,
 } SEV_EC;
 
+// Appendix C.3.2: Public Key Formats - ECDSA Public Key
 typedef struct __attribute__ ((__packed__)) SEV_ECDSA_PUBKEY
 {
     uint32_t    Curve;      // SEV_EC
@@ -140,6 +157,7 @@ typedef struct __attribute__ ((__packed__)) SEV_ECDSA_PUBKEY
     uint8_t     RMBZ[SEV_PUBKEY_SIZE-2*SEV_ECDSA_PUBKEY_MAX_BITS/8-sizeof(uint32_t)];
 } SEV_ECDSA_PUBKEY;
 
+// Appendix C.3.3: Public Key Formats - ECDH Public Key
 typedef struct __attribute__ ((__packed__)) SEV_ECDH_PUBKEY
 {
     uint32_t    Curve;      // SEV_EC
@@ -148,6 +166,7 @@ typedef struct __attribute__ ((__packed__)) SEV_ECDH_PUBKEY
     uint8_t     RMBZ[SEV_PUBKEY_SIZE-2*SEV_ECDH_PUBKEY_MAX_BITS/8-sizeof(uint32_t)];
 } SEV_ECDH_PUBKEY;
 
+// Appendix C.4: Public Key Formats
 typedef union
 {
     SEV_RSA_PUBKEY      RSA;
@@ -155,15 +174,18 @@ typedef union
     SEV_ECDH_PUBKEY     ECDH;
 } SEV_PUBKEY;
 
+// Appendix C.4: Signature Formats
 #define SEV_RSA_SIG_MAX_BITS        4096
 #define SEV_ECDSA_SIG_COMP_MAX_BITS 576
 #define SEV_SIG_SIZE                (SEV_RSA_SIG_MAX_BITS/8)
 
+// Appendix C.4.1: RSA Signature
 typedef struct __attribute__ ((__packed__)) SEV_RSA_SIG
 {
     uint8_t     S[SEV_RSA_SIG_MAX_BITS/8];
 } SEV_RSA_SIG;
 
+// Appendix C.4.2: ECDSA Signature
 typedef struct __attribute__ ((__packed__)) SEV_ECDSA_SIG
 {
     uint8_t     R[SEV_ECDSA_SIG_COMP_MAX_BITS/8];
@@ -177,8 +199,9 @@ typedef union
     SEV_ECDSA_SIG   ECDSA;
 } SEV_SIG;
 
+// Appendix C.1: USAGE Enumeration
 typedef enum SEV_USAGE {
-    SEVUsageARK     = 0,
+    SEVUsageARK     = 0x0,
     SEVUsageASK     = 0x13,
     SEVUsageInvalid = 0x1000,
     SEVUsageOCA     = 0x1001,
@@ -187,6 +210,7 @@ typedef enum SEV_USAGE {
     SEVUsageCEK     = 0x1004,
 } SEV_USAGE;
 
+// Appendix C.1: ALGO Enumeration
 typedef enum SEV_SIG_ALGO {
     SEVSigAlgoInvalid       = 0x0,
     SEVSigAlgoRSASHA256     = 0x1,
@@ -200,6 +224,7 @@ typedef enum SEV_SIG_ALGO {
 #define SEV_CERT_MAX_VERSION    1       // Max supported version
 #define SEV_CERT_MAX_SIGNATURES 2       // Max number of sig's
 
+// Appendix C.1: SEV Certificate Format
 typedef struct __attribute__ ((__packed__)) SEV_CERT
 {
     uint32_t    Version;        // Certificate Version. Should be 1.
@@ -207,30 +232,69 @@ typedef struct __attribute__ ((__packed__)) SEV_CERT
     uint8_t     ApiMinor;       // certificate. Unused during validation.
     uint8_t     Reserved0;
     uint8_t     Reserved1;
-    uint32_t    PubkeyUsage;    // SEV_SIG_USAGE
+    uint32_t    PubkeyUsage;    // SEV_USAGE
     uint32_t    PubkeyAlgo;     // SEV_SIG_ALGO
     SEV_PUBKEY  Pubkey;
-    uint32_t    Sig1Usage;      // SEV_SIG_USAGE
+    uint32_t    Sig1Usage;      // SEV_USAGE
     uint32_t    Sig1Algo;       // SEV_SIG_ALGO
     SEV_SIG     Sig1;
-    uint32_t    Sig2Usage;      // SEV_SIG_USAGE
+    uint32_t    Sig2Usage;      // SEV_USAGE
     uint32_t    Sig2Algo;       // SEV_SIG_ALGO
     SEV_SIG     Sig2;
 } SEV_CERT;
-
-typedef struct __attribute__ ((__packed__)) SEV_CERT_CHAIN_BUF
-{
-    SEV_CERT    PEKCert;
-    SEV_CERT    OCACert;
-    SEV_CERT    CEKCert;
-} SEV_CERT_CHAIN_BUF;
 
 // Macros used for comparing individual certificates from chain
 #define PEKinCertChain(x) (&((SEV_CERT_CHAIN_BUF *)x)->PEKCert)
 #define OCAinCertChain(x) (&((SEV_CERT_CHAIN_BUF *)x)->OCACert)
 #define CEKinCertChain(x) (&((SEV_CERT_CHAIN_BUF *)x)->CEKCert)
 
-// Definition of buffers referred to by the command buffers of SEV API commands.
+
+// Appendix B.1: Certificate Format
+typedef union
+{
+    uint8_t     Short[2048/8];
+    uint8_t     Long[4096/8];
+} AMD_CERT_PUBEXP;
+
+typedef union
+{
+    uint8_t     Short[2048/8];
+    uint8_t     Long[4096/8];
+} AMD_CERT_MOD;
+
+typedef union
+{
+    uint8_t     Short[2048/8];
+    uint8_t     Long[4096/8];
+} AMD_CERT_SIG;
+
+typedef enum AMD_SIG_USAGE {
+    AMDUsageARK     = 0x00,
+    AMDUsageSEV     = 0x13,
+} AMD_SIG_USAGE;
+
+// Appendix B.1: AMD Signing Key Certificate Format
+typedef struct __attribute__ ((__packed__)) AMD_CERT
+{
+    uint32_t    Version;        // Certificate Version. Should be 1.
+    uint64_t    KeyID0;         // The unique ID for this key
+    uint64_t    KeyID1;
+    uint64_t    CertifyingID0;  // The unique ID for the key that signed this cert.
+    uint64_t    CertifyingID1;  // If this cert is self-signed, then equals KEY_ID field.
+    uint32_t    KeyUsage;       // AMD_SIG_USAGE
+    uint64_t    Reserved0;
+    uint64_t    Reserved1;
+    uint32_t    PubExpSize;     // Size of public exponent in bits. Must be 2048/4096.
+    uint32_t    ModulusSize;    // Size of modulus in bits. Must be 2048/4096.
+    AMD_CERT_PUBEXP PubExp;     // Public exponent of this key. Size is PubExpSize.
+    AMD_CERT_MOD    Modulus;    // Public modulus of this key. Size is ModulusSize.
+    AMD_CERT_SIG    Sig;        // Public signature of this key. Size is ModulusSize.
+} AMD_CERT;
+
+
+// -------------------------------------------------------------------------- //
+// Definition of buffers referred to by the command buffers of SEV API commands
+// -------------------------------------------------------------------------- //
 
 // Values passed in INIT command Options field.
 enum SEV_OPTIONS {
@@ -243,7 +307,8 @@ enum SEV_CONFIG {
     SEV_CONFIG_SEV_ES = 1 << 0,
 };
 
-// Guest policy bits. LAUNCH_START and GUEST_STATUS
+// Guest policy bits. Used in LAUNCH_START and GUEST_STATUS
+// Chapter 3: Guest Policy Structure
 enum SEV_POLICY : uint32_t {
     SEV_POLICY_NODBG     = 1 << 0,      // 1 disables DBG commands
     SEV_POLICY_NOKS      = 1 << 1,      // 1 disables key sharing
@@ -268,18 +333,21 @@ enum SEV_POLICY : uint32_t {
 #define SEV_POLICY_DEBUG ((SEV_POLICY)(SEV_POLICY_NOKS|SEV_POLICY_DOMAIN| \
     SEV_POLICY_SEV))
 
+// PLATFORM_STATUS Command Sub-Buffer
 enum SEV_PLATFORM_STATUS_OWNER {
     // Bit 0 is the owner, self or external..
-    PLATFORM_STATUS_OWNER_SELF = 0 << 0,
+    PLATFORM_STATUS_OWNER_SELF     = 0 << 0,
     PLATFORM_STATUS_OWNER_EXTERNAL = 1 << 0,
 };
 
+// (See SEV_SESSION_BUF)
 typedef struct __attribute__ ((__packed__)) TEKTIK
 {
     AES128Key   TEK;
     AES128Key   TIK;
 } TEKTIK;
 
+// LAUNCH_START/SEND_START/RECEIVE_START Session Data Buffer
 typedef struct __attribute__ ((__packed__)) SEV_SESSION_BUF
 {
     Nonce128    Nonce;
@@ -289,12 +357,14 @@ typedef struct __attribute__ ((__packed__)) SEV_SESSION_BUF
     HMACSHA256  PolicyMAC;
 } SEV_SESSION_BUF;
 
+// LAUNCH_MEASURE Measurement Buffer
 typedef struct __attribute__ ((__packed__)) SEV_MEASURE_BUF
 {
     HMACSHA256  Measurement;
     Nonce128    MNonce;
 } SEV_MEASURE_BUF;
 
+// LAUNCH_SECRET, SEND_UPDATE_DATA/VMSA, RECEIVE_UPDATE_DATA/VMSA
 typedef struct __attribute__ ((__packed__)) SEV_HDR_BUF
 {
     uint32_t    Flags;
@@ -302,8 +372,26 @@ typedef struct __attribute__ ((__packed__)) SEV_HDR_BUF
     HMACSHA256  MAC;
 } SEV_HDR_BUF;
 
-// Definition of the command buffers for each of the SEV API commands.
+// PDH_CERT_EXPORT/SEND_START Platform Certificates Buffer
+typedef struct __attribute__ ((__packed__)) SEV_CERT_CHAIN_BUF
+{
+    SEV_CERT    PEKCert;
+    SEV_CERT    OCACert;
+    SEV_CERT    CEKCert;
+} SEV_CERT_CHAIN_BUF;
 
+// SEND_START AMD Certificates Buffer
+typedef struct __attribute__ ((__packed__)) AMD_CERT_CHAIN_BUF
+{
+    AMD_CERT    ASKCert;
+    AMD_CERT    ARKCert;
+} AMD_CERT_CHAIN_BUF;
+
+// -------------------------------------------------------------------------- //
+// --- Definition of the command buffers for each of the SEV API commands --- //
+// -------------------------------------------------------------------------- //
+
+// Chapter 5: Platform Mamanagement API
 typedef struct __attribute__ ((__packed__)) SEV_INIT_CMD_BUF
 {
     uint32_t    Options;        // enum SEV_OPTIONS
@@ -376,6 +464,18 @@ typedef struct __attribute__ ((__packed__)) SEV_GET_ID_CMD_BUF
     uint32_t    IDLength;
 } SEV_GET_ID_CMD_BUF;
 
+typedef struct __attribute__ ((__packed__)) SEV_INIT_EX_CMD_BUF
+{
+    uint32_t    Length;         // Must be 0x24
+    uint32_t    Options;        // enum SEV_OPTIONS
+    uint64_t    TMRPhysAddr;    // 1MB alligned. Ignored if CONFIG_ES is 0
+    uint32_t    TMRLength;      // Ignored if CONFIG_ES is 0
+    uint32_t    Reserved;
+    uint64_t    NVPhysAddr;
+    uint32_t    NVLength;       // Must be 32KB
+} SEV_INIT_EX_CMD_BUF;
+
+// Chapter 6: Guest Management API
 typedef struct __attribute__ ((__packed__)) SEV_LAUNCH_START_CMD_BUF
 {
     uint32_t    Handle;
@@ -543,8 +643,8 @@ typedef struct __attribute__ ((__packed__)) SEV_ACTIVATE_EX_CMD_BUF
     uint32_t    EXLen;
     uint32_t    Handle;
     uint32_t    ASID;
-    uint32_t    Reserved0;
-    uint64_t    CCXs;
+    uint32_t    NumIDs;
+    uint64_t    IDsPaddr;
 } SEV_ACTIVATE_EX_CMD_BUF;
 
 typedef struct __attribute__ ((__packed__)) SEV_DEACTIVATE_CMD_BUF
@@ -569,6 +669,7 @@ typedef struct __attribute__ ((__packed__)) SEV_COPY_CMD_BUF
     uint64_t    DstPAddr;
 } SEV_COPY_CMD_BUF;
 
+// Chapter: Debugging API
 typedef struct __attribute__ ((__packed__)) SEV_DBG_DECRYPT_CMD_BUF
 {
     uint32_t    Handle;
