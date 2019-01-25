@@ -20,34 +20,34 @@
 #include <cstring>  // memcpy
 
 char helpArray[] = "The following commands are supported: \n" \
-                    "  sev_factory_reset\n" \
-                    "  sev_platform_status\n" \
-                    "  sev_pek_gen\n" \
-                    "  sev_pek_csr\n" \
-                    "  sev_pdh_gen\n" \
-                    "  sev_pdh_cert_export\n" \
-                    "  sev_pek_cert_import\n" \
-                    "  sev_get_id\n";
+                    "  factory_reset\n" \
+                    "  platform_status\n" \
+                    "  pek_gen\n" \
+                    "  pek_csr\n" \
+                    "  pdh_gen\n" \
+                    "  pdh_cert_export\n" \
+                    "  pek_cert_import\n" \
+                    "  get_id\n";
 
 uint32_t map_arg_to_cmd(std::string arg)
 {
     uint32_t ret = 0;
 
-    if(strcmp(arg.c_str(), "sev_factory_reset") == 0)
+    if(strcmp(arg.c_str(), "factory_reset") == 0)
         ret = SEV_FACTORY_RESET;
-    else if(strcmp(arg.c_str(), "sev_platform_status") == 0)
+    else if(strcmp(arg.c_str(), "platform_status") == 0)
         ret = SEV_PLATFORM_STATUS;
-    else if(strcmp(arg.c_str(), "sev_pek_gen") == 0)
+    else if(strcmp(arg.c_str(), "pek_gen") == 0)
         ret = SEV_PEK_GEN;
-    else if(strcmp(arg.c_str(), "sev_pek_csr") == 0)
+    else if(strcmp(arg.c_str(), "pek_csr") == 0)
         ret = SEV_PEK_CSR;
-    else if(strcmp(arg.c_str(), "sev_pdh_gen") == 0)
+    else if(strcmp(arg.c_str(), "pdh_gen") == 0)
         ret = SEV_PDH_GEN;
-    else if(strcmp(arg.c_str(), "sev_pdh_cert_export") == 0)
+    else if(strcmp(arg.c_str(), "pdh_cert_export") == 0)
         ret = SEV_PDH_CERT_EXPORT;
-    else if(strcmp(arg.c_str(), "sev_pek_cert_import") == 0)
+    else if(strcmp(arg.c_str(), "pek_cert_import") == 0)
         ret = SEV_PEK_CERT_IMPORT;
-    else if(strcmp(arg.c_str(), "sev_get_id") == 0)
+    else if(strcmp(arg.c_str(), "get_id") == 0)
         ret = SEV_GET_ID;
     else
         ret = SEV_MAX;
