@@ -21,6 +21,65 @@
 #include <string>
 #include <cstring>  // memcpy
 
+static std::string DisplayBuildInfo()
+{
+    sev_user_data_status status_data;
+    int cmd_ret = ERROR_UNSUPPORTED;
+
+    std::string api_major_ver = "API_Major: xxx";
+    std::string api_minor_ver = "API_Minor: xxx";
+    std::string build_id_ver  = "BuildID: xxx";
+
+    cmd_ret = gSEVDevice.platform_status(&status_data);
+    if (cmd_ret != STATUS_SUCCESS)
+        return "";
+
+    char MajorBuf[4], MinorBuf[4], BuildIDBuf[4];          // +1 for Null char
+    sprintf(MajorBuf, "%d", status_data.api_major);
+    sprintf(MinorBuf, "%d", status_data.api_minor);
+    sprintf(BuildIDBuf, "%d", status_data.build);
+    api_major_ver.replace(11, 3, MajorBuf);
+    api_minor_ver.replace(11, 3, MinorBuf);
+    build_id_ver.replace(9, 3, BuildIDBuf);
+
+    return api_major_ver + ", " + api_minor_ver + ", " + build_id_ver;
+}
+
+static void sysinfo()
+{
+    std::string cmd = "";
+    std::string output = "";
+
+    printf("-------------------------System Info-------------------------");
+
+    // Exec bash commands to get info on user's platform and append to the output string
+    cmd = "echo -n 'Hostname: '; hostname";
+    ExecuteSystemCommand(cmd, &output);
+    cmd = "echo -n 'BIOS Version: '; dmidecode -s bios-version";
+    ExecuteSystemCommand(cmd, &output);
+    cmd = "echo -n 'BIOS Release Date: '; dmidecode -s bios-release-date";
+    ExecuteSystemCommand(cmd, &output);
+    cmd = "echo -n 'SMT/Multi-Threading Status Per Socket: \n'; lscpu | grep -E \"^CPU\\(s\\):|Thread\\(s\\) per core|Core\\(s\\) per socket|Socket\\(s\\)\"";
+    ExecuteSystemCommand(cmd, &output);
+    cmd = "echo -n 'Processor Frequency (all sockets): \n'; dmidecode -s processor-frequency";
+    ExecuteSystemCommand(cmd, &output);
+    cmd = "echo -n 'Operating System: '; cat /etc/os-release | grep \"PRETTY_NAME=\" | sed 's/.*=//'";        // cat /etc/issue
+    ExecuteSystemCommand(cmd, &output);
+    cmd = "echo -n 'Kernel Version: '; uname -r";
+    ExecuteSystemCommand(cmd, &output);
+    cmd = "echo -n 'Git Commit #: '; cat \"../.git/refs/heads/master\"";
+    ExecuteSystemCommand(cmd, &output);
+
+    // Print results of all ExecuteSystemCommand calls
+    printf("\n%s", output.c_str());
+
+    std::string BuildInfo = DisplayBuildInfo();
+    printf("Firmware Version: %s\n", BuildInfo.c_str());
+
+    printf("-------------------------------------------------------------\n\n");
+}
+
+
 char helpArray[] = "The following commands are supported:\n" \
                    "(Please see the readme file for more detailed information)\n" \
                    "  factory_reset\n" \
@@ -76,6 +135,8 @@ int main(int argc, char** argv)
 {
     Command cmd;
     SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
+
+    sysinfo();  // Display system info
 
     printf("You have entered %i arguments\n", argc);
     if(argc <= 1) {     // User didnt enter any args
