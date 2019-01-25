@@ -34,7 +34,7 @@ void SEVCert::X509CertToSEVCert(const SEV_CERT *SEVCert, X509_CERT *X509Cert)
 
 }
 
-void PrintCert(SEV_CERT* cert)
+void PrintCert(SEV_CERT *cert)
 {
     printf("Printing Cert...\n");
     printf("%-15s%04x\n", "Version:", cert->Version);           // uint32_t
@@ -63,7 +63,7 @@ void PrintCert(SEV_CERT* cert)
     printf("\n");
 }
 
-void PrintCertHex(void* cert)
+void PrintCertHex(void *cert)
 {
     printf("Printing Cert...\n");
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { //bytes to uint8
@@ -73,7 +73,7 @@ void PrintCertHex(void* cert)
 }
 
 // Prints out the PDK, OCA, and CEK
-void PrintCertChainBufHex(void* p)
+void PrintCertChainBufHex(void *p)
 {
     printf("PEK Memory: %ld bytes\n", sizeof(SEV_CERT));
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { //bytes to uint8
@@ -91,7 +91,7 @@ void PrintCertChainBufHex(void* p)
 }
 
 bool SEVCert::CalcHashDigest(const SEV_CERT *Cert, uint32_t PubkeyAlgo, uint32_t PubKeyOffset,
-                             HMACSHA256* shaDigest256, HMACSHA512* shaDigest384)
+                             HMACSHA256 *shaDigest256, HMACSHA512 *shaDigest384)
 {
     bool ret = false;
     SHA256_CTX ctx256;
@@ -170,7 +170,7 @@ bool SEVCert::SignWithKey( uint32_t Version, uint32_t PubKeyUsage, uint32_t PubK
 
             // Read in the private key file into EVP_PKEY
             // You cannot call a sub-function here because the privRSAKey doesn't get set correctly
-            FILE* pFile = fopen(OCAPrivKeyFile.c_str(), "r");
+            FILE *pFile = fopen(OCAPrivKeyFile.c_str(), "r");
             if(!pFile) {
                 printf("OCA private key file not found\n");
                 break;
@@ -202,7 +202,7 @@ bool SEVCert::SignWithKey( uint32_t Version, uint32_t PubKeyUsage, uint32_t PubK
 
             // Read in the private key file into EVP_PKEY
             // You cannot call a sub-function here because the privECKey doesn't get set correctly
-            FILE* pFile = fopen(OCAPrivKeyFile.c_str(), "r");
+            FILE *pFile = fopen(OCAPrivKeyFile.c_str(), "r");
             if(!pFile) {
                 printf("OCA private key file not found\n");
                 break;
@@ -213,7 +213,7 @@ bool SEVCert::SignWithKey( uint32_t Version, uint32_t PubKeyUsage, uint32_t PubK
                 break;
 
             if(Sig1Algo == SEVSigAlgoECDSASHA256) {
-                ECDSA_SIG* sig = ECDSA_do_sign(shaDigest256, sizeof(shaDigest256), privECKey); // Contains 2 bignums
+                ECDSA_SIG *sig = ECDSA_do_sign(shaDigest256, sizeof(shaDigest256), privECKey); // Contains 2 bignums
                 if(!sig)
                     break;
                 BN_bn2lebinpad(sig->r, mChildCert.Sig1.ECDSA.R, sizeof(SEV_ECDSA_SIG::R));    // LE to BE
@@ -227,7 +227,7 @@ bool SEVCert::SignWithKey( uint32_t Version, uint32_t PubKeyUsage, uint32_t PubK
                 ECDSA_SIG_free(sig);
             }
             else if(Sig1Algo == SEVSigAlgoECDSASHA384) {
-                ECDSA_SIG* sig = ECDSA_do_sign(shaDigest384, sizeof(shaDigest384), privECKey); // Contains 2 bignums
+                ECDSA_SIG *sig = ECDSA_do_sign(shaDigest384, sizeof(shaDigest384), privECKey); // Contains 2 bignums
                 if(!sig)
                     break;
                 BN_bn2lebinpad(sig->r, mChildCert.Sig1.ECDSA.R, sizeof(SEV_ECDSA_SIG::R));    // LE to BE
@@ -292,10 +292,10 @@ SEV_ERROR_CODE SEVCert::ValidateRSAPubkey(const SEV_CERT *Cert, const EVP_PKEY *
 
     SEV_ERROR_CODE CmdRet = ERROR_INVALID_CERTIFICATE;
 
-	if (Cert->Pubkey.RSA.ModulusSize <= (SEV_RSA_PUBKEY_MAX_BITS/8))    //TODO, bits or bytes
+    if (Cert->Pubkey.RSA.ModulusSize <= (SEV_RSA_PUBKEY_MAX_BITS/8))    //TODO, bits or bytes
 		CmdRet = STATUS_SUCCESS;
 
-	return CmdRet;
+    return CmdRet;
 }
 
 // rsa.c -> pubkey_is_valid()
@@ -419,7 +419,7 @@ SEV_ERROR_CODE SEVCert::ValidateSignature(const SEV_CERT *ChildCert,
         CmdRet = STATUS_SUCCESS;
     } while (0);
 
-	return CmdRet;
+    return CmdRet;
 }
 
 // sev_cert.c -> sev_cert_validate_body()
@@ -450,12 +450,12 @@ SEV_ERROR_CODE SEVCert::CompilePublicKeyFromCertificate(const SEV_CERT* Cert, EV
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE CmdRet = ERROR_INVALID_CERTIFICATE;
-    struct rsa_st* RSA_pubKey = NULL;
-    EC_KEY* EC_pubKey = NULL;
-    BIGNUM* xBigNum = NULL;
-    BIGNUM* yBigNum = NULL;
-    BIGNUM* Modulus = NULL;
-    BIGNUM* PubExp = NULL;
+    struct rsa_st *RSA_pubKey = NULL;
+    EC_KEY *EC_pubKey = NULL;
+    BIGNUM *xBigNum = NULL;
+    BIGNUM *yBigNum = NULL;
+    BIGNUM *Modulus = NULL;
+    BIGNUM *PubExp = NULL;
 
     do {
         if( (Cert->PubkeyAlgo == SEVSigAlgoRSASHA256) ||

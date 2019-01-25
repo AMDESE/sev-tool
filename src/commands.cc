@@ -146,7 +146,7 @@ SEV_ERROR_CODE Command::pek_cert_import()
             break;
         }
 
-        cmd_ret = gSEVDevice.SetSelfOwned();
+        cmd_ret = gSEVDevice.set_self_owned();
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -249,6 +249,24 @@ SEV_ERROR_CODE Command::calc_measurement(measurement_t *user_data)
         }
     }
     printf("\n");
+
+    return cmd_ret;
+}
+
+SEV_ERROR_CODE Command::set_self_owned()
+{
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
+
+    cmd_ret = gSEVDevice.set_self_owned();
+
+    return cmd_ret;
+}
+
+SEV_ERROR_CODE Command::set_externally_owned()
+{
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
+
+    cmd_ret = gSEVDevice.set_externally_owned();
 
     return cmd_ret;
 }

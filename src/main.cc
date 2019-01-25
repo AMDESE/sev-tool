@@ -15,7 +15,7 @@
  * ************************************************************************/
 
 #include "commands.h"
-#include "sevcore.h"    // for measurement_t
+#include "sevcore.h"    // for measurement_t. //todo remove?
 #include "utilities.h"
 #include <stdio.h>
 #include <string>
@@ -100,6 +100,8 @@ char helpArray[] = "The following commands are supported:\n" \
                    "          uint32_t digest\n" \
                    "          uint8_t mnonce[128/8]\n" \
                    "          uint8_t gctx_tik[128/8]\n" \
+                   "  set_self_owed\n" \
+                   "  set_externally_owned\n" \
                    ;
 
 uint32_t map_arg_to_cmd(std::string arg)
@@ -124,6 +126,10 @@ uint32_t map_arg_to_cmd(std::string arg)
         ret = CMD_GET_ID;
     else if(strcmp(arg.c_str(), "calc_measurement") == 0)
         ret = CMD_CALC_MEASUREMENT;
+    else if(strcmp(arg.c_str(), "set_self_owned") == 0)
+        ret = CMD_SET_SELF_OWNED;
+    else if(strcmp(arg.c_str(), "set_externally_owned") == 0)
+        ret = CMD_SET_EXT_OWNED;
     else
         ret = CMD_MAX;
 
@@ -195,6 +201,14 @@ int main(int argc, char** argv)
             StrToArray(std::string(argv[8]), (uint8_t*)&user_data.mnonce, sizeof(user_data.mnonce));
             StrToArray(std::string(argv[9]), (uint8_t*)&user_data.tik,    sizeof(user_data.tik));
             cmd_ret = cmd.calc_measurement(&user_data);
+            break;
+        }
+        case CMD_SET_SELF_OWNED: {
+            cmd_ret = cmd.set_self_owned();
+            break;
+        }
+        case CMD_SET_EXT_OWNED: {
+            cmd_ret = cmd.set_externally_owned();
             break;
         }
         default: {

@@ -23,7 +23,7 @@
 
 bool ExecuteSystemCommand(const std::string cmd, std::string *log)
 {
-    FILE* pipe = popen(cmd.c_str(), "r");
+    FILE *pipe = popen(cmd.c_str(), "r");
     if (!pipe) {
         return false;
     }

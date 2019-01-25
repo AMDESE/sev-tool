@@ -23,8 +23,6 @@
 #include "linux/psp-sev.h"
 
 class Command {
-private:
-
 
 public:
     Command() {};
@@ -40,6 +38,8 @@ public:
     SEV_ERROR_CODE get_id(void);
 
     SEV_ERROR_CODE calc_measurement(measurement_t *user_data);
+    SEV_ERROR_CODE set_self_owned(void);
+    SEV_ERROR_CODE set_externally_owned(void);
 };
 
 #endif /* sevcert_h */

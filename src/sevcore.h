@@ -54,6 +54,8 @@ typedef enum COMMAND_CODE {
     CMD_GET_ID           = 0x07,
 
     CMD_CALC_MEASUREMENT = 0x08,
+    CMD_SET_SELF_OWNED   = 0x09,
+    CMD_SET_EXT_OWNED    = 0x0A,
 
     CMD_MAX,
 } COMMAND_CODE;
@@ -76,6 +78,8 @@ class SEVDevice {
 private:
     int mFd;
     bool validate_pek_csr(SEV_CERT *csr);
+    int get_platform_owner(sev_user_data_status* data);
+    int get_platform_es(sev_user_data_status* data);
 
 public:
     SEVDevice();
@@ -84,20 +88,19 @@ public:
     inline int GetFD(void) { return mFd; }
     int sev_ioctl(COMMAND_CODE cmd, void *data, SEV_ERROR_CODE *cmd_ret);
 
-    SEV_ERROR_CODE SetSelfOwned(void);
-    SEV_ERROR_CODE SetExternallyOwned(void);
-
     SEV_ERROR_CODE factory_reset(void);
-    SEV_ERROR_CODE platform_status(sev_user_data_status* data);
+    SEV_ERROR_CODE platform_status(sev_user_data_status *data);
     SEV_ERROR_CODE pek_gen(void);
-    SEV_ERROR_CODE pek_csr(sev_user_data_pek_csr* data, void* PEKMem, SEV_CERT* csr);
+    SEV_ERROR_CODE pek_csr(sev_user_data_pek_csr *data, void *PEKMem, SEV_CERT *csr);
     SEV_ERROR_CODE pdh_gen(void);
-    SEV_ERROR_CODE pdh_cert_export(sev_user_data_pdh_cert_export* data,
-                                   void* PDHCertMem, void* CertChainMem);
-    SEV_ERROR_CODE pek_cert_import(sev_user_data_pek_cert_import* data, SEV_CERT *csr);
-    SEV_ERROR_CODE get_id(sev_user_data_get_id* data);
+    SEV_ERROR_CODE pdh_cert_export(sev_user_data_pdh_cert_export *data,
+                                   void *PDHCertMem, void *CertChainMem);
+    SEV_ERROR_CODE pek_cert_import(sev_user_data_pek_cert_import *data, SEV_CERT *csr);
+    SEV_ERROR_CODE get_id(sev_user_data_get_id *data);
 
     SEV_ERROR_CODE calc_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
+    SEV_ERROR_CODE set_self_owned(void);
+    SEV_ERROR_CODE set_externally_owned(void);
 };
 
 

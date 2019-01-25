@@ -17,12 +17,20 @@
 #include "sevcert.h"
 #include "sevcore.h"
 #include "utilities.h"
+#include <openssl/hmac.h>
 #include <sys/ioctl.h>      // for ioctl()
 #include <sys/mman.h>       // for mmap() and friends
 #include <errno.h>          // for errorno
 #include <fcntl.h>          // for O_RDWR
 #include <unistd.h>         // for close()
 #include <stdexcept>        // for std::runtime_error()
+
+// The Linux Kernel's Platform Status command buffer is older/different than the
+// current SEV API and has the Owner and ConfigES params as a single param called Flags
+#define PLATFORM_STATUS_OWNER_OFFSET    0
+#define PLATFORM_STATUS_CONFIGES_OFFSET 8
+#define PLATFORM_OWNER_MASK (1UL << PLATFORM_STATUS_OWNER_OFFSET)
+#define PLATFORM_ES_MASK    (1UL << PLATFORM_STATUS_CONFIGES_OFFSET)
 
 // The single instance of the SEVDevice class that everyone can
 // access to get the mFd of the kernel driver.
@@ -84,6 +92,8 @@ int SEVDevice::sev_ioctl(COMMAND_CODE cmd, void *data, SEV_ERROR_CODE *cmd_ret)
             break;
         }
         case CMD_CALC_MEASUREMENT:
+        case CMD_SET_SELF_OWNED:
+        case CMD_SET_EXT_OWNED:
         default: {
             printf("Unexpected Command code! %02x\n", cmd);
             return ioctl_ret;
@@ -99,46 +109,6 @@ int SEVDevice::sev_ioctl(COMMAND_CODE cmd, void *data, SEV_ERROR_CODE *cmd_ret)
     }
 
     return ioctl_ret;
-}
-
-// Just believe it worked, for now. The flags parameter returned by
-// platform_status doesn't exactly match the spec (should be Owner
-// and Config as separate params), so I'm not exactly sure what it is.
-// It can probably be used to see if the owner changed
-SEV_ERROR_CODE SEVDevice::SetSelfOwned()
-{
-    sev_user_data_status plat_stat_data;
-    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
-
-    do {
-        cmd_ret = gSEVDevice.factory_reset();
-        if(cmd_ret != STATUS_SUCCESS)
-            break;
-
-        cmd_ret = gSEVDevice.pek_gen();
-        if(cmd_ret != STATUS_SUCCESS)
-            break;
-
-        cmd_ret = gSEVDevice.platform_status(&plat_stat_data);
-        if(cmd_ret != STATUS_SUCCESS)
-            break;
-
-        // TODO verify that the platform is self-owned using
-        // plat_stat_data's flag param
-    } while (0);
-
-    return cmd_ret;
-}
-
-// Just believe it worked, for now. The flags parameter returned by
-// platform_status doesn't exactly match the spec (should be Owner
-// and Config as separate params), so I'm not exactly sure what it is.
-// It can probably be used to see if the owner changed
-SEV_ERROR_CODE SEVDevice::SetExternallyOwned()
-{
-    SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;//ERROR_UNSUPPORTED;
-
-    return cmd_ret;
 }
 
 SEV_ERROR_CODE SEVDevice::factory_reset()
@@ -159,6 +129,16 @@ SEV_ERROR_CODE SEVDevice::factory_reset()
     } while (0);
 
     return cmd_ret;
+}
+
+int SEVDevice::get_platform_owner(sev_user_data_status* data)
+{
+    return data->flags & PLATFORM_OWNER_MASK;
+}
+
+int SEVDevice::get_platform_es(sev_user_data_status* data)
+{
+    return data->flags & PLATFORM_ES_MASK;
 }
 
 SEV_ERROR_CODE SEVDevice::platform_status(sev_user_data_status *data)
@@ -413,5 +393,72 @@ SEV_ERROR_CODE SEVDevice::calc_measurement(measurement_t *user_data, HMACSHA256 
     } while (0);
 
     HMAC_CTX_free(ctx);
+    return cmd_ret;
+}
+
+/*
+ * Note: You can not change the Platform Owner if Guests are running. That means
+ *       the Platform cannot be in the WORKING state here. The ccp Kernel Driver
+ *       will do its best to set the Platform state to whatever is required to
+ *       run each command, but that does not include shutting down Guests to do so.
+ */
+SEV_ERROR_CODE SEVDevice::set_self_owned()
+{
+    sev_user_data_status status_data;  // Platform Status
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
+
+    do {
+        cmd_ret = platform_status(&status_data);
+        if(cmd_ret != STATUS_SUCCESS) {
+            break;
+        }
+
+        if (get_platform_owner(&status_data) != PLATFORM_STATUS_OWNER_SELF) {
+            cmd_ret = pek_gen();
+        }
+    } while (0);
+
+    return cmd_ret;
+}
+
+/*
+ * Note: You can not change the Platform Owner if Guests are running. That means
+ *       the Platform cannot be in the WORKING state here. The ccp Kernel Driver
+ *       will do its best to set the Platform state to whatever is required to
+ *       run each command, but that does not include shutting down Guests to do so.
+ */
+SEV_ERROR_CODE SEVDevice::set_externally_owned()
+{
+    sev_user_data_status status_data;  // Platform Status
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
+    void *PEKMem = malloc(sizeof(SEV_CERT));
+
+    if(!PEKMem)
+        return ERROR_RESOURCE_LIMIT;
+
+    do {
+        cmd_ret = platform_status(&status_data);
+        if(cmd_ret != STATUS_SUCCESS)
+            break;
+
+        if (get_platform_owner(&status_data) != PLATFORM_STATUS_OWNER_EXTERNAL) {
+            // Get the CSR
+            sev_user_data_pek_csr pek_csr_data;                  // pek_csr
+            SEV_CERT PEKcsr;
+            cmd_ret = pek_csr(&pek_csr_data, PEKMem, &PEKcsr);
+            if(cmd_ret != STATUS_SUCCESS)
+                break;
+
+            // Sign the CSR
+            // Fetch the OCA certificate
+            // Submit the signed cert to PEKCertImport
+            sev_user_data_pek_cert_import pek_cert_import_data;
+            cmd_ret = pek_cert_import(&pek_cert_import_data, &PEKcsr);
+        }
+    } while (0);
+
+    // Free memory
+    free(PEKMem);
+
     return cmd_ret;
 }

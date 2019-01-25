@@ -19,6 +19,7 @@
 
 #include "sevapi.h"
 #include "x509cert.h"
+#include "linux/psp-sev.h"
 #include <string>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -29,15 +30,15 @@
 #include <openssl/pem.h>
 
 // Public global functions
-void PrintCert(SEV_CERT* cert);
-void PrintCertHex(void* cert);
-void PrintCertChainBufHex(void* p);
+void PrintCert(SEV_CERT *cert);
+void PrintCertHex(void *cert);
+void PrintCertChainBufHex(void *p);
 
 class SEVCert {
 private:
     SEV_CERT mChildCert;
     bool CalcHashDigest(const SEV_CERT *Cert, uint32_t PubkeyAlgo, uint32_t PubKeyOffset,
-                             HMACSHA256* shaDigest256, HMACSHA512* shaDigest384);
+                             HMACSHA256 *shaDigest256, HMACSHA512 *shaDigest384);
     SEV_ERROR_CODE ValidateUsage(uint32_t Usage);
     SEV_ERROR_CODE ValidateRSAPubkey(const SEV_CERT *Cert, const EVP_PKEY *PublicKey);
     SEV_ERROR_CODE ValidatePublicKey(const SEV_CERT *Cert, const EVP_PKEY *PublicKey);
@@ -56,7 +57,7 @@ public:
 
     bool SignWithKey( uint32_t Version, uint32_t PubKeyUsage, uint32_t PubKeyAlgorithm,
                       const std::string& OCAPrivKeyFile, uint32_t Sig1Usage, uint32_t Sig1Algo );
-    SEV_ERROR_CODE CompilePublicKeyFromCertificate(const SEV_CERT* Cert, EVP_PKEY* EVP_pubKey);
+    SEV_ERROR_CODE CompilePublicKeyFromCertificate(const SEV_CERT *Cert, EVP_PKEY *EVP_pubKey);
     SEV_ERROR_CODE VerifySEVCert(const SEV_CERT *ParentCert1, const SEV_CERT *ParentCert2 = NULL);
 };
 
