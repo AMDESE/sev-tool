@@ -44,13 +44,53 @@ SEVDevice::~SEVDevice()
     mFd = -1;
 }
 
-int SEVDevice::sev_ioctl(int cmd, void* data, SEV_ERROR_CODE *cmd_ret)
+int SEVDevice::sev_ioctl(COMMAND_CODE cmd, void *data, SEV_ERROR_CODE *cmd_ret)
 {
     int ioctl_ret = -1;
     sev_issue_cmd arg;
 
-	arg.cmd = cmd;
-	arg.data = (uint64_t)data;
+    // Translate our COMMAND_CODEs to Linux ioctl commands
+    switch(cmd) {
+        case CMD_FACTORY_RESET: {
+            arg.cmd = SEV_FACTORY_RESET;
+            break;
+        }
+        case CMD_PLATFORM_STATUS: {
+            arg.cmd = SEV_PLATFORM_STATUS;
+            break;
+        }
+        case CMD_PEK_GEN: {
+            arg.cmd = SEV_PEK_GEN;
+            break;
+        }
+        case CMD_PEK_CSR: {
+            arg.cmd = SEV_PEK_CSR;
+            break;
+        }
+        case CMD_PDH_GEN: {
+            arg.cmd = SEV_PDH_GEN;
+            break;
+        }
+        case CMD_PDH_CERT_EXPORT: {
+            arg.cmd = SEV_PDH_CERT_EXPORT;
+            break;
+        }
+        case CMD_PEK_CERT_IMPORT: {
+            arg.cmd = SEV_PEK_CERT_IMPORT;
+            break;
+        }
+        case CMD_GET_ID: {
+            arg.cmd = SEV_GET_ID;
+            break;
+        }
+        case CMD_CALC_MEASUREMENT:
+        default: {
+            printf("Unexpected Command code! %02x\n", cmd);
+            return ioctl_ret;
+        }
+    }
+
+    arg.data = (uint64_t)data;
 
     ioctl_ret = ioctl(gSEVDevice.GetFD(), SEV_ISSUE_CMD, &arg);
     *cmd_ret = (SEV_ERROR_CODE)arg.error; // Convert Linux's sev_ret_code to our SEV_ERROR_CODE
@@ -58,7 +98,7 @@ int SEVDevice::sev_ioctl(int cmd, void* data, SEV_ERROR_CODE *cmd_ret)
         // printf("Error: cmd %#x ioctl_ret=%d (%#x)\n", cmd, ioctl_ret, arg.error);
     }
 
-	return ioctl_ret;
+    return ioctl_ret;
 }
 
 // Just believe it worked, for now. The flags parameter returned by
@@ -112,7 +152,7 @@ SEV_ERROR_CODE SEVDevice::factory_reset()
 
     do {
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_FACTORY_RESET, &data, &cmd_ret);
+        ioctl_ret = gSEVDevice.sev_ioctl(CMD_FACTORY_RESET, &data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -131,7 +171,7 @@ SEV_ERROR_CODE SEVDevice::platform_status(sev_user_data_status *data)
 
     do {
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PLATFORM_STATUS, data, &cmd_ret);
+        ioctl_ret = gSEVDevice.sev_ioctl(CMD_PLATFORM_STATUS, data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -151,7 +191,7 @@ SEV_ERROR_CODE SEVDevice::pek_gen()
 
     do {
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PEK_GEN, &data, &cmd_ret);
+        ioctl_ret = gSEVDevice.sev_ioctl(CMD_PEK_GEN, &data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -191,7 +231,7 @@ SEV_ERROR_CODE SEVDevice::pek_csr(sev_user_data_pek_csr *data, void *PEKMem, SEV
 
         // Send the command. This is to get the MinSize length. If you
         // already know it, then you don't have to send the command twice
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PEK_CSR, data, &cmd_ret);
+        ioctl_ret = gSEVDevice.sev_ioctl(CMD_PEK_CSR, data, &cmd_ret);
         if(ioctl_ret != -1)
             break;
 
@@ -200,7 +240,7 @@ SEV_ERROR_CODE SEVDevice::pek_csr(sev_user_data_pek_csr *data, void *PEKMem, SEV
             break;
 
         // Send the command again with CSRLength=MinSize
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PEK_CSR, data, &cmd_ret);
+        ioctl_ret = gSEVDevice.sev_ioctl(CMD_PEK_CSR, data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -225,7 +265,7 @@ SEV_ERROR_CODE SEVDevice::pdh_gen()
 
     do {
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PDH_GEN, &data, &cmd_ret);
+        ioctl_ret = gSEVDevice.sev_ioctl(CMD_PDH_GEN, &data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -250,7 +290,7 @@ SEV_ERROR_CODE SEVDevice::pdh_cert_export(sev_user_data_pdh_cert_export *data,
         data->cert_chain_len = sizeof(SEV_CERT_CHAIN_BUF);
 
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PDH_CERT_EXPORT, data, &cmd_ret);
+        ioctl_ret = gSEVDevice.sev_ioctl(CMD_PDH_CERT_EXPORT, data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -300,7 +340,7 @@ SEV_ERROR_CODE SEVDevice::pek_cert_import(sev_user_data_pek_cert_import *data, S
         data->oca_cert_len = sizeof(SEV_CERT);
 
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PEK_CERT_IMPORT, data, &cmd_ret);
+        ioctl_ret = gSEVDevice.sev_ioctl(CMD_PEK_CERT_IMPORT, data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -323,11 +363,55 @@ SEV_ERROR_CODE SEVDevice::get_id(sev_user_data_get_id *data)
 
     do {
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_GET_ID, data, &cmd_ret);
+        ioctl_ret = gSEVDevice.sev_ioctl(CMD_GET_ID, data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
     } while (0);
 
+    return cmd_ret;
+}
+
+// We cannot call LaunchMeasure to get the MNonce because that command doesn't
+// exist in this context, so we user the user input params for all of our data
+// This function assumes the API version is at >= 0.17
+SEV_ERROR_CODE SEVDevice::calc_measurement(measurement_t *user_data, HMACSHA256 *final_meas)
+{
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
+
+    uint32_t MeasurementLength = sizeof(final_meas);
+
+    // Create and initialize the context
+    HMAC_CTX *ctx;
+    if (!(ctx = HMAC_CTX_new()))
+        return ERROR_BAD_MEASUREMENT;
+
+    do {
+        if (HMAC_Init_ex(ctx, user_data->tik, sizeof(user_data->tik), EVP_sha256(), NULL) != 1)
+            break;
+        //if (MinAPIVersion(0,17)) {
+            if (HMAC_Update(ctx, &user_data->meas_ctx, sizeof(user_data->meas_ctx)) != 1)
+                break;
+            if (HMAC_Update(ctx, &user_data->api_major, sizeof(user_data->api_major)) != 1)
+                break;
+            if (HMAC_Update(ctx, &user_data->api_minor, sizeof(user_data->api_minor)) != 1)
+                break;
+            if (HMAC_Update(ctx, &user_data->build_id, sizeof(user_data->build_id)) != 1)
+                break;
+        //}
+        if (HMAC_Update(ctx, (uint8_t*)&user_data->policy, sizeof(user_data->policy)) != 1)
+            break;
+        if (HMAC_Update(ctx, (uint8_t*)&user_data->digest, sizeof(user_data->digest)) != 1)
+            break;
+        // Use the same random MNonce as the FW in our validation calculations
+        if (HMAC_Update(ctx, (uint8_t*)&user_data->mnonce, sizeof(user_data->mnonce)) != 1)
+            break;
+        if (HMAC_Final(ctx, (uint8_t*)final_meas, &MeasurementLength) != 1)  // size = 32
+            break;
+
+        cmd_ret = STATUS_SUCCESS;
+    } while (0);
+
+    HMAC_CTX_free(ctx);
     return cmd_ret;
 }

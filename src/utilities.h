@@ -52,5 +52,11 @@ void GenRandomBytes( void *bytes, size_t numBytes );
 // Verify read/write access to an area of memory. Used to confirm TMR release.
 bool VerifyAccess( uint8_t *buf, size_t len );
 
+// Converts a string of ascii-encoded hex bytes into a Hex array
+// Ex. To generate the string, do printf("%02x", myArray) will generate
+//     "0123456ACF" and this function will put it back into an array
+// This function is expecting the input string to be an even number of elements
+//      not including the null terminator
+bool StrToArray(std::string in_string, uint8_t *array, uint32_t array_size);
 
 #endif /* utilities_h */

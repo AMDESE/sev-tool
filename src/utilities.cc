@@ -76,3 +76,25 @@ bool VerifyAccess( uint8_t *buf, size_t len )
     delete[] master;
     return ret;
 }
+
+bool StrToArray(std::string in_string, uint8_t *array, uint32_t array_size)
+{
+    std::string substring = "";
+
+    if(array_size < in_string.size() / 2) {
+        return false;
+    }
+
+    for(size_t i = 0; i < in_string.size()/2; i++) {
+        substring = in_string.substr(i*2, 2);
+        array[i] = (uint8_t)strtol(substring.c_str(), NULL, 16);
+    }
+
+    // printf("\nSTRING TO ARRAY: ");
+    // for(size_t i = 0; i < array_size; i++) {
+    //     printf("%02x", array[i]);
+    // }
+    // printf("\n");
+
+    return true;
+}

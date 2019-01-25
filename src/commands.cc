@@ -16,7 +16,6 @@
 
 #include "commands.h"
 #include "sevcert.h"
-#include "sevcore.h"
 #include <linux/types.h>
 #include <asm/ioctl.h>      // Can take this out when figure out how to call SEV_ISSUE_CMD
 #include <stdio.h>          // printf
@@ -206,6 +205,50 @@ SEV_ERROR_CODE Command::get_id()
         }
         printf("\n");
     }
+
+    return cmd_ret;
+}
+
+// ------------------------------------- //
+// ---- Non-Linux (Custom) commands ---- //
+// ------------------------------------- //
+
+SEV_ERROR_CODE Command::calc_measurement(measurement_t *user_data)
+{
+    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
+    HMACSHA256 final_meas;
+
+    cmd_ret = gSEVDevice.calc_measurement(user_data, &final_meas);
+
+    // Print input args for user
+    printf("Input Arguments:\n");
+    printf("   Context: %02x\n", user_data->meas_ctx);
+    printf("   Api Major: %02x\n", user_data->api_major);
+    printf("   Api Minor: %02x\n", user_data->api_minor);
+    printf("   Build ID: %02x\n", user_data->build_id);
+    printf("   Policy: %02x\n", user_data->policy);
+    printf("   Digest: ");
+    for(size_t i = 0; i < sizeof(user_data->digest); i++) {
+        printf("%02x", user_data->digest[i]);
+    }
+    printf("\n   MNonce: ");
+    for(size_t i = 0; i < sizeof(user_data->mnonce); i++) {
+        printf("%02x", user_data->mnonce[i]);
+    }
+    printf("\n   TIK: ");
+    for(size_t i = 0; i < sizeof(user_data->tik); i++) {
+        printf("*");
+    }
+    printf("\n\n");
+
+    // Print output
+    printf("Output Measurement:\n");
+    if(cmd_ret == STATUS_SUCCESS) {
+        for(size_t i = 0; i < sizeof(final_meas); i++) {
+            printf("%02x", final_meas[i]);
+        }
+    }
+    printf("\n");
 
     return cmd_ret;
 }

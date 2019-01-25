@@ -18,6 +18,7 @@
 #define commands_h
 
 #include "sevapi.h"
+#include "sevcore.h"
 #include "x509cert.h"
 #include "linux/psp-sev.h"
 
@@ -37,6 +38,8 @@ public:
     SEV_ERROR_CODE pdh_cert_export(void);
     SEV_ERROR_CODE pek_cert_import(void);
     SEV_ERROR_CODE get_id(void);
+
+    SEV_ERROR_CODE calc_measurement(measurement_t *user_data);
 };
 
 #endif /* sevcert_h */
