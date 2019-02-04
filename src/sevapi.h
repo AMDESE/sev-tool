@@ -308,7 +308,7 @@ typedef struct __attribute__ ((__packed__)) SEV_INIT_CMD_BUF
 {
     uint32_t    Options;        // enum SEV_OPTIONS
     uint32_t    Reserved;
-    uint64_t    TMRPhysAddr;    // 1MB alligned. Ignored if CONFIG_ES is 0
+    uint64_t    TMRPhysAddr;    // 1MB aligned. Ignored if CONFIG_ES is 0
     uint32_t    TMRLength;      // Ignored if CONFIG_ES is 0
 } SEV_INIT_CMD_BUF;
 
