@@ -15,7 +15,6 @@
  * ************************************************************************/
 
 #include "sevcert.h"
-#include "utilities.h"
 #include "crypto/rsa/rsa_locl.h"    // Needed to access internals of struct rsa_st. RSA_pubKey->n
 #include "crypto/ec/ec_lcl.h"       // Needed to access internals of struct ECDSA_SIG_st
 #include <cstring>                  // memset
@@ -39,7 +38,7 @@ void SEVCert::X509CertToSEVCert(const SEV_CERT *SEVCert, X509_CERT *X509Cert)
 // If outStr is passed in, fill up the string, else prints to std::out
 void PrintCertReadable(SEV_CERT *cert, std::string& outStr)
 {
-    char out[sizeof(SEV_CERT)*3+500];     // TODO: 500 Extra chars for text
+    char out[sizeof(SEV_CERT)*3+500];   // 2 chars per byte + 1 spaces + ~500 extra chars for text
 
     sprintf(out, "%-15s%04x\n", "Version:", cert->Version);           // uint32_t
     sprintf(out+strlen(out), "%-15s%04x\n", "ApiMajor:", cert->ApiMajor);         // uint8_t
@@ -48,21 +47,21 @@ void PrintCertReadable(SEV_CERT *cert, std::string& outStr)
     sprintf(out+strlen(out), "%-15s%04x\n", "PubkeyAlgo:", cert->PubkeyAlgo);     // uint32_t
     sprintf(out+strlen(out), "%-15s\n", "Pubkey:");                               // SEV_PUBKEY
     for(size_t i = 0; i < (size_t)(sizeof(SEV_PUBKEY)); i++) {  //bytes to uint8
-        sprintf(out+strlen(out), "%02X ", ((uint8_t*)&cert->Pubkey)[i] );
+        sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->Pubkey)[i] );
     }
     sprintf(out+strlen(out), "\n");
     sprintf(out+strlen(out), "%-15s%04x\n", "Sig1Usage:", cert->Sig1Usage);       // uint32_t
     sprintf(out+strlen(out), "%-15s%04x\n", "Sig1Algo:", cert->Sig1Algo);         // uint32_t
     sprintf(out+strlen(out), "%-15s\n", "Sig1:");                                 // SEV_SIG
     for(size_t i = 0; i < (size_t)(sizeof(SEV_SIG)); i++) {     //bytes to uint8
-        sprintf(out+strlen(out), "%02X ", ((uint8_t*)&cert->Sig1)[i] );
+        sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->Sig1)[i] );
     }
     sprintf(out+strlen(out), "\n");
     sprintf(out+strlen(out), "%-15s%04x\n", "Sig2Usage:", cert->Sig2Usage);       // uint32_t
     sprintf(out+strlen(out), "%-15s%04x\n", "Sig2Algo:", cert->Sig2Algo);         // uint32_t
     sprintf(out+strlen(out), "%-15s\n", "Sig2:");                                 // SEV_SIG
     for(size_t i = 0; i < (size_t)(sizeof(SEV_SIG)); i++) {     //bytes to uint8
-        sprintf(out+strlen(out), "%02X ", ((uint8_t*)&cert->Sig2)[i] );
+        sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->Sig2)[i] );
     }
     sprintf(out+strlen(out), "\n");
 
@@ -79,7 +78,7 @@ void PrintCertHex(void *cert)
 {
     printf("Printing Cert...\n");
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { //bytes to uint8
-        printf( "%02X ", ((uint8_t*)cert)[i] );
+        printf( "%02X ", ((uint8_t *)cert)[i] );
     }
     printf("\n");
 }
@@ -88,7 +87,7 @@ void PrintCertHex(void *cert)
 // If outStr is passed in, fill up the string, else prints to std::out
 void PrintCertChainBufReadable(void *p, std::string& outStr)
 {
-    char outPEK[50];
+    char outPEK[50];    // Just big enough for string below
     char outOCA[50];
     char outCEK[50];
 
@@ -120,15 +119,15 @@ void PrintCertChainBufHex(void *p)
 {
     printf("PEK Memory: %ld bytes\n", sizeof(SEV_CERT));
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { //bytes to uint8
-        printf( "%02X ", ((uint8_t*)PEKinCertChain(p))[i] );
+        printf( "%02X ", ((uint8_t *)PEKinCertChain(p))[i] );
     }
     printf("\nOCA Memory: %ld bytes\n", sizeof(SEV_CERT));
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { //bytes to uint8
-        printf( "%02X ", ((uint8_t*)OCAinCertChain(p))[i] );
+        printf( "%02X ", ((uint8_t *)OCAinCertChain(p))[i] );
     }
     printf("\nCEK Memory: %ld bytes\n", sizeof(SEV_CERT));
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { //bytes to uint8
-        printf( "%02X ", ((uint8_t*)CEKinCertChain(p))[i] );
+        printf( "%02X ", ((uint8_t *)CEKinCertChain(p))[i] );
     }
     printf("\n");
 }
@@ -149,7 +148,7 @@ bool SEVCert::CalcHashDigest(const SEV_CERT *Cert, uint32_t PubkeyAlgo, uint32_t
                 break;
             if (SHA256_Update(&ctx256, Cert, PubKeyOffset) != 1)
                 break;
-            if (SHA256_Final((uint8_t*)shaDigest256, &ctx256) != 1)  // size = 32
+            if (SHA256_Final((uint8_t *)shaDigest256, &ctx256) != 1)  // size = 32
                 break;
         }
         else if( (PubkeyAlgo == SEVSigAlgoRSASHA384) ||
@@ -158,7 +157,7 @@ bool SEVCert::CalcHashDigest(const SEV_CERT *Cert, uint32_t PubkeyAlgo, uint32_t
                 break;
             if (SHA384_Update(&ctx384, Cert, PubKeyOffset) != 1)
                 break;
-            if (SHA384_Final((uint8_t*)shaDigest384, &ctx384) != 1)  // size = 32
+            if (SHA384_Final((uint8_t *)shaDigest384, &ctx384) != 1)  // size = 32
                 break;
         }
         // Don't calculate for ECDH
@@ -225,15 +224,15 @@ bool SEVCert::SignWithKey( uint32_t Version, uint32_t PubKeyUsage, uint32_t PubK
 
             uint32_t sigLen = sizeof(mChildCert.Sig1.RSA);
             if(Sig1Algo == SEVSigAlgoRSASHA256) {
-                if(RSA_sign(NID_sha256, shaDigest256, sizeof(shaDigest256), (uint8_t*)&mChildCert.Sig1.RSA, &sigLen, privRSAKey) != 1)
+                if(RSA_sign(NID_sha256, shaDigest256, sizeof(shaDigest256), (uint8_t *)&mChildCert.Sig1.RSA, &sigLen, privRSAKey) != 1)
                     break;
-                if(RSA_verify(NID_sha256, shaDigest256, sizeof(shaDigest256), (uint8_t*)&mChildCert.Sig1.RSA, sigLen, privRSAKey) != 1)
+                if(RSA_verify(NID_sha256, shaDigest256, sizeof(shaDigest256), (uint8_t *)&mChildCert.Sig1.RSA, sigLen, privRSAKey) != 1)
                     break;
             }
             else if(Sig1Algo == SEVSigAlgoRSASHA384) {
-                if(RSA_sign(NID_sha384, shaDigest384, sizeof(shaDigest384), (uint8_t*)&mChildCert.Sig1.RSA, &sigLen, privRSAKey) != 1)
+                if(RSA_sign(NID_sha384, shaDigest384, sizeof(shaDigest384), (uint8_t *)&mChildCert.Sig1.RSA, &sigLen, privRSAKey) != 1)
                     break;
-                if(RSA_verify(NID_sha384, shaDigest384, sizeof(shaDigest384), (uint8_t*)&mChildCert.Sig1.RSA, sigLen, privRSAKey) != 1)
+                if(RSA_verify(NID_sha384, shaDigest384, sizeof(shaDigest384), (uint8_t *)&mChildCert.Sig1.RSA, sigLen, privRSAKey) != 1)
                     break;
             }
         }
@@ -408,7 +407,7 @@ SEV_ERROR_CODE SEVCert::ValidateSignature(const SEV_CERT *ChildCert,
                 // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 printf("WARNING: You are using untested code in"
                     "ValidateSignature for RSA cert type!\n");
-                // if( RSA_verify(NID_sha256, shaDigest, sizeof(shaDigest), (uint8_t*)&ParentCert->Sig1.RSA,
+                // if( RSA_verify(NID_sha256, shaDigest, sizeof(shaDigest), (uint8_t *)&ParentCert->Sig1.RSA,
                 //                sizeof(SEV_RSA_SIG), EVP_PKEY_get1_RSA(SigningKey[i])) != 1 ) {
                 // }
                 continue;

@@ -14,7 +14,6 @@
  * limitations under the License.
  * ************************************************************************/
 
-#include "sevapi.h"
 #include "utilities.h"
 #include <climits>
 #include <fstream>

@@ -14,73 +14,12 @@
  * limitations under the License.
  * ************************************************************************/
 
-#include "commands.h"
-#include "sevcore.h"    // for measurement_t. //todo remove?
-#include "utilities.h"
-#include <cstring>  // memcpy
-#include <getopt.h>
+#include "commands.h"  // has measurement_t
+#include "utilities.h" // for StrToArray
+#include <cstring>     // memcpy
+#include <getopt.h>    // for getopt_long
 #include <stdio.h>
 #include <string>
-#include <unistd.h> // getopt
-
-static std::string DisplayBuildInfo()
-{
-    sev_user_data_status status_data;
-    int cmd_ret = ERROR_UNSUPPORTED;
-
-    std::string api_major_ver = "API_Major: xxx";
-    std::string api_minor_ver = "API_Minor: xxx";
-    std::string build_id_ver  = "BuildID: xxx";
-
-    cmd_ret = gSEVDevice.platform_status(&status_data);
-    if (cmd_ret != STATUS_SUCCESS)
-        return "";
-
-    char MajorBuf[4], MinorBuf[4], BuildIDBuf[4];          // +1 for Null char
-    sprintf(MajorBuf, "%d", status_data.api_major);
-    sprintf(MinorBuf, "%d", status_data.api_minor);
-    sprintf(BuildIDBuf, "%d", status_data.build);
-    api_major_ver.replace(11, 3, MajorBuf);
-    api_minor_ver.replace(11, 3, MinorBuf);
-    build_id_ver.replace(9, 3, BuildIDBuf);
-
-    return api_major_ver + ", " + api_minor_ver + ", " + build_id_ver;
-}
-
-static void sysinfo()
-{
-    std::string cmd = "";
-    std::string output = "";
-
-    printf("-------------------------System Info-------------------------");
-
-    // Exec bash commands to get info on user's platform and append to the output string
-    cmd = "echo -n 'Hostname: '; hostname";
-    ExecuteSystemCommand(cmd, &output);
-    cmd = "echo -n 'BIOS Version: '; dmidecode -s bios-version";
-    ExecuteSystemCommand(cmd, &output);
-    cmd = "echo -n 'BIOS Release Date: '; dmidecode -s bios-release-date";
-    ExecuteSystemCommand(cmd, &output);
-    cmd = "echo -n 'SMT/Multi-Threading Status Per Socket: \n'; lscpu | grep -E \"^CPU\\(s\\):|Thread\\(s\\) per core|Core\\(s\\) per socket|Socket\\(s\\)\"";
-    ExecuteSystemCommand(cmd, &output);
-    cmd = "echo -n 'Processor Frequency (all sockets): \n'; dmidecode -s processor-frequency";
-    ExecuteSystemCommand(cmd, &output);
-    cmd = "echo -n 'Operating System: '; cat /etc/os-release | grep \"PRETTY_NAME=\" | sed 's/.*=//'";        // cat /etc/issue
-    ExecuteSystemCommand(cmd, &output);
-    cmd = "echo -n 'Kernel Version: '; uname -r";
-    ExecuteSystemCommand(cmd, &output);
-    cmd = "echo -n 'Git Commit #: '; cat \"../.git/refs/heads/master\"";
-    ExecuteSystemCommand(cmd, &output);
-
-    // Print results of all ExecuteSystemCommand calls
-    printf("\n%s", output.c_str());
-
-    std::string BuildInfo = DisplayBuildInfo();
-    printf("Firmware Version: %s\n", BuildInfo.c_str());
-
-    printf("-------------------------------------------------------------\n\n");
-}
-
 
 char helpArray[] = "The following commands are supported:\n" \
                    " sevtool -[global opts] --[command] [command opts]\n" \
@@ -112,7 +51,7 @@ char helpArray[] = "The following commands are supported:\n" \
                    ;
 
 /* Flag set by '--verbose' */
-static int verbose_flag = 0;        // TODO. --brief is broken
+static int verbose_flag = 0;
 
 static struct option long_options[] =
 {
@@ -131,7 +70,7 @@ static struct option long_options[] =
     {"get_id",               no_argument,       0, 'j'},
     {"calc_measurement",     required_argument, 0, 'k'},
     {"set_self_owned",       no_argument,       0, 'l'},
-    {"set_externally_owned", no_argument,       0, 'm'},
+    {"set_externally_owned", required_argument, 0, 'm'},
 
     {"help",                 no_argument,       0, 'H'},
     {"sysinfo",              no_argument,       0, 'I'},
@@ -145,7 +84,7 @@ int main(int argc, char** argv)
     int option_index = 0;   /* getopt_long stores the option index here. */
     std::string output_folder = "";
 
-    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
+    int cmd_ret = 0xFFFF;
     Command cmd;
 
     while ((c = getopt_long (argc, argv, "hio:", long_options, &option_index)) != -1)
@@ -154,13 +93,12 @@ int main(int argc, char** argv)
             case 'h':
             case 'H': {
                 printf("%s\n", helpArray);
-                cmd_ret = STATUS_SUCCESS;
+                cmd_ret = 0;
                 break;
             }
             case 'i':
             case 'I': {
-                sysinfo();  // Display system info
-                cmd_ret = STATUS_SUCCESS;
+                cmd_ret = cmd.sysinfo();  // Display system info
                 break;
             }
             case 'o':
@@ -222,9 +160,9 @@ int main(int argc, char** argv)
                 user_data.api_minor = (uint8_t)strtol(argv[optind++], NULL, 16);
                 user_data.build_id  = (uint8_t)strtol(argv[optind++], NULL, 16);
                 user_data.policy    = (uint32_t)strtol(argv[optind++], NULL, 16);
-                StrToArray(std::string(argv[optind++]), (uint8_t*)&user_data.digest, sizeof(user_data.digest));
-                StrToArray(std::string(argv[optind++]), (uint8_t*)&user_data.mnonce, sizeof(user_data.mnonce));
-                StrToArray(std::string(argv[optind++]), (uint8_t*)&user_data.tik,    sizeof(user_data.tik));
+                StrToArray(std::string(argv[optind++]), (uint8_t *)&user_data.digest, sizeof(user_data.digest));
+                StrToArray(std::string(argv[optind++]), (uint8_t *)&user_data.mnonce, sizeof(user_data.mnonce));
+                StrToArray(std::string(argv[optind++]), (uint8_t *)&user_data.tik,    sizeof(user_data.tik));
                 cmd_ret = cmd.calc_measurement(output_folder, verbose_flag, &user_data);
                 break;
             }
@@ -244,6 +182,11 @@ int main(int argc, char** argv)
                 cmd_ret = cmd.set_externally_owned(oca_priv_key_file, oca_cert_file);
                 break;
             }
+            case 0:
+            case 1 : {
+                // Verbose/brief
+                break;
+            }
             default: {
                 fprintf(stderr, "Unrecognised option: -%c\n", optopt);
                 break;
@@ -251,9 +194,9 @@ int main(int argc, char** argv)
         }
     }
 
-    if(cmd_ret == STATUS_SUCCESS)
+    if(cmd_ret == 0)
         printf("\nCommand Successful\n");
-    else if(cmd_ret == ERROR_UNSUPPORTED)
+    else if(cmd_ret == 0xFFFF)
         printf("\nCommand not supported/recognized. Possibly bad formatting\n");
     else
         printf("\nCommand Unsuccessful: 0x%02x\n", cmd_ret);

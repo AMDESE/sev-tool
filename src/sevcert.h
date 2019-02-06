@@ -19,7 +19,6 @@
 
 #include "sevapi.h"
 #include "x509cert.h"
-#include "linux/psp-sev.h"
 #include <string>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>

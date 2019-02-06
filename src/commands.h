@@ -17,10 +17,8 @@
 #ifndef commands_h
 #define commands_h
 
-#include "sevapi.h"
-#include "sevcore.h"
-#include "x509cert.h"
-#include "linux/psp-sev.h"
+#include "sevapi.h"         // for HMACSHA256, Nonce128, AES128Key
+#include <openssl/sha.h>    // for SHA256_DIGEST_LENGTH
 #include <string>
 
 #define PEK_CSR_HEX_FILENAME            "pek_csr_out.cert"
@@ -33,27 +31,43 @@
 #define GET_ID_S2_FILENAME              "getid_s2_out.txt"
 #define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.txt"
 
+#define LAUNCH_MEASURE_CTX 0x4
+struct measurement_t {
+    uint8_t  meas_ctx;  // LAUNCH_MEASURE_CTX
+    uint8_t  api_major;
+    uint8_t  api_minor;
+    uint8_t  build_id;
+    uint32_t policy;    // SEV_POLICY
+    uint8_t digest[SHA256_DIGEST_LENGTH];   // gctx_ld
+    Nonce128 mnonce;
+    AES128Key tik;
+};
+
 class Command {
+private:
+    int calculate_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
 
 public:
     Command() {};
     ~Command() {};
 
-    SEV_ERROR_CODE factory_reset(void);
-    SEV_ERROR_CODE platform_status(void);
-    SEV_ERROR_CODE pek_gen(void);
-    SEV_ERROR_CODE pek_csr(std::string& output_folder, int verbose_flag);
-    SEV_ERROR_CODE pdh_gen(void);
-    SEV_ERROR_CODE pdh_cert_export(std::string& output_folder, int verbose_flag);
-    SEV_ERROR_CODE pek_cert_import(std::string& oca_priv_key_file,
-                                   std::string& oca_cert_file);
-    SEV_ERROR_CODE get_id(std::string& output_folder, int verbose_flag);
+    int factory_reset(void);
+    int platform_status(void);
+    int pek_gen(void);
+    int pek_csr(std::string& output_folder, int verbose_flag);
+    int pdh_gen(void);
+    int pdh_cert_export(std::string& output_folder, int verbose_flag);
+    int pek_cert_import(std::string& oca_priv_key_file,
+                                    std::string& oca_cert_file);
+    int get_id(std::string& output_folder, int verbose_flag);
 
-    SEV_ERROR_CODE calc_measurement(std::string& output_folder, int verbose_flag,
+    // Non-ioctl (custom) commands
+    int sysinfo();
+    int calc_measurement(std::string& output_folder, int verbose_flag,
                                     measurement_t *user_data);
-    SEV_ERROR_CODE set_self_owned(void);
-    SEV_ERROR_CODE set_externally_owned(std::string& oca_priv_key_file,
+    int set_self_owned(void);
+    int set_externally_owned(std::string& oca_priv_key_file,
                                         std::string& oca_cert_file);
 };
 
-#endif /* sevcert_h */
+#endif /* commands_h */

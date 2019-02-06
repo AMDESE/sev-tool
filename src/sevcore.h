@@ -14,20 +14,13 @@
  * limitations under the License.
  * ************************************************************************/
 
-#ifndef sevcore_h
-#define sevcore_h
-
-// This file abstracts sevapi.h in to C++ classes. The implementation is
-// closely tied to the special SEV FW test driver. Hopefully, porting the
-// entire tool to a new OS with a different driver requires only
-// changing this file and the corresponding .cc file.
+#ifndef sevcore_linux_h
+#define sevcore_linux_h
 
 // Class SEVDevice is for the SEV "device", as manifested by the special
 // SEV FW test driver. struct ioctl_cmd is also defined by that driver.
 
-#include "sevapi.h"
-#include "linux/psp-sev.h"
-#include <openssl/sha.h>  // For SHA256_DIGEST_LENGTH
+#include "sevcert.h"
 #include <cstddef>      // For size_t
 #include <cstring>      // For memcmp
 #include <stdio.h>
@@ -43,68 +36,48 @@
 #define BAD_DEVICE_TYPE ((uint32_t)~0)
 #define BAD_FAMILY_MODEL ((uint32_t)~0)
 
-// Command list
-typedef enum COMMAND_CODE {
-    CMD_FACTORY_RESET    = 0x00,
-    CMD_PLATFORM_STATUS  = 0x01,
-    CMD_PEK_GEN          = 0x02,
-    CMD_PEK_CSR          = 0x03,
-    CMD_PDH_GEN          = 0x04,
-    CMD_PDH_CERT_EXPORT  = 0x05,
-    CMD_PEK_CERT_IMPORT  = 0x06,
-    CMD_GET_ID           = 0x07,
-
-    CMD_CALC_MEASUREMENT = 0x08,
-    CMD_SET_SELF_OWNED   = 0x09,
-    CMD_SET_EXT_OWNED    = 0x0A,
-
-    CMD_MAX,
-} COMMAND_CODE;
-
-#define LAUNCH_MEASURE_CTX 0x4
-struct measurement_t {
-    uint8_t  meas_ctx;  // LAUNCH_MEASURE_CTX
-    uint8_t  api_major;
-    uint8_t  api_minor;
-    uint8_t  build_id;
-    uint32_t policy;    // SEV_POLICY
-    uint8_t digest[SHA256_DIGEST_LENGTH];   // gctx_ld
-    Nonce128 mnonce;
-    AES128Key tik;
-};
+// Platform Status Buffer flags param was split up into owner/ES in API v0.17
+#define PLAT_STAT_OWNER_OFFSET    0
+#define PLAT_STAT_CONFIGES_OFFSET 8
+#define PLAT_STAT_OWNER_MASK      (1U << PLAT_STAT_OWNER_OFFSET)
+#define PLAT_STAT_ES_MASK         (1U << PLAT_STAT_CONFIGES_OFFSET)
 
 
 // Class to access the special SEV FW API test suite driver.
 class SEVDevice {
 private:
     int mFd;
-    bool validate_pek_csr(SEV_CERT *csr);
-    int get_platform_owner(sev_user_data_status* data);
-    int get_platform_es(sev_user_data_status* data);
+    int get_platform_owner(void* data);
+    int get_platform_es(void* data);
+    bool validate_pek_csr(SEV_CERT *PEKcsr);
 
 public:
     SEVDevice();
     ~SEVDevice();
 
     inline int GetFD(void) { return mFd; }
-    int sev_ioctl(COMMAND_CODE cmd, void *data, SEV_ERROR_CODE *cmd_ret);
+    int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
-    SEV_ERROR_CODE factory_reset(void);
-    SEV_ERROR_CODE platform_status(sev_user_data_status *data);
-    SEV_ERROR_CODE pek_gen(void);
-    SEV_ERROR_CODE pek_csr(sev_user_data_pek_csr *data, void *PEKMem, SEV_CERT *csr);
-    SEV_ERROR_CODE pdh_gen(void);
-    SEV_ERROR_CODE pdh_cert_export(sev_user_data_pdh_cert_export *data,
+    // Format for below input variables:
+    // data is a uint8_t pointer to an empty buffer the size of the cmd_buffer
+    // All other variables are specific input/output variables for that command
+    // Each function sets the params in data to the input/output variables of the function
+    int factory_reset(void);
+    int platform_status(uint8_t *data);
+    int pek_gen(void);
+    int pek_csr(uint8_t *data, void *PEKMem, SEV_CERT *csr);
+    int pdh_gen(void);
+    int pdh_cert_export(uint8_t *data,
                                    void *PDHCertMem, void *CertChainMem);
-    SEV_ERROR_CODE pek_cert_import(sev_user_data_pek_cert_import *data,
+    int pek_cert_import(uint8_t *data,
                                    SEV_CERT *csr,
                                    std::string& oca_priv_key_file,
                                    std::string& oca_cert_file);
-    SEV_ERROR_CODE get_id(sev_user_data_get_id *data);
+    int get_id(void *data, void *IDMem, uint32_t id_length = 0);
 
-    SEV_ERROR_CODE calc_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
-    SEV_ERROR_CODE set_self_owned(void);
-    SEV_ERROR_CODE set_externally_owned(std::string& oca_priv_key_file,
+    int sysinfo();
+    int set_self_owned(void);
+    int set_externally_owned(std::string& oca_priv_key_file,
                                         std::string& oca_cert_file);
 };
 
@@ -113,4 +86,4 @@ public:
 // Easiest to make it a global
 extern SEVDevice gSEVDevice;
 
-#endif /* sevcore_h */
+#endif /* sevcore_linux_h */
