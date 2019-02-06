@@ -30,8 +30,10 @@
 #include <openssl/pem.h>
 
 // Public global functions
-void PrintCert(SEV_CERT *cert);
+static std::string empty = "NULL";
+void PrintCertReadable(SEV_CERT *cert, std::string& outStr = empty);
 void PrintCertHex(void *cert);
+void PrintCertChainBufReadable(void *p, std::string& outStr = empty);
 void PrintCertChainBufHex(void *p);
 
 class SEVCert {

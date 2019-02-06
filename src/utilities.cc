@@ -48,15 +48,47 @@ bool ExecuteSystemCommand(const std::string cmd, std::string *log)
 size_t ReadFile(const std::string& filename, void *buffer, size_t len)
 {
     std::ifstream file(filename, std::ios::binary);
-    if (len > INT_MAX)
+    if (len > INT_MAX) {
+        printf("ReadFile Error: Input length too long\n");
         return 0;
+    }
     std::streamsize slen = (std::streamsize)len;
 
-    if (!file.is_open())
+    if (!file.is_open()) {
+        printf("Readfile Error: Could not open file. Ensure directory exists\n");
         return 0;
+    }
 
     file.read((char *)buffer, slen);
-    return (size_t)file.gcount();
+    size_t count = (size_t)file.gcount();
+    file.close();
+
+    return count;
+}
+
+// Writes len bytes from the beginning of a file. Does NOT append
+// Returns number of bytes written, or 0 if the file couldn't be opened.
+// ostream CANNOT create a folder, so it has to exist already, to succeed
+size_t WriteFile(const std::string& filename, const void *buffer, size_t len)
+{
+    std::ofstream file(filename, std::ofstream::out);
+    if (len > INT_MAX) {
+        printf("WriteFile Error: Input length too long\n");
+        return 0;
+    }
+    std::streamsize slen = (std::streamsize)len;
+
+    if (!file.is_open()) {
+        printf("WriteFile Error: Could not open/create file. Ensure directory exists\n");
+        return 0;
+    }
+    printf("Writing to file: %s\n", filename.c_str());
+
+    file.write((char *)buffer, slen);
+    size_t count = (size_t)file.tellp();
+    file.close();
+
+    return count;
 }
 
 void GenRandomBytes( void *bytes, size_t numBytes )

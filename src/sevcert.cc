@@ -21,6 +21,8 @@
 #include <cstring>                  // memset
 #include <stdio.h>
 #include <stdexcept>
+#include <fstream>
+#include <stdio.h>
 
 // Converts X509_CERTs to SEV_CERTs
 void SEVCert::SEVCertToX509Cert(const X509_CERT *X509Cert, SEV_CERT *SEVCert)
@@ -34,35 +36,45 @@ void SEVCert::X509CertToSEVCert(const SEV_CERT *SEVCert, X509_CERT *X509Cert)
 
 }
 
-void PrintCert(SEV_CERT *cert)
+// If outStr is passed in, fill up the string, else prints to std::out
+void PrintCertReadable(SEV_CERT *cert, std::string& outStr)
 {
-    printf("Printing Cert...\n");
-    printf("%-15s%04x\n", "Version:", cert->Version);           // uint32_t
-    printf("%-15s%04x\n", "ApiMajor:", cert->ApiMajor);         // uint8_t
-    printf("%-15s%04x\n", "ApiMinor:", cert->ApiMinor);         // uint8_t
-    printf("%-15s%04x\n", "PubkeyUsage:", cert->PubkeyUsage);   // uint32_t
-    printf("%-15s%04x\n", "PubkeyAlgo:", cert->PubkeyAlgo);     // uint32_t
-    printf("%-15s\n", "Pubkey:");                               // SEV_PUBKEY
+    char out[sizeof(SEV_CERT)*3+500];     // TODO: 500 Extra chars for text
+
+    sprintf(out, "%-15s%04x\n", "Version:", cert->Version);           // uint32_t
+    sprintf(out+strlen(out), "%-15s%04x\n", "ApiMajor:", cert->ApiMajor);         // uint8_t
+    sprintf(out+strlen(out), "%-15s%04x\n", "ApiMinor:", cert->ApiMinor);         // uint8_t
+    sprintf(out+strlen(out), "%-15s%04x\n", "PubkeyUsage:", cert->PubkeyUsage);   // uint32_t
+    sprintf(out+strlen(out), "%-15s%04x\n", "PubkeyAlgo:", cert->PubkeyAlgo);     // uint32_t
+    sprintf(out+strlen(out), "%-15s\n", "Pubkey:");                               // SEV_PUBKEY
     for(size_t i = 0; i < (size_t)(sizeof(SEV_PUBKEY)); i++) {  //bytes to uint8
-        printf( "%02X ", ((uint8_t*)&cert->Pubkey)[i] );
+        sprintf(out+strlen(out), "%02X ", ((uint8_t*)&cert->Pubkey)[i] );
     }
-    printf("\n");
-    printf("%-15s%04x\n", "Sig1Usage:", cert->Sig1Usage);       // uint32_t
-    printf("%-15s%04x\n", "Sig1Algo:", cert->Sig1Algo);         // uint32_t
-    printf("%-15s\n", "Sig1:");                                 // SEV_SIG
+    sprintf(out+strlen(out), "\n");
+    sprintf(out+strlen(out), "%-15s%04x\n", "Sig1Usage:", cert->Sig1Usage);       // uint32_t
+    sprintf(out+strlen(out), "%-15s%04x\n", "Sig1Algo:", cert->Sig1Algo);         // uint32_t
+    sprintf(out+strlen(out), "%-15s\n", "Sig1:");                                 // SEV_SIG
     for(size_t i = 0; i < (size_t)(sizeof(SEV_SIG)); i++) {     //bytes to uint8
-        printf( "%02X ", ((uint8_t*)&cert->Sig1)[i] );
+        sprintf(out+strlen(out), "%02X ", ((uint8_t*)&cert->Sig1)[i] );
     }
-    printf("\n");
-    printf("%-15s%04x\n", "Sig2Usage:", cert->Sig2Usage);       // uint32_t
-    printf("%-15s%04x\n", "Sig2Algo:", cert->Sig2Algo);         // uint32_t
-    printf("%-15s\n", "Sig2:");                                 // SEV_SIG
+    sprintf(out+strlen(out), "\n");
+    sprintf(out+strlen(out), "%-15s%04x\n", "Sig2Usage:", cert->Sig2Usage);       // uint32_t
+    sprintf(out+strlen(out), "%-15s%04x\n", "Sig2Algo:", cert->Sig2Algo);         // uint32_t
+    sprintf(out+strlen(out), "%-15s\n", "Sig2:");                                 // SEV_SIG
     for(size_t i = 0; i < (size_t)(sizeof(SEV_SIG)); i++) {     //bytes to uint8
-        printf( "%02X ", ((uint8_t*)&cert->Sig2)[i] );
+        sprintf(out+strlen(out), "%02X ", ((uint8_t*)&cert->Sig2)[i] );
     }
-    printf("\n");
+    sprintf(out+strlen(out), "\n");
+
+    if(outStr == "NULL") {
+        printf("%s\n", out);
+    }
+    else {
+        outStr += out;
+    }
 }
 
+// To print this to a file, just use WriteFile directly
 void PrintCertHex(void *cert)
 {
     printf("Printing Cert...\n");
@@ -73,6 +85,37 @@ void PrintCertHex(void *cert)
 }
 
 // Prints out the PDK, OCA, and CEK
+// If outStr is passed in, fill up the string, else prints to std::out
+void PrintCertChainBufReadable(void *p, std::string& outStr)
+{
+    char outPEK[50];
+    char outOCA[50];
+    char outCEK[50];
+
+    std::string outStr_local = "";
+
+    sprintf(outPEK, "PEK Memory: %ld bytes\n", sizeof(SEV_CERT));
+    outStr_local += outPEK;
+    PrintCertReadable(((SEV_CERT*)PEKinCertChain(p)), outStr_local);
+
+    sprintf(outOCA, "\nOCA Memory: %ld bytes\n", sizeof(SEV_CERT));
+    outStr_local += outOCA;
+    PrintCertReadable(((SEV_CERT*)OCAinCertChain(p)), outStr_local);
+
+    sprintf(outCEK, "\nCEK Memory: %ld bytes\n", sizeof(SEV_CERT));
+    outStr_local += outCEK;
+    PrintCertReadable(((SEV_CERT*)CEKinCertChain(p)), outStr_local);
+
+    if(outStr == "NULL") {
+        printf("%s\n", outStr_local.c_str());
+    }
+    else {
+        outStr = outStr_local;
+    }
+}
+
+// Prints out the PDK, OCA, and CEK
+// To print this to a file, just use WriteFile directly
 void PrintCertChainBufHex(void *p)
 {
     printf("PEK Memory: %ld bytes\n", sizeof(SEV_CERT));

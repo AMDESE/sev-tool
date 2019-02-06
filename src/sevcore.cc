@@ -279,11 +279,11 @@ SEV_ERROR_CODE SEVDevice::pdh_cert_export(sev_user_data_pdh_cert_export *data,
     return cmd_ret;
 }
 
-// wip dont want to be reading from a file. use opeenssl to generate
-#define SEV_DEFAULT_DIR "../psp-sev-assets/"
-#define OCAPrivateKeyFile SEV_DEFAULT_DIR "oca_key.pem"
-#define OCACertFile SEV_DEFAULT_DIR "oca.cert"
-SEV_ERROR_CODE SEVDevice::pek_cert_import(sev_user_data_pek_cert_import *data, SEV_CERT *PEKcsr)
+// wip dont want to be reading from a file. use openssl to generate
+SEV_ERROR_CODE SEVDevice::pek_cert_import(sev_user_data_pek_cert_import *data,
+                                          SEV_CERT *PEKcsr,
+                                          std::string& oca_priv_key_file,
+                                          std::string& oca_cert_file)
 {
     SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
     int ioctl_ret = -1;
@@ -304,13 +304,13 @@ SEV_ERROR_CODE SEVDevice::pek_cert_import(sev_user_data_pek_cert_import *data, S
         // --------- Sign the CSR --------- //
         SEVCert CSRCert(*PEKcsr);
         CSRCert.SignWithKey(SEV_CERT_MAX_VERSION, SEVUsagePEK, SEVSigAlgoECDSASHA256,
-                         OCAPrivateKeyFile, SEVUsageOCA, SEVSigAlgoECDSASHA256);
+                         oca_priv_key_file, SEVUsageOCA, SEVSigAlgoECDSASHA256);
 
         // Fetch the OCA certificate
         size_t OCACertLength = 0;
-        OCACertLength = ReadFile(OCACertFile, OCACert, sizeof(SEV_CERT));
+        OCACertLength = ReadFile(oca_cert_file, OCACert, sizeof(SEV_CERT));
         if(OCACertLength == 0) {
-            printf("File not found: %s\n", OCACertFile);
+            printf("File not found: %s\n", oca_cert_file.c_str());
             break;
         }
 
@@ -427,7 +427,8 @@ SEV_ERROR_CODE SEVDevice::set_self_owned()
  *       will do its best to set the Platform state to whatever is required to
  *       run each command, but that does not include shutting down Guests to do so.
  */
-SEV_ERROR_CODE SEVDevice::set_externally_owned()
+SEV_ERROR_CODE SEVDevice::set_externally_owned(std::string& oca_priv_key_file,
+                                               std::string& oca_cert_file)
 {
     sev_user_data_status status_data;  // Platform Status
     SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
@@ -453,7 +454,8 @@ SEV_ERROR_CODE SEVDevice::set_externally_owned()
             // Fetch the OCA certificate
             // Submit the signed cert to PEKCertImport
             sev_user_data_pek_cert_import pek_cert_import_data;
-            cmd_ret = pek_cert_import(&pek_cert_import_data, &PEKcsr);
+            cmd_ret = pek_cert_import(&pek_cert_import_data, &PEKcsr,
+                                      oca_priv_key_file, oca_cert_file);
         }
     } while (0);
 

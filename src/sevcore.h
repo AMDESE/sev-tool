@@ -31,6 +31,7 @@
 #include <cstddef>      // For size_t
 #include <cstring>      // For memcmp
 #include <stdio.h>
+#include <string>
 
 #define DEFAULT_SEV_DEVICE     "/dev/sev"
 
@@ -95,12 +96,16 @@ public:
     SEV_ERROR_CODE pdh_gen(void);
     SEV_ERROR_CODE pdh_cert_export(sev_user_data_pdh_cert_export *data,
                                    void *PDHCertMem, void *CertChainMem);
-    SEV_ERROR_CODE pek_cert_import(sev_user_data_pek_cert_import *data, SEV_CERT *csr);
+    SEV_ERROR_CODE pek_cert_import(sev_user_data_pek_cert_import *data,
+                                   SEV_CERT *csr,
+                                   std::string& oca_priv_key_file,
+                                   std::string& oca_cert_file);
     SEV_ERROR_CODE get_id(sev_user_data_get_id *data);
 
     SEV_ERROR_CODE calc_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
     SEV_ERROR_CODE set_self_owned(void);
-    SEV_ERROR_CODE set_externally_owned(void);
+    SEV_ERROR_CODE set_externally_owned(std::string& oca_priv_key_file,
+                                        std::string& oca_cert_file);
 };
 
 

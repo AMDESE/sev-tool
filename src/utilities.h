@@ -46,6 +46,10 @@ bool ExecuteSystemCommand(const std::string cmd, std::string *log);
 // of file or of buffer, whichever is smaller.
 size_t ReadFile(const std::string& filename, void *buffer, size_t len);
 
+// Truncate and write (not append) a file from the beginning
+// Returns number of bytes written
+size_t WriteFile(const std::string& filename, const void *buffer, size_t len);
+
 // Generate some random bytes
 void GenRandomBytes( void *bytes, size_t numBytes );
 
