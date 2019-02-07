@@ -19,11 +19,30 @@
 
 // This file puts in to C/C++ form the definitions from the SEV FW spec.
 // It should remain usable purely from C
-// All SEV API indices are based off SEV API v0.17
+// All SEV API indices are based off of SEV API v0.17
 
 #include <stdint.h>
 
+// ------------------------------- //
+// --- Miscellaneous constants --- //
+// ------------------------------- //
+
+// Maximum size of firmware image
+#define FW_MAX_SIZE 65536
+
+// TMR (Trusted Memory Region) size required for INIT with SEV-ES enabled
+#define SEV_TMR_SIZE (1024*1024)
+
+// Invalid guest handle.
+#define INVALID_GUEST_HANDLE    0
+
+#define INVALID_ASID    0
+
+
 // Chapter 4.3 - Command Identifiers
+/**
+ * SEV commands (each entry stored in a byte).
+ */
 typedef enum SEV_API_COMMANDS
 {
     NO_COMMAND          = 0x0,
@@ -65,25 +84,62 @@ typedef enum SEV_API_COMMANDS
 } SEV_API_COMMAND_CODE;
 
 // Chapter 5.1.2 - Platform State Machine
+/**
+ * SEV Platform state (each entry stored in a byte).
+ *
+ * @UNINIT  - The platform is uninitialized.
+ * @INIT    - The platform is initialized, but not currently managed by any
+ *            guests.
+ * @WORKING - The platform is initialized, and currently managing guests.
+ */
 typedef enum SEV_PLATFORM_STATE
 {
-    PLATFORM_UNINIT     = 0,
-    PLATFORM_INIT       = 1,
-    PLATFORM_WORKING    = 2,
+    PLATFORM_UNINIT		= 0,
+    PLATFORM_INIT		= 1,
+    PLATFORM_WORKING	= 2,
 } SEV_PLATFORM_STATE;
 
 // Chapter 6.1.1 - GSTATE Finite State Machine
+/**
+ * GSTATE Finite State machine status'
+ *
+ * Description:
+ * @UNINIT  - The guest is uninitialized.
+ * @LUPDATE - The guest is currently being launched and plaintext data and VMCB
+ *            save areas are being imported.
+ * @LSECRET - The guest is currently being launched and ciphertext data are
+ *            is being imported.
+ * @RUNNING - The guest is fully launched or migrated in, and not being
+ *            migrated out to another machine.
+ * @SUPDATE - The guest is currently being migrated out to another machine.
+ * @RUPDATE - The guest is currently being migrated from another machine.
+ *
+ * Allowed Guest Commands:
+ * @UNINIT  - LAUNCH_START, RECEIVE_START
+ * @LUPDATE - LAUNCH_UPDATE_DATA, LAUNCH_UPDATE_VMSA, LAUNCH_MEASURE, ACTIVATE,
+ *            DEACTIVATE, DECOMMISSION, GUEST_STATUS
+ * @LSECRET - LAUNCH_SECRET, LAUNCH_FINISH, ACTIVATE, DEACTIVATE, DECOMMISSION,
+ *            GUEST_STATUS
+ * @RUNNING - ACTIVATE, DEACTIVATE, DECOMMISSION, SEND_START, GUEST_STATUS
+ * @SUPDATE - SEND_UPDATE_DATA, SEND_UPDATE_VMSA, SEND_FINISH, ACTIVATE,
+ *            DEACTIVATE, DECOMMISSION, GUEST_STATUS
+ * @RUPDATE - RECEIVE_UDPATE_DATA, RECEIVE_UDPATE_VMSA, RECEIVE_FINISH,
+ *            ACTIVATE, DEACTIVATE, DECOMMISSION, GUEST_STATUS
+ */
 typedef enum SEV_GUEST_STATE
 {
-    GUEST_UNINIT        = 0,
-    GUEST_LUPDATE       = 1,
-    GUEST_LSECRET       = 2,
-    GUEST_RUNNING       = 3,
-    GUEST_SUPDATE       = 4,
-    GUEST_RUPDATE       = 5,
+    GUEST_UNINIT	= 0,
+    GUEST_LUPDATE	= 1,
+    GUEST_LSECRET	= 2,
+    GUEST_RUNNING	= 3,
+    GUEST_SUPDATE	= 4,
+    GUEST_RUPDATE	= 5,
 } SEV_GUEST_STATE;
 
 // Chapter 4.4 - Status Codes
+/**
+ * SEV Error Codes (each entry stored in a byte).
+ */
 typedef enum SEV_ERROR_CODE
 {
     STATUS_SUCCESS                  = 0x00,
@@ -135,6 +191,13 @@ typedef uint8_t IV128[128/8];
 #define SEV_PUBKEY_SIZE             (SEV_RSA_PUBKEY_MAX_BITS/8)
 
 // Appendix C.3.1 Public Key Formats - RSA Public Key
+/**
+ * SEV RSA Public key information.
+ *
+ * @ModulusSize - Size of modulus in bits.
+ * @PubExp      - The public exponent of the public key.
+ * @Modulus     - The modulus of the public key.
+ */
 typedef struct __attribute__ ((__packed__)) SEV_RSA_PUBKEY
 {
     uint32_t    ModulusSize;
@@ -142,6 +205,13 @@ typedef struct __attribute__ ((__packed__)) SEV_RSA_PUBKEY
     uint8_t     Modulus[SEV_RSA_PUBKEY_MAX_BITS/8];
 } SEV_RSA_PUBKEY;
 
+/**
+ * SEV Elliptical Curve algorithm details.
+ *
+ * @SEVECInvalid - Invalid cipher size selected.
+ * @SEVECP256    - 256 bit elliptical curve cipher.
+ * @SEVECP384    - 384 bit elliptical curve cipher.
+ */
 typedef enum SEV_EC {
     SEVECInvalid = 0,
     SEVECP256    = 1,
@@ -149,24 +219,43 @@ typedef enum SEV_EC {
 } SEV_EC;
 
 // Appendix C.3.2: Public Key Formats - ECDSA Public Key
+/**
+ * SEV Elliptical Curve DSA algorithm details.
+ *
+ * @Curve - The SEV Elliptical curve ID.
+ * @QX    - x component of the public point Q.
+ * @QY    - y component of the public point Q.
+ * @RMBZ  - RESERVED. Must be zero!
+ */
 typedef struct __attribute__ ((__packed__)) SEV_ECDSA_PUBKEY
 {
-    uint32_t    Curve;      // SEV_EC
+    uint32_t    Curve;      // SEV_EC as a uint32_t
     uint8_t     QX[SEV_ECDSA_PUBKEY_MAX_BITS/8];
     uint8_t     QY[SEV_ECDSA_PUBKEY_MAX_BITS/8];
     uint8_t     RMBZ[SEV_PUBKEY_SIZE-2*SEV_ECDSA_PUBKEY_MAX_BITS/8-sizeof(uint32_t)];
 } SEV_ECDSA_PUBKEY;
 
 // Appendix C.3.3: Public Key Formats - ECDH Public Key
+/**
+ * SEV Elliptical Curve Diffie Hellman Public Key details.
+ *
+ * @Curve - The SEV Elliptical curve ID.
+ * @QX    - x component of the public point Q.
+ * @QY    - y component of the public point Q.
+ * @RMBZ  - RESERVED. Must be zero!
+ */
 typedef struct __attribute__ ((__packed__)) SEV_ECDH_PUBKEY
 {
-    uint32_t    Curve;      // SEV_EC
+    uint32_t    Curve;      // SEV_EC as a uint32_t
     uint8_t     QX[SEV_ECDH_PUBKEY_MAX_BITS/8];
     uint8_t     QY[SEV_ECDH_PUBKEY_MAX_BITS/8];
     uint8_t     RMBZ[SEV_PUBKEY_SIZE-2*SEV_ECDH_PUBKEY_MAX_BITS/8-sizeof(uint32_t)];
 } SEV_ECDH_PUBKEY;
 
 // Appendix C.4: Public Key Formats
+/**
+ * The SEV Public Key memory slot may hold RSA, ECDSA, or ECDH.
+ */
 typedef union
 {
     SEV_RSA_PUBKEY      RSA;
@@ -175,17 +264,32 @@ typedef union
 } SEV_PUBKEY;
 
 // Appendix C.4: Signature Formats
+/**
+ * SEV Signature may be RSA or ECDSA.
+ */
 #define SEV_RSA_SIG_MAX_BITS        4096
 #define SEV_ECDSA_SIG_COMP_MAX_BITS 576
 #define SEV_SIG_SIZE                (SEV_RSA_SIG_MAX_BITS/8)
 
 // Appendix C.4.1: RSA Signature
+/**
+ * SEV RSA Signature data.
+ *
+ * @S - Signature bits.
+ */
 typedef struct __attribute__ ((__packed__)) SEV_RSA_SIG
 {
     uint8_t     S[SEV_RSA_SIG_MAX_BITS/8];
 } SEV_RSA_SIG;
 
 // Appendix C.4.2: ECDSA Signature
+/**
+ * SEV Elliptical Curve Signature data.
+ *
+ * @R    - R component of the signature.
+ * @S    - S component of the signature.
+ * @RMBZ - RESERVED. Must be zero!
+ */
 typedef struct __attribute__ ((__packed__)) SEV_ECDSA_SIG
 {
     uint8_t     R[SEV_ECDSA_SIG_COMP_MAX_BITS/8];
@@ -193,6 +297,9 @@ typedef struct __attribute__ ((__packed__)) SEV_ECDSA_SIG
     uint8_t     RMBZ[SEV_SIG_SIZE-2*SEV_ECDSA_SIG_COMP_MAX_BITS/8];
 } SEV_ECDSA_SIG;
 
+/**
+ * SEV Signature may be RSA or ECDSA.
+ */
 typedef union
 {
     SEV_RSA_SIG     RSA;
@@ -200,6 +307,9 @@ typedef union
 } SEV_SIG;
 
 // Appendix C.1: USAGE Enumeration
+/**
+ * SEV Usage codes.
+ */
 typedef enum SEV_USAGE {
     SEVUsageARK     = 0x0,
     SEVUsageASK     = 0x13,
@@ -211,6 +321,9 @@ typedef enum SEV_USAGE {
 } SEV_USAGE;
 
 // Appendix C.1: ALGO Enumeration
+/**
+ * SEV Algorithm cipher codes.
+ */
 typedef enum SEV_SIG_ALGO {
     SEVSigAlgoInvalid       = 0x0,
     SEVSigAlgoRSASHA256     = 0x1,
@@ -225,6 +338,24 @@ typedef enum SEV_SIG_ALGO {
 #define SEV_CERT_MAX_SIGNATURES 2       // Max number of sig's
 
 // Appendix C.1: SEV Certificate Format
+/**
+ * SEV Certificate format.
+ *
+ * @Version     - Certificate version, set to 01h.
+ * @ApiMajor    - If PEK, set to API major version, otherwise zero.
+ * @ApiMinor    - If PEK, set to API minor version, otherwise zero.
+ * @Reserved0   - RESERVED, Must be zero!
+ * @Reserved1   - RESERVED, Must be zero!
+ * @PubkeyUsage - Public key usage              (SEV_SIG_USAGE).
+ * @PubkeyAlgo  - Public key algorithm          (SEV_SIG_ALGO).
+ * @Pubkey      - Public Key.
+ * @Sig1Usage   - Key usage of SIG1 signing key (SEV_SIG_USAGE).
+ * @Sig1Algo    - First signature algorithm     (SEV_SIG_ALGO).
+ * @Sig1        - First signature.
+ * @Sig2Usage   - Key usage of SIG2 signing key (SEV_SIG_USAGE).
+ * @Sig2Algo    - Second signature algorithm    (SEV_SIG_ALGO).
+ * @Sig2        - Second signature
+ */
 typedef struct __attribute__ ((__packed__)) SEV_CERT
 {
     uint32_t    Version;        // Certificate Version. Should be 1.
@@ -295,20 +426,40 @@ typedef struct __attribute__ ((__packed__)) AMD_CERT
 // -------------------------------------------------------------------------- //
 // Definition of buffers referred to by the command buffers of SEV API commands
 // -------------------------------------------------------------------------- //
-
-// Values passed in INIT command Options field.
-enum SEV_OPTIONS {
+// Values passed into INIT command Options field
+enum SEV_OPTIONS : uint32_t  {
     // Bit 0 is the SEV-ES bit
     SEV_OPTION_SEV_ES = 1 << 0,
 };
 
-enum SEV_CONFIG {
+// Values returned from PLATFORM_STATUS Config.ES field
+enum SEV_CONFIG : uint32_t  {
     // Bit 0 is the SEV-ES bit
-    SEV_CONFIG_SEV_ES = 1 << 0,
+    SEV_CONFIG_NON_ES = 0 << 0,
+    SEV_CONFIG_ES     = 1 << 0,
 };
+
 
 // Guest policy bits. Used in LAUNCH_START and GUEST_STATUS
 // Chapter 3: Guest Policy Structure
+/**
+ * SEV Guest Policy bits (stored as a bit field struct).
+ *
+ * @nodbg     - Debugging of the guest is disallowed
+ * @noks      - Sharing keys with other guests is disallowed
+ * @es        - SEV-ES is required
+ * @nosend    - Disallow sending of guest to another platform
+ * @domain    - Guest must not be transmitted to another platform
+ *              outside the domain
+ * @sev       - The guest must not be transmitted to another platform
+ *              that is not SEV capable
+ * @api_major - The guest must not be transmitted to another platform
+ *              lower than the specified major version
+ * @api_minor - The guest must not be transmitted to another platform
+ *              lower than the specified minor version
+ * @raw       - The raw unsigned 32 bit value stored in memory at the
+ *              specified location.
+ */
 enum SEV_POLICY : uint32_t {
     SEV_POLICY_NODBG     = 1 << 0,      // 1 disables DBG commands
     SEV_POLICY_NOKS      = 1 << 1,      // 1 disables key sharing
@@ -333,21 +484,38 @@ enum SEV_POLICY : uint32_t {
 #define SEV_POLICY_DEBUG ((SEV_POLICY)(SEV_POLICY_NOKS|SEV_POLICY_DOMAIN| \
     SEV_POLICY_SEV))
 
-// PLATFORM_STATUS Command Sub-Buffer
+/**
+ * PLATFORM_STATUS Command Sub-Buffer
+ * Status of the owner of the platform (each entry stored in one byte).
+ */
 enum SEV_PLATFORM_STATUS_OWNER {
     // Bit 0 is the owner, self or external..
     PLATFORM_STATUS_OWNER_SELF     = 0 << 0,
     PLATFORM_STATUS_OWNER_EXTERNAL = 1 << 0,
 };
 
-// (See SEV_SESSION_BUF)
+/**
+ * Transport encryption and integrity keys
+ * (See SEV_SESSION_BUF)
+ *
+ * @TEK - Transport Encryption Key.
+ * @TIK - Transport Integrity Key.
+ */
 typedef struct __attribute__ ((__packed__)) TEKTIK
 {
     AES128Key   TEK;
     AES128Key   TIK;
 } TEKTIK;
 
-// LAUNCH_START/SEND_START/RECEIVE_START Session Data Buffer
+/**
+ * LAUNCH_START/SEND_START/RECEIVE_START Session Data Buffer
+ *
+ * @Nonce     - An arbitrary 128 bit number.
+ * @WrapTK    - The SEV transport encryption and integrity keys.
+ * @WrapIV    - 128 bit initializer vector.
+ * @WrapMAC   - Session hash message authentication code.
+ * @PolicyMAC - Policy hash message authentication code.
+ */
 typedef struct __attribute__ ((__packed__)) SEV_SESSION_BUF
 {
     Nonce128    Nonce;
@@ -357,14 +525,22 @@ typedef struct __attribute__ ((__packed__)) SEV_SESSION_BUF
     HMACSHA256  PolicyMAC;
 } SEV_SESSION_BUF;
 
-// LAUNCH_MEASURE Measurement Buffer
+/**
+ * LAUNCH_MEASURE Measurement buffer.
+ *
+ * @Measurement - 256 bit hash message authentication code.
+ * @MNonce      - An arbitrary 128 bit number.
+ */
 typedef struct __attribute__ ((__packed__)) SEV_MEASURE_BUF
 {
     HMACSHA256  Measurement;
     Nonce128    MNonce;
 } SEV_MEASURE_BUF;
 
-// LAUNCH_SECRET, SEND_UPDATE_DATA/VMSA, RECEIVE_UPDATE_DATA/VMSA
+/**
+ * LAUNCH_SECRET, SEND_UPDATE_DATA/VMSA, RECEIVE_UPDATE_DATA/VMSA 
+ * HDR Buffer
+ */
 typedef struct __attribute__ ((__packed__)) SEV_HDR_BUF
 {
     uint32_t    Flags;
@@ -372,7 +548,13 @@ typedef struct __attribute__ ((__packed__)) SEV_HDR_BUF
     HMACSHA256  MAC;
 } SEV_HDR_BUF;
 
-// PDH_CERT_EXPORT/SEND_START Platform Certificates Buffer
+/**
+ * PDH_CERT_EXPORT/SEND_START Platform Certificate(s) Chain Buffer
+ *
+ * @PEKCert - Platform Endorsement Key certificate.
+ * @OCACert - Owner Certificate Authority certificate.
+ * @CEKCert - Chip Endorsement Key certificate.
+ */
 typedef struct __attribute__ ((__packed__)) SEV_CERT_CHAIN_BUF
 {
     SEV_CERT    PEKCert;
@@ -392,6 +574,16 @@ typedef struct __attribute__ ((__packed__)) AMD_CERT_CHAIN_BUF
 // -------------------------------------------------------------------------- //
 
 // Chapter 5: Platform Mamanagement API
+/**
+ * SEV initialization command buffer
+ *
+ * @Options     - An SEV_OPTIONS enum value
+ * @Reserved    - Reserved. Must be 0.
+ * @TMRPhysAddr - System physical address to memory region donated by
+ *                Hypervisor for SEV-ES operations. Ignored if SEV-ES
+ *                is disabled.
+ * @TMRLength   - Length of the memory. Ignored if SEV-ES disabled.
+ */
 typedef struct __attribute__ ((__packed__)) SEV_INIT_CMD_BUF
 {
     uint32_t    Options;        // enum SEV_OPTIONS
@@ -408,6 +600,19 @@ typedef struct __attribute__ ((__packed__)) SEV_PLATFORM_RESET_CMD_BUF
 {
 } SEV_PLATFORM_RESET_CMD_BUF;
 
+/**
+ * SEV Platform Status command buffer.
+ *
+ * @ApiMajor             - Major API version
+ * @ApiMinor             - Minor API version
+ * @CurrentPlatformState - Current platform state (SEV_PLATFORM_STATE)
+ * @Owner                - Defines the owner: 0=Self-owned; 1=Externally owned
+ * @Config               - SEV-ES is initialized for the platform when set.
+ *                         Disabled for all guests when not set.
+ * @Reserved             - Reserved. Set to zero.
+ * @BuildID              - Firmware Build ID for this API version.
+ * @GuestCount           - Number of valid guests maintained by the firmware.
+ */
 typedef struct __attribute__ ((__packed__)) SEV_PLATFORM_STATUS_CMD_BUF
 {
     uint8_t     ApiMajor;
@@ -687,21 +892,5 @@ typedef struct __attribute__ ((__packed__)) SEV_DBG_ENCRYPT_CMD_BUF
     uint64_t    DstPAddr;
     uint32_t    Length;
 } SEV_DBG_ENCRYPT_CMD_BUF;
-
-
-// ------------------------------- //
-// --- Miscellaneous constants --- //
-// ------------------------------- //
-
-// Maximum size of firmware image
-#define FW_MAX_SIZE 65536
-
-// TMR (Trusted Memory Region) size required for INIT with SEV-ES enabled
-#define SEV_TMR_SIZE (1024*1024)
-
-// Invalid guest handle.
-#define INVALID_GUEST_HANDLE    0
-
-#define INVALID_ASID    0
 
 #endif /* sevapi_h */
