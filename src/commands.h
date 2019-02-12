@@ -30,6 +30,7 @@
 #define GET_ID_S1_FILENAME              "getid_s1_out.txt"
 #define GET_ID_S2_FILENAME              "getid_s2_out.txt"
 #define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.txt"
+#define CEK_ASK_FILENAME               "cek_ask.cert"
 
 #define LAUNCH_MEASURE_CTX 0x4
 struct measurement_t {
@@ -68,6 +69,7 @@ public:
     int set_self_owned(void);
     int set_externally_owned(std::string& oca_priv_key_file,
                                         std::string& oca_cert_file);
+    int generate_cek_ask(std::string& output_folder);
 };
 
 #endif /* commands_h */

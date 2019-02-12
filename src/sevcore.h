@@ -28,6 +28,8 @@
 
 #define DEFAULT_SEV_DEVICE     "/dev/sev"
 
+#define KDS_CERT_SITE           "https://kdsintfdev.amd.com/cek/id/"
+
 // A system physical address that should always be invalid.
 // Used to test the SEV FW detects such invalid addresses and returns the
 // correct error return value.
@@ -79,6 +81,7 @@ public:
     int set_self_owned(void);
     int set_externally_owned(std::string& oca_priv_key_file,
                                         std::string& oca_cert_file);
+    int generate_cek_ask(std::string& output_folder, std::string& cert_file);
 };
 
 

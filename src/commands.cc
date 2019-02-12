@@ -393,3 +393,14 @@ int Command::set_externally_owned(std::string& oca_priv_key_file,
 
     return (int)cmd_ret;
 }
+
+int Command::generate_cek_ask(std::string& output_folder)
+{
+    int cmd_ret = -1;
+
+    std::string cert_file = CEK_ASK_FILENAME;
+
+    cmd_ret = gSEVDevice.generate_cek_ask(output_folder, cert_file);
+
+    return (int)cmd_ret;
+}

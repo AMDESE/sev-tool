@@ -48,6 +48,7 @@ char helpArray[] = "The following commands are supported:\n" \
                    "          uint8_t gctx_tik[128/8]\n" \
                    "  set_self_owed\n" \
                    "  set_externally_owned\n" \
+                   "  generate_cek_ask\n" \
                    ;
 
 /* Flag set by '--verbose' */
@@ -71,6 +72,7 @@ static struct option long_options[] =
     {"calc_measurement",     required_argument, 0, 'k'},
     {"set_self_owned",       no_argument,       0, 'l'},
     {"set_externally_owned", required_argument, 0, 'm'},
+    {"generate_cek_ask",     no_argument,       0, 'n'},
 
     {"help",                 no_argument,       0, 'H'},
     {"sysinfo",              no_argument,       0, 'I'},
@@ -180,6 +182,10 @@ int main(int argc, char** argv)
                 std::string oca_priv_key_file = argv[optind++];
                 std::string oca_cert_file = argv[optind++];
                 cmd_ret = cmd.set_externally_owned(oca_priv_key_file, oca_cert_file);
+                break;
+            }
+            case 'n': {
+                cmd_ret = cmd.generate_cek_ask(output_folder);
                 break;
             }
             case 0:

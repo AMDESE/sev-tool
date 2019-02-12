@@ -19,6 +19,7 @@
 #include "linux/psp-sev.h"
 #include <sys/ioctl.h>      // for ioctl()
 #include <sys/mman.h>       // for mmap() and friends
+#include <cstdio>           // for std::rename
 #include <errno.h>          // for errorno
 #include <fcntl.h>          // for O_RDWR
 #include <unistd.h>         // for close()
@@ -451,4 +452,65 @@ int SEVDevice::set_externally_owned(std::string& oca_priv_key_file,
     return (int)cmd_ret;
 }
 
+// TODO. Try to use curl as a git submodule
+int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_file)
+{
+    int cmd_ret = SEV_RET_UNSUPPORTED;
+    int ioctl_ret = -1;
+    sev_user_data_get_id id_buf;
+    std::string cmd = "wget ";
+    std::string output = "";
+
+    // Set struct to 0
+    memset(&id_buf, 0, sizeof(sev_user_data_get_id));
+
+    do {
+        // Prepare the cmd string
+        if(output_folder == "") {
+           output_folder = "./";
+        }
+        cmd += "-P " + output_folder + " ";
+        cmd += KDS_CERT_SITE;
+
+        // Get the ID of the Platform
+        // Send the command
+        ioctl_ret = gSEVDevice.sev_ioctl(SEV_GET_ID, &id_buf, &cmd_ret);
+        if(ioctl_ret != 0)
+            break;
+
+        // Copy the resulting IDs into the real buffer allocated for them
+        char id1_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
+        for(uint8_t i = 0; i < sizeof(id_buf.socket1); i++)
+        {
+            sprintf(id1_buf+strlen(id1_buf), "%02x", id_buf.socket1[i]);
+        }
+        cmd += id1_buf;
+
+        // Pass in the ID of Socket1 to the KDS server and download the certificate
+        if(!ExecuteSystemCommand(cmd, &output)) {
+            printf("Error: pipe not opened for system command\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+
+        // Check if the file got downloaded
+        std::string cert_w_path = output_folder + "/" + id1_buf;
+        char tmp_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
+        if(ReadFile(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
+            printf("Error: command to get cek_ask cert failed\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+
+        // Copy the file from (get_id) name to something known (cert_file)
+        std::string to_cert_w_path = output_folder + "/" + cert_file;
+        if(std::rename(cert_w_path.c_str(), to_cert_w_path.c_str()) != 0) {
+            printf("Error: renaming cert file\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+    } while (0);
+
+    return cmd_ret;
+}
 #endif

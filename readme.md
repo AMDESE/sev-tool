@@ -1,7 +1,7 @@
 # How to Download and Run SEV Tool
 &nbsp;
-Version: v4
-Updated: 2019-02-01
+Version: v5
+Updated: 2019-02-11
 &nbsp;
 &nbsp;
 &nbsp;
@@ -185,6 +185,15 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          ```sh
          $ sudo ./sevtool --set_externally_owned [oca_priv_key_file] [oca_cert_file]
          $ sudo ./sevtool --set_externally_owned ../psp-sev-assets/oca_key_in.pem ../psp-sev-assets/oca_in.cert
+         ```
+12. generate_cek_ask
+     - Optional input args: --ofolder [folder_path]
+         - This allows the user to specify the folder where the tool will export the cek_ark.cert to, otherwise it will be exported to the same directory as the sev-tool executable
+     - Outputs:
+        - If --[ofolder] flag used: The cek_ask.cert file for your specific platform (processor in the first socket) will be exported to the folder specified. Otherwise, it will be exported to the same directory as the sev-tool executable. File: cek_ask.cert
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --generate_cek_ask
          ```
 
 ## Debugging the SEV Tool
