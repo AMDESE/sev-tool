@@ -404,3 +404,12 @@ int Command::generate_cek_ask(std::string& output_folder)
 
     return (int)cmd_ret;
 }
+
+int Command::get_ask_ark(std::string& output_folder)
+{
+    int cmd_ret = -1;
+
+    cmd_ret = gSEVDevice.get_ask_ark(output_folder);
+
+    return (int)cmd_ret;
+}

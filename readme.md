@@ -195,6 +195,15 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          ```sh
          $ sudo ./sevtool --ofolder ./certs --generate_cek_ask
          ```
+13. get_ask_ark
+     - Optional input args: --ofolder [folder_path]
+         - This allows the user to specify the folder where the tool will export the ark_ask certificate to, otherwise it will be exported to the same directory as the sev-tool executable
+     - Outputs:
+        - If --[ofolder] flag used: The ark_ark certificate will be exported to the folder specified. Otherwise, it will be exported to the same directory as the sev-tool executable. File: ask_ark_[platform_type].cert
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --get_ask_ark
+         ```
 
 ## Debugging the SEV Tool
    - kdbg makes it very easy to step through, add breakpoints to, and debug the test suite

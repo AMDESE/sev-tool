@@ -29,6 +29,19 @@
 #define DEFAULT_SEV_DEVICE     "/dev/sev"
 
 #define KDS_CERT_SITE           "https://kdsintfdev.amd.com/cek/id/"
+#define AMD_SEV_DEVELOPER_SITE  "https://developer.amd.com/sev/"
+#define ASK_ARK_PATH_SITE       "https://developer.amd.com/wp-content/resources/"
+#define ASK_ARK_NAPLES_FILE     "ask_ark_naples.cert"
+#define ASK_ARK_ROME_FILE       "ask_ark_rome.cert"
+#define ASK_ARK_NAPLES_SITE      ASK_ARK_PATH_SITE ASK_ARK_NAPLES_FILE
+#define ASK_ARK_ROME_SITE        ASK_ARK_PATH_SITE ASK_ARK_ROME_FILE
+
+#define NAPLES_FAMILY       0x17UL      // 23
+#define NAPLES_MODEL_LOW    0x00UL
+#define NAPLES_MODEL_HIGH   0x0FUL
+#define ROME_FAMILY         0x17UL      // 23
+#define ROME_MODEL_LOW      0x30UL
+#define ROME_MODEL_HIGH     0x3FUL
 
 // A system physical address that should always be invalid.
 // Used to test the SEV FW detects such invalid addresses and returns the
@@ -52,6 +65,7 @@ private:
     int get_platform_owner(void* data);
     int get_platform_es(void* data);
     bool validate_pek_csr(SEV_CERT *PEKcsr);
+    void get_family_model(uint32_t *family, uint32_t *model);
 
 public:
     SEVDevice();
@@ -82,6 +96,7 @@ public:
     int set_externally_owned(std::string& oca_priv_key_file,
                                         std::string& oca_cert_file);
     int generate_cek_ask(std::string& output_folder, std::string& cert_file);
+    int get_ask_ark(std::string& output_folder);
 };
 
 

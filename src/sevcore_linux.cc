@@ -347,11 +347,28 @@ static std::string DisplayBuildInfo()
     return api_major_ver + ", " + api_minor_ver + ", " + build_id_ver;
 }
 
+void SEVDevice::get_family_model(uint32_t *family, uint32_t *model)
+{
+    std::string cmd = "";
+    std::string fam_str = "";
+    std::string model_str = "";
+
+    cmd = "lscpu | grep -E \"CPU family:\" | awk {'print $3'}";
+    ExecuteSystemCommand(cmd, &fam_str);
+    cmd = "lscpu | grep -E \"Model:\" | awk {'print $2'}";
+    ExecuteSystemCommand(cmd, &model_str);
+
+    *family = std::stoi(fam_str, NULL, 10);
+    *model = std::stoi(model_str, NULL, 10);
+}
+
 int SEVDevice::sysinfo()
 {
     int cmd_ret = SEV_RET_SUCCESS;
     std::string cmd = "";
     std::string output = "";
+    uint32_t family = 0;
+    uint32_t model = 0;
 
     printf("-------------------------System Info-------------------------");
     // Exec bash commands to get info on user's platform and append to the output string
@@ -377,6 +394,9 @@ int SEVDevice::sysinfo()
 
     std::string BuildInfo = DisplayBuildInfo();
     printf("Firmware Version: %s\n", BuildInfo.c_str());
+
+    get_family_model(&family, &model);
+    printf("Platform Family %02x, Model %02x\n", family, model);
 
     printf("-------------------------------------------------------------\n\n");
 
@@ -506,6 +526,61 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
         std::string to_cert_w_path = output_folder + "/" + cert_file;
         if(std::rename(cert_w_path.c_str(), to_cert_w_path.c_str()) != 0) {
             printf("Error: renaming cert file\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+    } while (0);
+
+    return cmd_ret;
+}
+
+// TODO. Try to use curl as a git submodule
+int SEVDevice::get_ask_ark(std::string& output_folder)
+{
+    int cmd_ret = SEV_RET_UNSUPPORTED;
+    std::string cmd = "wget ";
+    std::string output = "";
+    uint32_t family = 0;
+    uint32_t model = 0;
+    std::string cert_w_path = "";
+
+    do {
+        // Prepare the cmd string
+        if(output_folder == "") {
+           output_folder = "./";
+        }
+        cmd += "-P " + output_folder + " ";
+        cert_w_path = output_folder + "/";
+
+        get_family_model(&family, &model);
+        if(family == NAPLES_FAMILY && model >= NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
+            cmd += ASK_ARK_NAPLES_SITE;
+            cert_w_path += ASK_ARK_NAPLES_FILE;
+        }
+        else if(family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
+            cmd += ASK_ARK_ROME_SITE;
+            cert_w_path += ASK_ARK_ROME_FILE;
+            // TODO take printf out when Rome cert comes out
+            printf("Note: the Rome .cert is NOT publically available yet. "\
+                        "Please email your AMD rep to get the cert\n");
+        }
+        else {
+            printf("Error: Unable to determine Platform type. " \
+                        "Detected Family %i, Model %i\n", family, model);
+            break;
+        }
+
+        // Download the certificate from the AMD server
+        if(!ExecuteSystemCommand(cmd, &output)) {
+            printf("Error: pipe not opened for system command\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+
+        // Check if the file got downloaded
+        char tmp_buf[100] = {0};  // Just try to read some amount of chars
+        if(ReadFile(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
+            printf("Error: command to get ask_ark cert failed\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
         }
