@@ -247,24 +247,24 @@ int Command::get_id(std::string& output_folder, int verbose_flag)
     cmd_ret = gSEVDevice.get_id(data, IDMem, 2*default_id_length);
 
     if(cmd_ret == STATUS_SUCCESS) {
-        char id1_buf[default_id_length*2+1] = {0};  // 2 chars per byte +1 for null term
-        char id2_buf[default_id_length*2+1] = {0};
+        char id0_buf[default_id_length*2+1] = {0};  // 2 chars per byte +1 for null term
+        char id1_buf[default_id_length*2+1] = {0};
         for(uint8_t i = 0; i < default_id_length; i++)
         {
-            sprintf(id1_buf+strlen(id1_buf), "%02x", ((uint8_t *)(data_buf->IDPAddr))[i]);
-            sprintf(id2_buf+strlen(id2_buf), "%02x", ((uint8_t *)(data_buf->IDPAddr))[i+default_id_length]);
+            sprintf(id0_buf+strlen(id0_buf), "%02x", ((uint8_t *)(data_buf->IDPAddr))[i]);
+            sprintf(id1_buf+strlen(id1_buf), "%02x", ((uint8_t *)(data_buf->IDPAddr))[i+default_id_length]);
         }
 
         if(verbose_flag) {          // Print ID arrays
-            printf("* GetID Socket1:\n%s", id1_buf);
-            printf("\n* GetID Socket2:\n%s", id2_buf);
+            printf("* GetID Socket0:\n%s", id0_buf);
+            printf("\n* GetID Socket1:\n%s", id1_buf);
             printf("\n");
         }
         if(output_folder != "") {   // Print the IDs to a text file
+            std::string id0_path = output_folder+"/"+GET_ID_S0_FILENAME;
             std::string id1_path = output_folder+"/"+GET_ID_S1_FILENAME;
-            std::string id2_path = output_folder+"/"+GET_ID_S2_FILENAME;
-            WriteFile(id1_path, (void*)id1_buf, sizeof(id1_buf)-1);   // Don't write null term
-            WriteFile(id2_path, (void*)id2_buf, sizeof(id2_buf)-1);
+            WriteFile(id0_path, (void*)id0_buf, sizeof(id0_buf)-1);   // Don't write null term
+            WriteFile(id1_path, (void*)id1_buf, sizeof(id1_buf)-1);
         }
     }
 
