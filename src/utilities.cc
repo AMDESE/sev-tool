@@ -129,3 +129,35 @@ bool StrToArray(std::string in_string, uint8_t *array, uint32_t array_size)
 
     return true;
 }
+
+void AsciiHexBytesToBinary(void *out, const char *in_bytes, size_t len)
+{
+    std::string temp;
+
+    for(size_t i = 0; i < len; i++)
+    {
+        temp = {in_bytes[i*2], in_bytes[(i*2)+1], '\0'};
+        ((uint8_t *)out)[i] = (uint8_t)stoi(temp, NULL, 16);
+    }
+
+}
+
+bool reverse_bytes(uint8_t *bytes, size_t size)
+{
+	uint8_t *start = bytes;
+	uint8_t *end = bytes + size - 1;
+
+	if (!bytes)
+        return false;
+
+	while (start < end)
+	{
+		uint8_t byte = *start;
+		*start = *end;
+		*end = byte;
+		start++;
+		end--;
+	}
+
+	return true;
+}

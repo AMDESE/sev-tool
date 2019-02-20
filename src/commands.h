@@ -31,6 +31,9 @@
 #define GET_ID_S2_FILENAME              "getid_s2_out.txt"
 #define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.txt"
 #define CEK_ASK_FILENAME                "cek_ask.cert"
+#define ASK_ARK_FILENAME                "ask_ark.cert"
+#define ASK_FILENAME                    "ask.cert"
+#define ARK_FILENAME                    "ark.cert"
 
 #define LAUNCH_MEASURE_CTX 0x4
 struct measurement_t {
@@ -47,7 +50,8 @@ struct measurement_t {
 class Command {
 private:
     int calculate_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
-
+    int validate_platform(SEV_CERT *pdh, SEV_CERT_CHAIN_BUF *pdh_cert_chain,
+                                AMD_CERT *ask, AMD_CERT *ark);
 public:
     Command() {};
     ~Command() {};
@@ -71,6 +75,7 @@ public:
                                         std::string& oca_cert_file);
     int generate_cek_ask(std::string& output_folder);
     int get_ask_ark(std::string& output_folder);
+    int validate_cert_chain(std::string& output_folder);
 };
 
 #endif /* commands_h */

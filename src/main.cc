@@ -50,6 +50,7 @@ char helpArray[] = "The following commands are supported:\n" \
                    "  set_externally_owned\n" \
                    "  generate_cek_ask\n" \
                    "  get_ask_ark\n" \
+                   "  validate_cert_chain\n" \
                    ;
 
 /* Flag set by '--verbose' */
@@ -75,6 +76,7 @@ static struct option long_options[] =
     {"set_externally_owned", required_argument, 0, 'm'},
     {"generate_cek_ask",     no_argument,       0, 'n'},
     {"get_ask_ark",          no_argument,       0, 'p'},
+    {"validate_cert_chain",  no_argument,       0, 'q'},
 
     {"help",                 no_argument,       0, 'H'},
     {"sysinfo",              no_argument,       0, 'I'},
@@ -192,6 +194,10 @@ int main(int argc, char** argv)
             }
             case 'p': {
                 cmd_ret = cmd.get_ask_ark(output_folder);
+                break;
+            }
+            case 'q': {
+                cmd_ret = cmd.validate_cert_chain(output_folder);
                 break;
             }
             case 0:

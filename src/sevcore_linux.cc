@@ -257,7 +257,7 @@ int SEVDevice::pek_cert_import(uint8_t *data,
 
         // --------- Sign the CSR --------- //
         SEVCert CSRCert(*PEKcsr);
-        CSRCert.SignWithKey(SEV_CERT_MAX_VERSION, SEVUsagePEK, SEVSigAlgoECDSASHA256,
+        CSRCert.sign_with_key(SEV_CERT_MAX_VERSION, SEVUsagePEK, SEVSigAlgoECDSASHA256,
                          oca_priv_key_file, SEVUsageOCA, SEVSigAlgoECDSASHA256);
 
         // Fetch the OCA certificate
@@ -268,7 +268,7 @@ int SEVDevice::pek_cert_import(uint8_t *data,
             break;
         }
 
-        data_buf->pek_cert_address = (uint64_t)CSRCert.Data();
+        data_buf->pek_cert_address = (uint64_t)CSRCert.data();
         data_buf->pek_cert_len = sizeof(SEV_CERT);
         data_buf->oca_cert_address = (uint64_t)OCACert;
         data_buf->oca_cert_len = sizeof(SEV_CERT);
@@ -504,7 +504,8 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
         {
             sprintf(id1_buf+strlen(id1_buf), "%02x", id_buf.socket1[i]);
         }
-        cmd += id1_buf;
+        cmd += "bd9e2fe7356fcd52be9c10008f25f175482d1c8b2bef5b0eb36147dae166573c20d086a7f8d2bb4cdaef09788198e41682355815d4239e8e408c1a4113cd3e95";
+        // cmd += id1_buf;
 
         // Pass in the ID of Socket1 to the KDS server and download the certificate
         if(!ExecuteSystemCommand(cmd, &output)) {
@@ -514,7 +515,7 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
         }
 
         // Check if the file got downloaded
-        std::string cert_w_path = output_folder + "/" + id1_buf;
+        std::string cert_w_path = output_folder + "/" + "bd9e2fe7356fcd52be9c10008f25f175482d1c8b2bef5b0eb36147dae166573c20d086a7f8d2bb4cdaef09788198e41682355815d4239e8e408c1a4113cd3e95";
         char tmp_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
         if(ReadFile(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
             printf("Error: command to get cek_ask cert failed\n");
@@ -535,7 +536,7 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
 }
 
 // TODO. Try to use curl as a git submodule
-int SEVDevice::get_ask_ark(std::string& output_folder)
+int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     std::string cmd = "wget ";
@@ -584,8 +585,18 @@ int SEVDevice::get_ask_ark(std::string& output_folder)
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
         }
+
+        // Copy the file (_PlatformType) to something known (cert_file)
+        std::string to_cert_w_path = output_folder + "/" + cert_file;
+        if(std::rename(cert_w_path.c_str(), to_cert_w_path.c_str()) != 0) {
+            printf("Error: renaming cert file\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+        cmd_ret = SEV_RET_SUCCESS;
     } while (0);
 
     return cmd_ret;
 }
+
 #endif

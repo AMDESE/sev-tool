@@ -29,37 +29,37 @@
 #include <openssl/pem.h>
 
 // Public global functions
-static std::string empty = "NULL";
-void PrintCertReadable(SEV_CERT *cert, std::string& outStr = empty);
-void PrintCertHex(void *cert);
-void PrintCertChainBufReadable(void *p, std::string& outStr = empty);
-void PrintCertChainBufHex(void *p);
+static std::string sev_empty = "NULL";
+void print_cert_readable(const SEV_CERT *cert, std::string& outStr = sev_empty);
+void print_cert_hex(void *cert);
+void print_cert_chain_buf_readable(void *p, std::string& outStr = sev_empty);
+void print_cert_chain_buf_hex(void *p);
 
 class SEVCert {
 private:
-    SEV_CERT mChildCert;
-    bool CalcHashDigest(const SEV_CERT *Cert, uint32_t PubkeyAlgo, uint32_t PubKeyOffset,
-                             HMACSHA256 *shaDigest256, HMACSHA512 *shaDigest384);
-    SEV_ERROR_CODE ValidateUsage(uint32_t Usage);
-    SEV_ERROR_CODE ValidateRSAPubkey(const SEV_CERT *Cert, const EVP_PKEY *PublicKey);
-    SEV_ERROR_CODE ValidatePublicKey(const SEV_CERT *Cert, const EVP_PKEY *PublicKey);
-    SEV_ERROR_CODE ValidateSignature(const SEV_CERT *ChildCert, const SEV_CERT *ParentCert,
-                                     EVP_PKEY *ParentSigningKey);
-    SEV_ERROR_CODE ValidateBody(const SEV_CERT *Cert);
+    SEV_CERT m_child_cert;
+    bool calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint32_t pub_key_offset,
+                             HMACSHA256 *sha_digest_256, HMACSHA512 *sha_digest_384);
+    SEV_ERROR_CODE validate_usage(uint32_t Usage);
+    SEV_ERROR_CODE validate_rsa_pubkey(const SEV_CERT *cert, const EVP_PKEY *PublicKey);
+    SEV_ERROR_CODE validate_public_key(const SEV_CERT *cert, const EVP_PKEY *PublicKey);
+    SEV_ERROR_CODE validate_signature(const SEV_CERT *child_cert, const SEV_CERT *parent_cert,
+                                     EVP_PKEY *parent_signing_key);
+    SEV_ERROR_CODE validate_body(const SEV_CERT *cert);
 
 public:
-    SEVCert( SEV_CERT& cert ) { mChildCert = cert; }
+    SEVCert( SEV_CERT& cert ) { m_child_cert = cert; }
     ~SEVCert() {};
 
-    const SEV_CERT *Data() { return &mChildCert; }
+    const SEV_CERT *data() { return &m_child_cert; }
 
-    void SEVCertToX509Cert(const X509_CERT *X509Cert, SEV_CERT *SEVCert);
-    void X509CertToSEVCert(const SEV_CERT *SEVCert, X509_CERT *X509Cert);
+    void sev_cert_to_x509_cert(const X509_CERT *x509_cert, SEV_CERT *sev_cert);
+    void x509_cert_to_sev_cert(const SEV_CERT *sev_cert, X509_CERT *x509_cert);
 
-    bool SignWithKey( uint32_t Version, uint32_t PubKeyUsage, uint32_t PubKeyAlgorithm,
-                      const std::string& OCAPrivKeyFile, uint32_t Sig1Usage, uint32_t Sig1Algo );
-    SEV_ERROR_CODE CompilePublicKeyFromCertificate(const SEV_CERT *Cert, EVP_PKEY *EVP_pubKey);
-    SEV_ERROR_CODE VerifySEVCert(const SEV_CERT *ParentCert1, const SEV_CERT *ParentCert2 = NULL);
+    bool sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
+                      const std::string& oca_priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo );
+    SEV_ERROR_CODE compile_public_key_from_certificate(const SEV_CERT *cert, EVP_PKEY *evp_pub_key);
+    SEV_ERROR_CODE verify_sev_cert(const SEV_CERT *parent_cert1, const SEV_CERT *parent_cert2 = NULL);
 };
 
 #endif /* sevcert_h */

@@ -14,12 +14,12 @@
  * limitations under the License.
  * ************************************************************************/
 
-#ifndef x509cert_h
-#define x509cert_h
+#ifndef x509_cert_h
+#define x509_cert_h
 
 typedef struct __attribute__ ((__packed__)) X509_CERT
 {
     //Coming soon...
 } X509_CERT;
 
-#endif /* x509cert_h */
+#endif /* x509_cert_h */

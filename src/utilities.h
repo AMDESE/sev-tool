@@ -63,4 +63,11 @@ bool VerifyAccess( uint8_t *buf, size_t len );
 //      not including the null terminator
 bool StrToArray(std::string in_string, uint8_t *array, uint32_t array_size);
 
+// If you have a buffer (or read in input file) that's in AsciiHexBytes,
+// such as the getid output files, this will read it back into a buffer
+void AsciiHexBytesToBinary(void *out, const char *in_bytes, size_t len);
+
+// Reverses bytes in a section of memory. Used in validating a cert signature
+bool reverse_bytes(uint8_t *bytes, size_t size);
+
 #endif /* utilities_h */

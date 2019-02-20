@@ -401,7 +401,7 @@ typedef union
 
 typedef enum AMD_SIG_USAGE {
     AMDUsageARK     = 0x00,
-    AMDUsageSEV     = 0x13,
+    AMDUsageASK     = 0x13,
 } AMD_SIG_USAGE;
 
 // Appendix B.1: AMD Signing Key Certificate Format

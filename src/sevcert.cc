@@ -15,7 +15,8 @@
  * ************************************************************************/
 
 #include "sevcert.h"
-#include "crypto/rsa/rsa_locl.h"    // Needed to access internals of struct rsa_st. RSA_pubKey->n
+#include "utilities.h"
+#include "crypto/rsa/rsa_locl.h"    // Needed to access internals of struct rsa_st. rsa_pub_key->n
 #include "crypto/ec/ec_lcl.h"       // Needed to access internals of struct ECDSA_SIG_st
 #include <cstring>                  // memset
 #include <stdio.h>
@@ -23,42 +24,48 @@
 #include <fstream>
 #include <stdio.h>
 
-// Converts X509_CERTs to SEV_CERTs
-void SEVCert::SEVCertToX509Cert(const X509_CERT *X509Cert, SEV_CERT *SEVCert)
-{
+/**
+ * Converts X509_CERTs to SEV_CERTs
+ */
+// void SEVCert::sev_cert_to_x509_cert(const X509_CERT *x509_cert, SEV_CERT *sev_cert)
+// {
 
-}
+// }
 
-// Converts SEV_CERTs to X509_CERTs
-void SEVCert::X509CertToSEVCert(const SEV_CERT *SEVCert, X509_CERT *X509Cert)
-{
+/**
+ * Converts SEV_CERTs to X509_CERTs
+ */
+// void SEVCert::x509_cert_to_sev_cert(const SEV_CERT *sev_cert, X509_CERT *x509_cert)
+// {
 
-}
+// }
 
-// If outStr is passed in, fill up the string, else prints to std::out
-void PrintCertReadable(SEV_CERT *cert, std::string& outStr)
+/**
+ * If outStr is passed in, fill up the string, else prints to std::out
+ */
+void print_cert_readable(const SEV_CERT *cert, std::string& outStr)
 {
     char out[sizeof(SEV_CERT)*3+500];   // 2 chars per byte + 1 spaces + ~500 extra chars for text
 
-    sprintf(out, "%-15s%04x\n", "Version:", cert->Version);           // uint32_t
-    sprintf(out+strlen(out), "%-15s%04x\n", "ApiMajor:", cert->ApiMajor);         // uint8_t
-    sprintf(out+strlen(out), "%-15s%04x\n", "ApiMinor:", cert->ApiMinor);         // uint8_t
-    sprintf(out+strlen(out), "%-15s%04x\n", "PubkeyUsage:", cert->PubkeyUsage);   // uint32_t
-    sprintf(out+strlen(out), "%-15s%04x\n", "PubkeyAlgo:", cert->PubkeyAlgo);     // uint32_t
-    sprintf(out+strlen(out), "%-15s\n", "Pubkey:");                               // SEV_PUBKEY
+    sprintf(out, "%-15s%08x\n", "Version:", cert->Version);                         // uint32_t
+    sprintf(out+strlen(out), "%-15s%02x\n", "ApiMajor:", cert->ApiMajor);           // uint8_t
+    sprintf(out+strlen(out), "%-15s%02x\n", "ApiMinor:", cert->ApiMinor);           // uint8_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "pub_key_usage:", cert->PubkeyUsage); // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "pubkey_algo:", cert->PubkeyAlgo);     // uint32_t
+    sprintf(out+strlen(out), "%-15s\n", "Pubkey:");                                 // SEV_PUBKEY
     for(size_t i = 0; i < (size_t)(sizeof(SEV_PUBKEY)); i++) {  //bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->Pubkey)[i] );
     }
     sprintf(out+strlen(out), "\n");
-    sprintf(out+strlen(out), "%-15s%04x\n", "Sig1Usage:", cert->Sig1Usage);       // uint32_t
-    sprintf(out+strlen(out), "%-15s%04x\n", "Sig1Algo:", cert->Sig1Algo);         // uint32_t
-    sprintf(out+strlen(out), "%-15s\n", "Sig1:");                                 // SEV_SIG
+    sprintf(out+strlen(out), "%-15s%08x\n", "sig1_usage:", cert->Sig1Usage);       // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "sig1_algo:", cert->Sig1Algo);         // uint32_t
+    sprintf(out+strlen(out), "%-15s\n", "Sig1:");                                   // SEV_SIG
     for(size_t i = 0; i < (size_t)(sizeof(SEV_SIG)); i++) {     //bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->Sig1)[i] );
     }
     sprintf(out+strlen(out), "\n");
-    sprintf(out+strlen(out), "%-15s%04x\n", "Sig2Usage:", cert->Sig2Usage);       // uint32_t
-    sprintf(out+strlen(out), "%-15s%04x\n", "Sig2Algo:", cert->Sig2Algo);         // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "Sig2Usage:", cert->Sig2Usage);       // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "Sig2Algo:", cert->Sig2Algo);         // uint32_t
     sprintf(out+strlen(out), "%-15s\n", "Sig2:");                                 // SEV_SIG
     for(size_t i = 0; i < (size_t)(sizeof(SEV_SIG)); i++) {     //bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->Sig2)[i] );
@@ -73,49 +80,55 @@ void PrintCertReadable(SEV_CERT *cert, std::string& outStr)
     }
 }
 
-// To print this to a file, just use WriteFile directly
-void PrintCertHex(void *cert)
+/**
+ * To print this to a file, just use WriteFile directly
+ */
+void print_cert_hex(void *cert)
 {
-    printf("Printing Cert...\n");
+    printf("Printing cert...\n");
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { //bytes to uint8
         printf( "%02X ", ((uint8_t *)cert)[i] );
     }
     printf("\n");
 }
 
-// Prints out the PDK, OCA, and CEK
-// If outStr is passed in, fill up the string, else prints to std::out
-void PrintCertChainBufReadable(void *p, std::string& outStr)
+/**
+ * Prints out the PDK, OCA, and CEK
+ * If outStr is passed in, fill up the string, else prints to std::out
+ */
+void print_cert_chain_buf_readable(void *p, std::string& outStr)
 {
-    char outPEK[50];    // Just big enough for string below
-    char outOCA[50];
-    char outCEK[50];
+    char out_pek[50];    // Just big enough for string below
+    char out_oca[50];
+    char out_cek[50];
 
-    std::string outStr_local = "";
+    std::string out_str_local = "";
 
-    sprintf(outPEK, "PEK Memory: %ld bytes\n", sizeof(SEV_CERT));
-    outStr_local += outPEK;
-    PrintCertReadable(((SEV_CERT*)PEKinCertChain(p)), outStr_local);
+    sprintf(out_pek, "PEK Memory: %ld bytes\n", sizeof(SEV_CERT));
+    out_str_local += out_pek;
+    print_cert_readable(((SEV_CERT*)PEKinCertChain(p)), out_str_local);
 
-    sprintf(outOCA, "\nOCA Memory: %ld bytes\n", sizeof(SEV_CERT));
-    outStr_local += outOCA;
-    PrintCertReadable(((SEV_CERT*)OCAinCertChain(p)), outStr_local);
+    sprintf(out_oca, "\nOCA Memory: %ld bytes\n", sizeof(SEV_CERT));
+    out_str_local += out_oca;
+    print_cert_readable(((SEV_CERT*)OCAinCertChain(p)), out_str_local);
 
-    sprintf(outCEK, "\nCEK Memory: %ld bytes\n", sizeof(SEV_CERT));
-    outStr_local += outCEK;
-    PrintCertReadable(((SEV_CERT*)CEKinCertChain(p)), outStr_local);
+    sprintf(out_cek, "\nCEK Memory: %ld bytes\n", sizeof(SEV_CERT));
+    out_str_local += out_cek;
+    print_cert_readable(((SEV_CERT*)CEKinCertChain(p)), out_str_local);
 
     if(outStr == "NULL") {
-        printf("%s\n", outStr_local.c_str());
+        printf("%s\n", out_str_local.c_str());
     }
     else {
-        outStr = outStr_local;
+        outStr = out_str_local;
     }
 }
 
-// Prints out the PDK, OCA, and CEK
-// To print this to a file, just use WriteFile directly
-void PrintCertChainBufHex(void *p)
+/*
+ * Prints out the PDK, OCA, and CEK
+ * To print this to a file, just use WriteFile directly
+ */
+void print_cert_chain_buf_hex(void *p)
 {
     printf("PEK Memory: %ld bytes\n", sizeof(SEV_CERT));
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { //bytes to uint8
@@ -132,32 +145,32 @@ void PrintCertChainBufHex(void *p)
     printf("\n");
 }
 
-bool SEVCert::CalcHashDigest(const SEV_CERT *Cert, uint32_t PubkeyAlgo, uint32_t PubKeyOffset,
-                             HMACSHA256 *shaDigest256, HMACSHA512 *shaDigest384)
+bool SEVCert::calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint32_t pub_key_offset,
+                             HMACSHA256 *sha_digest_256, HMACSHA512 *sha_digest_384)
 {
     bool ret = false;
-    SHA256_CTX ctx256;
-    SHA512_CTX ctx384;              // size is the same for 384 and 512
+    SHA256_CTX ctx_256;
+    SHA512_CTX ctx_384;              // size is the same for 384 and 512
 
-    // SHA256/SHA384 hash the Cert from Version through Pubkey parameters
+    // SHA256/SHA384 hash the cert from Version through Pubkey parameters
     // Calculate the digest of the input message   rsa.c -> rsa_pss_verify_msg()
     do {
-        if( (PubkeyAlgo == SEVSigAlgoRSASHA256) ||
-            (PubkeyAlgo == SEVSigAlgoECDSASHA256)) {
-            if (SHA256_Init(&ctx256) != 1)
+        if( (pubkey_algo == SEVSigAlgoRSASHA256) ||
+            (pubkey_algo == SEVSigAlgoECDSASHA256)) {
+            if (SHA256_Init(&ctx_256) != 1)
                 break;
-            if (SHA256_Update(&ctx256, Cert, PubKeyOffset) != 1)
+            if (SHA256_Update(&ctx_256, cert, pub_key_offset) != 1)
                 break;
-            if (SHA256_Final((uint8_t *)shaDigest256, &ctx256) != 1)  // size = 32
+            if (SHA256_Final((uint8_t *)sha_digest_256, &ctx_256) != 1)  // size = 32
                 break;
         }
-        else if( (PubkeyAlgo == SEVSigAlgoRSASHA384) ||
-                 (PubkeyAlgo == SEVSigAlgoECDSASHA384)) {
-            if (SHA384_Init(&ctx384) != 1)
+        else if( (pubkey_algo == SEVSigAlgoRSASHA384) ||
+                 (pubkey_algo == SEVSigAlgoECDSASHA384)) {
+            if (SHA384_Init(&ctx_384) != 1)
                 break;
-            if (SHA384_Update(&ctx384, Cert, PubKeyOffset) != 1)
+            if (SHA384_Update(&ctx_384, cert, pub_key_offset) != 1)
                 break;
-            if (SHA384_Final((uint8_t *)shaDigest384, &ctx384) != 1)  // size = 32
+            if (SHA384_Final((uint8_t *)sha_digest_384, &ctx_384) != 1)  // size = 32
                 break;
         }
         // Don't calculate for ECDH
@@ -166,125 +179,128 @@ bool SEVCert::CalcHashDigest(const SEV_CERT *Cert, uint32_t PubkeyAlgo, uint32_t
     return ret;
 }
 
-// sev_cert.c -> sev_cert_create() (kinda)
-// Signs the PEK's sig1 with the OCA (private key)
-// The firmware signs sig2 with the CEK during PEK_CERT_IMPORT
-// Inputs: Version, PubKeyUsage, PubKeyAlgorithm are for the child cert (PEK)
-//         OCAPrivKeyFile, Sig1Usage, Sig1Algo are for the parent (OCA)
-/* To optimize this function, can make the PEM read code RSA, EC, or general EVP.
-The issue is that if it reads it into a common-format EVP_PKEY, how to we get that
-private key into the EC_KEY or RSA_KEY that we are doing the signing on.
-Also, to make the EC_KEY validate, I only figured out how to create the EC_KEY with
-a GROUP as the input parm, not new up the EC_KEY then assign it a GROUP and all other
-params later (don't know what other params it needed to validate correctly) */
-bool SEVCert::SignWithKey( uint32_t Version, uint32_t PubKeyUsage, uint32_t PubKeyAlgorithm,
-                           const std::string& OCAPrivKeyFile, uint32_t Sig1Usage, uint32_t Sig1Algo )
+/**
+ * sev_cert.c -> sev_cert_create() (kinda)
+ * Signs the PEK's sig1 with the OCA (private key)
+ * The firmware signs sig2 with the CEK during PEK_CERT_IMPORT
+ * Inputs: Version, pub_key_usage, pub_key_algorithm are for the child cert (PEK)
+ *         oca_priv_key_file, sig1_usage, sig1_algo are for the parent (OCA)
+ *
+ * To optimize this function, can make the PEM read code RSA, EC, or general EVP.
+ * The issue is that if it reads it into a common-format EVP_PKEY, how to we get that
+ * private key into the EC_KEY or RSA_KEY that we are doing the signing on.
+ * Also, to make the EC_KEY validate, I only figured out how to create the EC_KEY with
+ * a GROUP as the input parm, not new up the EC_KEY then assign it a GROUP and all other
+ * params later (don't know what other params it needed to validate correctly)
+ */
+bool SEVCert::sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
+                           const std::string& oca_priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo )
 {
     bool isValid = false;
-    HMACSHA256 shaDigest256;           // Hash on the cert from Version to PubKey
-    HMACSHA512 shaDigest384;           // Hash on the cert from Version to PubKey
-    EC_KEY *privECKey = NULL;
-    RSA *privRSAKey = NULL;
+    HMACSHA256 sha_digest_256;           // Hash on the cert from Version to PubKey
+    HMACSHA512 sha_digest_384;           // Hash on the cert from Version to PubKey
+    EC_KEY *priv_ec_key = NULL;
+    RSA *priv_rsa_key = NULL;
 
     do {
         // Sign the certificate    sev_cert.c -> sev_cert_sign()
         // The constructor defaults all member vars, and the user can change them
-        memset(&mChildCert.Sig1, 0, sizeof(SEV_CERT::Sig1));
-        mChildCert.Version = Version;
-        mChildCert.PubkeyUsage = PubKeyUsage;
-        mChildCert.PubkeyAlgo = PubKeyAlgorithm;
+        memset(&m_child_cert.Sig1, 0, sizeof(SEV_CERT::Sig1));
+        m_child_cert.Version = Version;
+        m_child_cert.PubkeyUsage = pub_key_usage;
+        m_child_cert.PubkeyAlgo = pub_key_algorithm;
 
-        mChildCert.Sig1Usage = Sig1Usage;       // Parent cert's sig
-        mChildCert.Sig1Algo = Sig1Algo;
+        m_child_cert.Sig1Usage = sig1_usage;       // Parent cert's sig
+        m_child_cert.Sig1Algo = sig1_algo;
 
-        // SHA256/SHA384 hash the Cert from the [Version:Pubkey] params
-        uint32_t PubKeyOffset = offsetof(SEV_CERT, Sig1Usage);  // 16 + sizeof(SEV_PUBKEY)
-        if(!CalcHashDigest(&mChildCert, Sig1Algo, PubKeyOffset, &shaDigest256, &shaDigest384))
+        // SHA256/SHA384 hash the cert from the [Version:Pubkey] params
+        uint32_t pub_key_offset = offsetof(SEV_CERT, Sig1Usage);  // 16 + sizeof(SEV_PUBKEY)
+        if(!calc_hash_digest(&m_child_cert, sig1_algo, pub_key_offset, &sha_digest_256, &sha_digest_384))
             break;
 
-        if( (Sig1Algo == SEVSigAlgoRSASHA256) ||
-            (Sig1Algo == SEVSigAlgoRSASHA384)) {
+        if( (sig1_algo == SEVSigAlgoRSASHA256) ||
+            (sig1_algo == SEVSigAlgoRSASHA384)) {
             printf("Error: RSA signing untested!");
             // This code probably does not work!
 
-            if (!(privRSAKey = RSA_new()))
+            if (!(priv_rsa_key = RSA_new()))
                 break;
 
             // Read in the private key file into EVP_PKEY
-            // You cannot call a sub-function here because the privRSAKey doesn't get set correctly
-            FILE *pFile = fopen(OCAPrivKeyFile.c_str(), "r");
+            // You cannot call a sub-function here because the priv_rsa_key doesn't get set correctly
+            FILE *pFile = fopen(oca_priv_key_file.c_str(), "r");
             if(!pFile) {
                 printf("OCA private key file not found\n");
                 break;
             }
-            privRSAKey = PEM_read_RSAPrivateKey(pFile, NULL, NULL, NULL);
+            priv_rsa_key = PEM_read_RSAPrivateKey(pFile, NULL, NULL, NULL);
             fclose (pFile);
-            if(!privRSAKey)
+            if(!priv_rsa_key)
                 break;
 
-            uint32_t sigLen = sizeof(mChildCert.Sig1.RSA);
-            if(Sig1Algo == SEVSigAlgoRSASHA256) {
-                if(RSA_sign(NID_sha256, shaDigest256, sizeof(shaDigest256), (uint8_t *)&mChildCert.Sig1.RSA, &sigLen, privRSAKey) != 1)
+            uint32_t sigLen = sizeof(m_child_cert.Sig1.RSA);
+            if(sig1_algo == SEVSigAlgoRSASHA256) {
+                if(RSA_sign(NID_sha256, sha_digest_256, sizeof(sha_digest_256), (uint8_t *)&m_child_cert.Sig1.RSA, &sigLen, priv_rsa_key) != 1)
                     break;
-                if(RSA_verify(NID_sha256, shaDigest256, sizeof(shaDigest256), (uint8_t *)&mChildCert.Sig1.RSA, sigLen, privRSAKey) != 1)
+                if(RSA_verify(NID_sha256, sha_digest_256, sizeof(sha_digest_256), (uint8_t *)&m_child_cert.Sig1.RSA, sigLen, priv_rsa_key) != 1)
                     break;
             }
-            else if(Sig1Algo == SEVSigAlgoRSASHA384) {
-                if(RSA_sign(NID_sha384, shaDigest384, sizeof(shaDigest384), (uint8_t *)&mChildCert.Sig1.RSA, &sigLen, privRSAKey) != 1)
+            else if(sig1_algo == SEVSigAlgoRSASHA384) {
+                if(RSA_sign(NID_sha384, sha_digest_384, sizeof(sha_digest_384), (uint8_t *)&m_child_cert.Sig1.RSA, &sigLen, priv_rsa_key) != 1)
                     break;
-                if(RSA_verify(NID_sha384, shaDigest384, sizeof(shaDigest384), (uint8_t *)&mChildCert.Sig1.RSA, sigLen, privRSAKey) != 1)
+                if(RSA_verify(NID_sha384, sha_digest_384, sizeof(sha_digest_384), (uint8_t *)&m_child_cert.Sig1.RSA, sigLen, priv_rsa_key) != 1)
                     break;
             }
         }
-        else if( (Sig1Algo == SEVSigAlgoECDSASHA256) ||
-                 (Sig1Algo ==  SEVSigAlgoECDSASHA384)) {
+        else if( (sig1_algo == SEVSigAlgoECDSASHA256) ||
+                 (sig1_algo ==  SEVSigAlgoECDSASHA384)) {
             // New up the EC_KEY with the EC_GROUP
             int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
-            privECKey = EC_KEY_new_by_curve_name(nid);
+            priv_ec_key = EC_KEY_new_by_curve_name(nid);
 
             // Read in the private key file into EVP_PKEY
-            // You cannot call a sub-function here because the privECKey doesn't get set correctly
-            FILE *pFile = fopen(OCAPrivKeyFile.c_str(), "r");
+            // You cannot call a sub-function here because the priv_ec_key doesn't get set correctly
+            FILE *pFile = fopen(oca_priv_key_file.c_str(), "r");
             if(!pFile) {
                 printf("OCA private key file not found\n");
                 break;
             }
-            privECKey = PEM_read_ECPrivateKey(pFile, NULL, NULL, NULL);
+            priv_ec_key = PEM_read_ECPrivateKey(pFile, NULL, NULL, NULL);
             fclose(pFile);
-            if(!privECKey)
+            if(!priv_ec_key)
                 break;
 
-            if(Sig1Algo == SEVSigAlgoECDSASHA256) {
-                ECDSA_SIG *sig = ECDSA_do_sign(shaDigest256, sizeof(shaDigest256), privECKey); // Contains 2 bignums
+            if(sig1_algo == SEVSigAlgoECDSASHA256) {
+                ECDSA_SIG *sig = ECDSA_do_sign(sha_digest_256, sizeof(sha_digest_256), priv_ec_key); // Contains 2 bignums
                 if(!sig)
                     break;
-                BN_bn2lebinpad(sig->r, mChildCert.Sig1.ECDSA.R, sizeof(SEV_ECDSA_SIG::R));    // LE to BE
-                BN_bn2lebinpad(sig->s, mChildCert.Sig1.ECDSA.S, sizeof(SEV_ECDSA_SIG::S));
+                BN_bn2lebinpad(sig->r, m_child_cert.Sig1.ECDSA.R, sizeof(SEV_ECDSA_SIG::R));    // LE to BE
+                BN_bn2lebinpad(sig->s, m_child_cert.Sig1.ECDSA.S, sizeof(SEV_ECDSA_SIG::S));
 
                 // Validation will also be done by the FW
-                if(ECDSA_do_verify(shaDigest256, sizeof(shaDigest256), sig, privECKey) != 1) {
+                if(ECDSA_do_verify(sha_digest_256, sizeof(sha_digest_256), sig, priv_ec_key) != 1) {
                     ECDSA_SIG_free(sig);
                     break;
                 }
                 ECDSA_SIG_free(sig);
             }
-            else if(Sig1Algo == SEVSigAlgoECDSASHA384) {
-                ECDSA_SIG *sig = ECDSA_do_sign(shaDigest384, sizeof(shaDigest384), privECKey); // Contains 2 bignums
+            else if(sig1_algo == SEVSigAlgoECDSASHA384) {
+                ECDSA_SIG *sig = ECDSA_do_sign(sha_digest_384, sizeof(sha_digest_384), priv_ec_key); // Contains 2 bignums
                 if(!sig)
                     break;
-                BN_bn2lebinpad(sig->r, mChildCert.Sig1.ECDSA.R, sizeof(SEV_ECDSA_SIG::R));    // LE to BE
-                BN_bn2lebinpad(sig->s, mChildCert.Sig1.ECDSA.S, sizeof(SEV_ECDSA_SIG::S));
+                BN_bn2lebinpad(sig->r, m_child_cert.Sig1.ECDSA.R, sizeof(SEV_ECDSA_SIG::R));    // LE to BE
+                BN_bn2lebinpad(sig->s, m_child_cert.Sig1.ECDSA.S, sizeof(SEV_ECDSA_SIG::S));
 
                 // Validation will also be done by the FW
-                if(ECDSA_do_verify(shaDigest384, sizeof(shaDigest384), sig, privECKey) != 1) {
+                if(ECDSA_do_verify(sha_digest_384, sizeof(sha_digest_384), sig, priv_ec_key) != 1) {
                     ECDSA_SIG_free(sig);
                     break;
                 }
                 ECDSA_SIG_free(sig);
             }
         }
-        else if( (Sig1Algo == SEVSigAlgoECDHSHA256) ||
-                 (Sig1Algo == SEVSigAlgoECDHSHA384)) {
+        else if( (sig1_algo == SEVSigAlgoECDHSHA256) ||
+                 (sig1_algo == SEVSigAlgoECDHSHA384)) {
             printf("Error: ECDH signing unsupported");
             break;                       // Error unsupported
         }
@@ -297,16 +313,18 @@ bool SEVCert::SignWithKey( uint32_t Version, uint32_t PubKeyUsage, uint32_t PubK
     } while (0);
 
     // Free memory
-    EC_KEY_free(privECKey);
-    RSA_free(privRSAKey);
+    EC_KEY_free(priv_ec_key);
+    RSA_free(priv_rsa_key);
 
     return isValid;
 }
 
-//sev_cert.c  -> usage_is_valid()
-SEV_ERROR_CODE SEVCert::ValidateUsage(uint32_t Usage)
+/**
+ * sev_cert.c  -> usage_is_valid()
+ */
+SEV_ERROR_CODE SEVCert::validate_usage(uint32_t Usage)
 {
-    SEV_ERROR_CODE CmdRet = ERROR_INVALID_CERTIFICATE;
+    SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
 
     switch (Usage)
     {
@@ -316,337 +334,365 @@ SEV_ERROR_CODE SEVCert::ValidateUsage(uint32_t Usage)
     case SEVUsagePEK:
     case SEVUsagePDH:
     case SEVUsageCEK:
-        CmdRet = STATUS_SUCCESS;
+        cmd_ret = STATUS_SUCCESS;
         break;
     default:
-        CmdRet = ERROR_INVALID_CERTIFICATE;
+        cmd_ret = ERROR_INVALID_CERTIFICATE;
     }
 
-    return CmdRet;
+    return cmd_ret;
 }
 
-// rsa.c -> rsa_pubkey_is_valid()
-// This function is untested because we don't have any RSA certs to test
-SEV_ERROR_CODE SEVCert::ValidateRSAPubkey(const SEV_CERT *Cert, const EVP_PKEY *PublicKey)
+/**
+ * rsa.c -> rsa_pubkey_is_valid()
+ * This function is untested because we don't have any RSA certs to test
+ */
+SEV_ERROR_CODE SEVCert::validate_rsa_pubkey(const SEV_CERT *cert, const EVP_PKEY *PublicKey)
 {
-    if (!Cert || !PublicKey)
+    if (!cert || !PublicKey)
         return ERROR_INVALID_CERTIFICATE;
 
-    SEV_ERROR_CODE CmdRet = ERROR_INVALID_CERTIFICATE;
+    SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
 
-    if (Cert->Pubkey.RSA.ModulusSize <= (SEV_RSA_PUBKEY_MAX_BITS/8))    //TODO, bits or bytes
-		CmdRet = STATUS_SUCCESS;
+    if (cert->Pubkey.RSA.ModulusSize <= SEV_RSA_PUBKEY_MAX_BITS)
+        cmd_ret = STATUS_SUCCESS;
 
-    return CmdRet;
+    return cmd_ret;
 }
 
-// rsa.c -> pubkey_is_valid()
-// Inputs: Cert is the child cert
-//         PublicKey is the parent's public key
-SEV_ERROR_CODE SEVCert::ValidatePublicKey(const SEV_CERT *Cert, const EVP_PKEY *PublicKey)
+/**
+ * rsa.c -> pubkey_is_valid()
+ * Inputs: cert is the child cert
+ *         PublicKey is the parent's public key
+ */
+SEV_ERROR_CODE SEVCert::validate_public_key(const SEV_CERT *cert, const EVP_PKEY *PublicKey)
 {
-    if (!Cert || !PublicKey)
+    if (!cert || !PublicKey)
         return ERROR_INVALID_CERTIFICATE;
 
-    SEV_ERROR_CODE CmdRet = ERROR_INVALID_CERTIFICATE;
+    SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
 
     do {
-        if(ValidateUsage(Cert->PubkeyUsage) != STATUS_SUCCESS)
+        if(validate_usage(cert->PubkeyUsage) != STATUS_SUCCESS)
             break;
 
-        if( (Cert->PubkeyAlgo == SEVSigAlgoRSASHA256) ||
-            (Cert->PubkeyAlgo == SEVSigAlgoRSASHA384) ) {
-            if(ValidateRSAPubkey(Cert, PublicKey) != STATUS_SUCCESS)
+        if( (cert->PubkeyAlgo == SEVSigAlgoRSASHA256) ||
+            (cert->PubkeyAlgo == SEVSigAlgoRSASHA384) ) {
+            if(validate_rsa_pubkey(cert, PublicKey) != STATUS_SUCCESS)
                 break;
         }
-        else if( (Cert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||
-                 (Cert->PubkeyAlgo == SEVSigAlgoECDSASHA384) ||
-                 (Cert->PubkeyAlgo == SEVSigAlgoECDHSHA256)  ||
-                 (Cert->PubkeyAlgo == SEVSigAlgoECDHSHA384) )
+        else if( (cert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||
+                 (cert->PubkeyAlgo == SEVSigAlgoECDSASHA384) ||
+                 (cert->PubkeyAlgo == SEVSigAlgoECDHSHA256)  ||
+                 (cert->PubkeyAlgo == SEVSigAlgoECDHSHA384) )
             ;       // Are no invalid values for these cert types
         else
             break;
 
-        CmdRet = STATUS_SUCCESS;
+        cmd_ret = STATUS_SUCCESS;
     } while (0);
 
-    return CmdRet;
+    return cmd_ret;
 }
 
-// sev_cert.c -> sev_cert_validate_sig()
-// This function gets called from a loop, and this function has
-// to see which of the signatures this currentSig matches to
-// Inputs Ex) ChildCert = PEK. ParentCert = OCA. ParentSigningKey = OCA PubKey.
-SEV_ERROR_CODE SEVCert::ValidateSignature(const SEV_CERT *ChildCert,
-                                          const SEV_CERT *ParentCert,
-                                          EVP_PKEY *ParentSigningKey)    // Probably PubKey
+/**
+ * sev_cert.c -> sev_cert_validate_sig()
+ * This function gets called from a loop, and this function has
+ * to see which of the signatures this currentSig matches to
+ * Inputs Ex) child_cert = PEK. parent_cert = OCA. parent_signing_key = OCA PubKey.
+ */
+SEV_ERROR_CODE SEVCert::validate_signature(const SEV_CERT *child_cert,
+                                          const SEV_CERT *parent_cert,
+                                          EVP_PKEY *parent_signing_key)    // Probably PubKey
 {
-    if (!ChildCert || !ParentCert || !ParentSigningKey)
+    if (!child_cert || !parent_cert || !parent_signing_key)
         return ERROR_INVALID_CERTIFICATE;
 
-    SEV_ERROR_CODE CmdRet = ERROR_INVALID_CERTIFICATE;
-    SEV_SIG CertSig[SEV_CERT_MAX_SIGNATURES] = {ChildCert->Sig1, ChildCert->Sig2};
-    HMACSHA256 shaDigest256;        // Hash on the cert from Version to PubKey
-    HMACSHA512 shaDigest384;        // Hash on the cert from Version to PubKey
+    SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
+    SEV_SIG cert_sig[SEV_CERT_MAX_SIGNATURES] = {child_cert->Sig1, child_cert->Sig2};
+    HMACSHA256 sha_digest_256;        // Hash on the cert from Version to PubKey
+    HMACSHA512 sha_digest_384;        // Hash on the cert from Version to PubKey
 
     do{
-        // 1. SHA256 hash the Cert from Version through Pubkey parameters
+        // 1. SHA256 hash the cert from Version through Pubkey parameters
         // Calculate the digest of the input message   rsa.c -> rsa_pss_verify_msg()
-        uint32_t PubKeyOffset = offsetof(SEV_CERT, Sig1Usage);  // 16 + sizeof(SEV_PUBKEY)
-        if(!CalcHashDigest(ChildCert, ParentCert->PubkeyAlgo, PubKeyOffset, &shaDigest256, &shaDigest384)) {
+        uint32_t pub_key_offset = offsetof(SEV_CERT, Sig1Usage);  // 16 + sizeof(SEV_PUBKEY)
+        if(!calc_hash_digest(child_cert, parent_cert->PubkeyAlgo, pub_key_offset, &sha_digest_256, &sha_digest_384)) {
             break;
         }
 
-        // 2. Use the Pubkey in sig[i] arg to decrypt the sig in ChildCert arg
-        // Try both sigs in ChildCert, to see if either of them match. In PEK, CEK and OCA can be in any order
-        bool foundMatch = false;
+        // 2. Use the Pubkey in sig[i] arg to decrypt the sig in child_cert arg
+        // Try both sigs in child_cert, to see if either of them match. In PEK, CEK and OCA can be in any order
+        bool found_match = false;
         for (int i = 0; i < SEV_CERT_MAX_SIGNATURES; i++)
         {
-            if( (ParentCert->PubkeyAlgo == SEVSigAlgoRSASHA256) ||
-                (ParentCert->PubkeyAlgo == SEVSigAlgoRSASHA384)) {
+            if( (parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA256) ||
+                (parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA384)) {
+
                 // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                printf("WARNING: You are using untested code in"
-                    "ValidateSignature for RSA cert type!\n");
-                // if( RSA_verify(NID_sha256, shaDigest, sizeof(shaDigest), (uint8_t *)&ParentCert->Sig1.RSA,
-                //                sizeof(SEV_RSA_SIG), EVP_PKEY_get1_RSA(SigningKey[i])) != 1 ) {
-                // }
+                printf("TODO validate_signature segfaults on RSA_verify\n");
+
+                RSA *rsa = EVP_PKEY_get1_RSA(parent_signing_key);     // Signer's (parent's) public key
+                if (!rsa)
+                    printf("Error parent signing key is bad\n");
+
+                if(parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA256) {
+                    if( RSA_verify(NID_sha256, sha_digest_256, sizeof(sha_digest_256),
+                                    (uint8_t *)&parent_cert->Sig1.RSA, sizeof(SEV_RSA_SIG), rsa) != 1 )
+                        found_match = true;
+                }
+                else if(parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA384) {
+                        if( RSA_verify(NID_sha384, sha_digest_384, sizeof(sha_digest_384),
+                                    (uint8_t *)&parent_cert->Sig1.RSA, sizeof(SEV_RSA_SIG), rsa) != 1 )
+                        found_match = true;
+                }
+                // RSA_free(rsa);
                 continue;
             }
-            else if( (ParentCert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||
-                     (ParentCert->PubkeyAlgo == SEVSigAlgoECDSASHA384) ||
-                     (ParentCert->PubkeyAlgo == SEVSigAlgoECDHSHA256)  ||
-                     (ParentCert->PubkeyAlgo == SEVSigAlgoECDHSHA384)) {      // ecdsa.c -> sign_verify_msg
+            else if( (parent_cert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||
+                     (parent_cert->PubkeyAlgo == SEVSigAlgoECDSASHA384) ||
+                     (parent_cert->PubkeyAlgo == SEVSigAlgoECDHSHA256)  ||
+                     (parent_cert->PubkeyAlgo == SEVSigAlgoECDHSHA384)) {      // ecdsa.c -> sign_verify_msg
                 ECDSA_SIG *tmp_ecdsa_sig = ECDSA_SIG_new();
-                BIGNUM *rBigNum = BN_new();
-                BIGNUM *sBigNum = BN_new();
+                BIGNUM *r_big_num = BN_new();
+                BIGNUM *s_big_num = BN_new();
 
                 // Store the x and y components as separate BIGNUM objects. The values in the
                 // SEV certificate are little-endian, must reverse bytes before storing in BIGNUM
-                rBigNum = BN_lebin2bn(CertSig[i].ECDSA.R, sizeof(SEV_ECDSA_SIG::R), rBigNum);    // LE to BE
-                sBigNum = BN_lebin2bn(CertSig[i].ECDSA.S, sizeof(SEV_ECDSA_SIG::S), sBigNum);
+                r_big_num = BN_lebin2bn(cert_sig[i].ECDSA.R, sizeof(SEV_ECDSA_SIG::R), r_big_num);    // LE to BE
+                s_big_num = BN_lebin2bn(cert_sig[i].ECDSA.S, sizeof(SEV_ECDSA_SIG::S), s_big_num);
 
                 // Calling ECDSA_SIG_set0() transfers the memory management of the values to
                 // the ECDSA_SIG object, and therefore the values that have been passed
                 // in should not be freed directly after this function has been called
-                if(ECDSA_SIG_set0(tmp_ecdsa_sig, rBigNum, sBigNum) != 1) {
-                    BN_free(sBigNum);
-                    BN_free(rBigNum);
+                if(ECDSA_SIG_set0(tmp_ecdsa_sig, r_big_num, s_big_num) != 1) {
+                    BN_free(s_big_num);
+                    BN_free(r_big_num);
                     continue;
                 }
-                if( (ParentCert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||
-                    (ParentCert->PubkeyAlgo == SEVSigAlgoECDHSHA256)) {
-                    if(ECDSA_do_verify(shaDigest256, sizeof(shaDigest256), tmp_ecdsa_sig,
-                                    EVP_PKEY_get1_EC_KEY(ParentSigningKey)) == 1)
-                        foundMatch = true;
+                if( (parent_cert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||
+                    (parent_cert->PubkeyAlgo == SEVSigAlgoECDHSHA256)) {
+                    if(ECDSA_do_verify(sha_digest_256, sizeof(sha_digest_256), tmp_ecdsa_sig,
+                                    EVP_PKEY_get1_EC_KEY(parent_signing_key)) == 1)
+                        found_match = true;
                 }
-                else if( (ParentCert->PubkeyAlgo == SEVSigAlgoECDSASHA384) ||
-                         (ParentCert->PubkeyAlgo == SEVSigAlgoECDHSHA384)) {
-                    if(ECDSA_do_verify(shaDigest384, sizeof(shaDigest384), tmp_ecdsa_sig,
-                                EVP_PKEY_get1_EC_KEY(ParentSigningKey)) == 1)
-                        foundMatch = true;
+                else if( (parent_cert->PubkeyAlgo == SEVSigAlgoECDSASHA384) ||
+                         (parent_cert->PubkeyAlgo == SEVSigAlgoECDHSHA384)) {
+                    if(ECDSA_do_verify(sha_digest_384, sizeof(sha_digest_384), tmp_ecdsa_sig,
+                                EVP_PKEY_get1_EC_KEY(parent_signing_key)) == 1)
+                        found_match = true;
                 }
                 ECDSA_SIG_free(tmp_ecdsa_sig);      // Frees BIGNUMs too
                 continue;
             }
             else {       // Bad/unsupported signing key algorithm
-                printf("Unexpected algorithm! %x\n", ParentCert->PubkeyAlgo);
+                printf("Unexpected algorithm! %x\n", parent_cert->PubkeyAlgo);
                 break;
             }
         }
-        if(!foundMatch)
+        if(!found_match)
             break;
 
         // 3. Compare
 
-        CmdRet = STATUS_SUCCESS;
+        cmd_ret = STATUS_SUCCESS;
     } while (0);
 
-    return CmdRet;
+    return cmd_ret;
 }
 
-// sev_cert.c -> sev_cert_validate_body()
-SEV_ERROR_CODE SEVCert::ValidateBody(const SEV_CERT *Cert)
+/**
+ * sev_cert.c -> sev_cert_validate_body()
+ */
+SEV_ERROR_CODE SEVCert::validate_body(const SEV_CERT *cert)
 {
-    if (!Cert)
+    if (!cert)
         return ERROR_INVALID_CERTIFICATE;
 
-    SEV_ERROR_CODE CmdRet = ERROR_INVALID_CERTIFICATE;
+    SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
 
     do {
-        if ( (Cert->Version == 0) || (Cert->Version > SEV_CERT_MAX_VERSION) )
+        if ( (cert->Version == 0) || (cert->Version > SEV_CERT_MAX_VERSION) )
             break;
 
-        CmdRet = STATUS_SUCCESS;
+        cmd_ret = STATUS_SUCCESS;
     } while (0);
 
-    return CmdRet;
+    return cmd_ret;
 }
 
-// Note that this function NEWs/allocates memory for a EC_KEY
-//  that must be freed in the calling function using EC_KEY_free()
-// Inputs: Cert is the parent Cert
-//         pubKey is the parent's public key
-SEV_ERROR_CODE SEVCert::CompilePublicKeyFromCertificate(const SEV_CERT* Cert, EVP_PKEY* EVP_pubKey)
+/** Note that this function NEWs/allocates memory for a EC_KEY
+ *  that must be freed in the calling function using EC_KEY_free()
+ * Inputs: cert is the parent cert
+ *         pubKey is the parent's public key
+ */
+SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const SEV_CERT* cert, EVP_PKEY* evp_pub_key)
 {
-    if(!Cert)
+    if(!cert)
         return ERROR_INVALID_CERTIFICATE;
 
-    SEV_ERROR_CODE CmdRet = ERROR_INVALID_CERTIFICATE;
-    struct rsa_st *RSA_pubKey = NULL;
-    EC_KEY *EC_pubKey = NULL;
-    BIGNUM *xBigNum = NULL;
-    BIGNUM *yBigNum = NULL;
-    BIGNUM *Modulus = NULL;
-    BIGNUM *PubExp = NULL;
+    SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
+    struct rsa_st *rsa_pub_key = NULL;
+    EC_KEY *ec_pub_key = NULL;
+    BIGNUM *x_big_num = NULL;
+    BIGNUM *y_big_num = NULL;
+    BIGNUM *modulus = NULL;
+    BIGNUM *pub_exp = NULL;
 
     do {
-        if( (Cert->PubkeyAlgo == SEVSigAlgoRSASHA256) ||
-            (Cert->PubkeyAlgo == SEVSigAlgoRSASHA384) ) {
+        if( (cert->PubkeyAlgo == SEVSigAlgoRSASHA256) ||
+            (cert->PubkeyAlgo == SEVSigAlgoRSASHA384) ) {
             // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
             printf("WARNING: You are using untested code in"
-                   "CompilePublicKeyFromCertificate for RSA cert type!\n");
-            RSA_pubKey = RSA_new();
+                   "compile_public_key_from_certificate for RSA cert type!\n");
+            rsa_pub_key = RSA_new();
 
-            Modulus = BN_lebin2bn(Cert->Pubkey.RSA.Modulus, sizeof(Cert->Pubkey.RSA.Modulus), NULL);  // New's up BigNum
-            PubExp  = BN_lebin2bn(Cert->Pubkey.RSA.PubExp,  sizeof(Cert->Pubkey.RSA.PubExp), NULL);
-            RSA_pubKey->n = Modulus;
-            RSA_pubKey->e = PubExp;
+            modulus = BN_lebin2bn(cert->Pubkey.RSA.Modulus, sizeof(cert->Pubkey.RSA.Modulus), NULL);  // New's up BigNum
+            pub_exp = BN_lebin2bn(cert->Pubkey.RSA.PubExp,  cert->Pubkey.RSA.ModulusSize/8, NULL);
+            rsa_pub_key->n = modulus;
+            rsa_pub_key->e = pub_exp;
 
-            // Make sure the key is good. TODO: Will this step work?
-            if (RSA_check_key(RSA_pubKey) != 1)
-                break;
+            // Make sure the key is good.
+            // TODO: This step fails because, from the openssl doc:
+            //       It does not work on RSA public keys that have only
+            //       the modulus and public exponent elements populated
+            // if (RSA_check_key(rsa_pub_key) != 1)
+            //     break;
 
             // Create a public EVP_PKEY from the public RSA_KEY
-            // This function links EVP_pubKey to RSA_pubKey, so when EVP_pubKey is freed, RSA_pubKey is freed
+            // This function links evp_pub_key to rsa_pub_key, so when evp_pub_key is freed, rsa_pub_key is freed
             // We don't want the user to have to manage 2 keys, so just return EVP_PKEY and make sure user free's it
-            EVP_PKEY_assign_RSA(EVP_pubKey, RSA_pubKey);
+            if(EVP_PKEY_assign_RSA(evp_pub_key, rsa_pub_key) != 1)
+                break;
         }
-        else if( (Cert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||
-                 (Cert->PubkeyAlgo == SEVSigAlgoECDSASHA384) ||
-                 (Cert->PubkeyAlgo == SEVSigAlgoECDHSHA256)  ||
-                 (Cert->PubkeyAlgo == SEVSigAlgoECDHSHA384) ) {      // ecdsa.c -> sign_verify_msg
+        else if( (cert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||
+                 (cert->PubkeyAlgo == SEVSigAlgoECDSASHA384) ||
+                 (cert->PubkeyAlgo == SEVSigAlgoECDHSHA256)  ||
+                 (cert->PubkeyAlgo == SEVSigAlgoECDHSHA384) ) {      // ecdsa.c -> sign_verify_msg
 
             // Store the x and y components as separate BIGNUM objects. The values in the
             // SEV certificate are little-endian, must reverse bytes before storing in BIGNUM
-            xBigNum = BN_lebin2bn(Cert->Pubkey.ECDH.QX, sizeof(Cert->Pubkey.ECDH.QX), NULL);  // New's up BigNum
-            yBigNum = BN_lebin2bn(Cert->Pubkey.ECDH.QY, sizeof(Cert->Pubkey.ECDH.QY), NULL);
+            x_big_num = BN_lebin2bn(cert->Pubkey.ECDH.QX, sizeof(cert->Pubkey.ECDH.QX), NULL);  // New's up BigNum
+            y_big_num = BN_lebin2bn(cert->Pubkey.ECDH.QY, sizeof(cert->Pubkey.ECDH.QY), NULL);
 
             int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
 
             // Create/allocate memory for an EC_KEY object using the NID above
-            if (!(EC_pubKey = EC_KEY_new_by_curve_name(nid)))
+            if (!(ec_pub_key = EC_KEY_new_by_curve_name(nid)))
                 break;
             // Store the x and y coordinates of the public key
-            if (EC_KEY_set_public_key_affine_coordinates(EC_pubKey, xBigNum, yBigNum) != 1)
+            if (EC_KEY_set_public_key_affine_coordinates(ec_pub_key, x_big_num, y_big_num) != 1)
                 break;
             // Make sure the key is good
-            if (EC_KEY_check_key(EC_pubKey) != 1)
+            if (EC_KEY_check_key(ec_pub_key) != 1)
                 break;
 
             // Create a public EVP_PKEY from the public EC_KEY
-            // This function links EVP_pubKey to EC_pubKey, so when EVP_pubKey is freed, EC_pubKey is freed
+            // This function links evp_pub_key to ec_pub_key, so when evp_pub_key is freed, ec_pub_key is freed
             // We don't want the user to have to manage 2 keys, so just return EVP_PKEY and make sure user free's it
-            EVP_PKEY_assign_EC_KEY(EVP_pubKey, EC_pubKey);
+            if(EVP_PKEY_assign_EC_KEY(evp_pub_key, ec_pub_key) != 1)
+                break;
         }
 
-        if (!EVP_pubKey)
+        if (!evp_pub_key)
             break;
 
-        CmdRet = STATUS_SUCCESS;
+        cmd_ret = STATUS_SUCCESS;
     } while (0);
 
     // Free memory if it was allocated
-    BN_free(yBigNum);       // If NULL, does nothing
-    BN_free(xBigNum);
-    BN_free(Modulus);
-    BN_free(PubExp);
+    BN_free(y_big_num);       // If NULL, does nothing
+    BN_free(x_big_num);
+    BN_free(modulus);
+    BN_free(pub_exp);
 
-    return CmdRet;
+    return cmd_ret;
 }
 
-// Takes in a signed certificate and validates the signature(s)
-// against the public keys in other certificates.
-// This test assumes ParentCert1 is always valid, and ParentCert2 may be valid
-// sev_cert.c -> sev_cert_validate()
-SEV_ERROR_CODE SEVCert::VerifySEVCert(const SEV_CERT *ParentCert1, const SEV_CERT *ParentCert2)
+/**
+ * Takes in a signed certificate and validates the signature(s)
+ * against the public keys in other certificates.
+ * This test assumes parent_cert1 is always valid, and parent_cert2 may be valid
+ * sev_cert.c -> sev_cert_validate()
+ */
+SEV_ERROR_CODE SEVCert::verify_sev_cert(const SEV_CERT *parent_cert1, const SEV_CERT *parent_cert2)
 {
-    if(!ParentCert1)
+    if(!parent_cert1)
         return ERROR_INVALID_CERTIFICATE;
 
-    SEV_ERROR_CODE CmdRet = ERROR_INVALID_CERTIFICATE;
-    EVP_PKEY *ParentPubKey[SEV_CERT_MAX_SIGNATURES] = {NULL};
-    const SEV_CERT *ParentCert[SEV_CERT_MAX_SIGNATURES] = {ParentCert1, ParentCert2};   // A cert has max of x parents/sigs
+    SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
+    EVP_PKEY *parent_pub_key[SEV_CERT_MAX_SIGNATURES] = {NULL};
+    const SEV_CERT *parent_cert[SEV_CERT_MAX_SIGNATURES] = {parent_cert1, parent_cert2};   // A cert has max of x parents/sigs
 
     do {
         // Get the public key from parent certs
-        int numSigs = (ParentCert1 && ParentCert2) ? 2 : 1;   // Run the loop for 1 or 2 signatures
+        int numSigs = (parent_cert1 && parent_cert2) ? 2 : 1;   // Run the loop for 1 or 2 signatures
         int i = 0;
         for (i = 0; i < numSigs; i++)
         {
             // New up the EVP_PKEY
-            if (!(ParentPubKey[i] = EVP_PKEY_new()))
+            if (!(parent_pub_key[i] = EVP_PKEY_new()))
                 break;
 
             // This function allocates memory and attaches an EC_Key
             //  to your EVP_PKEY so, to prevent mem leaks, make sure
             //  the EVP_PKEY is freed at the end of this function
-            if(CompilePublicKeyFromCertificate(ParentCert[i], ParentPubKey[i]) != STATUS_SUCCESS)
+            if(compile_public_key_from_certificate(parent_cert[i], parent_pub_key[i]) != STATUS_SUCCESS)
                 break;
 
             // Now, we have Parent's PublicKey(s), validate them
-            if (ValidatePublicKey(&mChildCert, ParentPubKey[i]) != STATUS_SUCCESS)
+            if (validate_public_key(&m_child_cert, parent_pub_key[i]) != STATUS_SUCCESS)
                 break;
 
             // Validate the signature before we do any other checking
             // Sub-function will need a separate loop to find which of the 2 signatures this one matches to
-            if(ValidateSignature(&mChildCert, ParentCert[i], ParentPubKey[i]) != STATUS_SUCCESS)
+            if(validate_signature(&m_child_cert, parent_cert[i], parent_pub_key[i]) != STATUS_SUCCESS)
                 break;
         }
         if(i != numSigs)
             break;
 
         // Validate the certificate body
-        if(ValidateBody(&mChildCert) != STATUS_SUCCESS)
+        if(validate_body(&m_child_cert) != STATUS_SUCCESS)
             break;
-
 
         // Although the signature was valid, ensure that the certificate
         // was signed with the proper key(s) in the correct order
-        if(mChildCert.PubkeyUsage == SEVUsagePDH) {
+        if(m_child_cert.PubkeyUsage == SEVUsagePDH) {
             // The PDH certificate must be signed by the PEK
-            if(ParentCert1->PubkeyUsage != SEVUsagePEK) {
+            if(parent_cert1->PubkeyUsage != SEVUsagePEK) {
                 break;
             }
         }
-        else if(mChildCert.PubkeyUsage == SEVUsagePEK) {
+        else if(m_child_cert.PubkeyUsage == SEVUsagePEK) {
             // The PEK certificate must be signed by the CEK and the OCA
-            if( ((ParentCert1->PubkeyUsage != SEVUsageOCA) && (ParentCert2->PubkeyUsage != SEVUsageCEK)) &&
-                ((ParentCert2->PubkeyUsage != SEVUsageOCA) && (ParentCert1->PubkeyUsage != SEVUsageCEK)) ) {
+            if( ((parent_cert1->PubkeyUsage != SEVUsageOCA) && (parent_cert2->PubkeyUsage != SEVUsageCEK)) &&
+                ((parent_cert2->PubkeyUsage != SEVUsageOCA) && (parent_cert1->PubkeyUsage != SEVUsageCEK)) ) {
                 break;
             }
         }
-        else if(mChildCert.PubkeyUsage == SEVUsageOCA) {
+        else if(m_child_cert.PubkeyUsage == SEVUsageOCA) {
             // The OCA certificate must be self-signed
-            if(ParentCert1->PubkeyUsage != SEVUsageOCA) {
+            if(parent_cert1->PubkeyUsage != SEVUsageOCA) {
                 break;
             }
         }
-        else if(mChildCert.PubkeyUsage == SEVUsageCEK) {
+        else if(m_child_cert.PubkeyUsage == SEVUsageCEK) {
             // The CEK must be signed by the ASK
-            if(ParentCert1->PubkeyUsage != SEVUsageASK) {
+            if(parent_cert1->PubkeyUsage != SEVUsageASK) {
                 break;
             }
         }
         else
             break;
 
-        CmdRet = STATUS_SUCCESS;
+        cmd_ret = STATUS_SUCCESS;
     } while (0);
 
     // Free memory
     for(int i = 0; i < SEV_CERT_MAX_SIGNATURES; i++) {
-        EVP_PKEY_free(ParentPubKey[i]);
+        EVP_PKEY_free(parent_pub_key[i]);
     }
 
-    return CmdRet;
+    return cmd_ret;
 }

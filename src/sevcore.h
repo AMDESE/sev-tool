@@ -96,7 +96,7 @@ public:
     int set_externally_owned(std::string& oca_priv_key_file,
                                         std::string& oca_cert_file);
     int generate_cek_ask(std::string& output_folder, std::string& cert_file);
-    int get_ask_ark(std::string& output_folder);
+    int get_ask_ark(std::string& output_folder, std::string& cert_file);
 };
 
 
