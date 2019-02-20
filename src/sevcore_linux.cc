@@ -504,8 +504,7 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
         {
             sprintf(id1_buf+strlen(id1_buf), "%02x", id_buf.socket1[i]);
         }
-        cmd += "bd9e2fe7356fcd52be9c10008f25f175482d1c8b2bef5b0eb36147dae166573c20d086a7f8d2bb4cdaef09788198e41682355815d4239e8e408c1a4113cd3e95";
-        // cmd += id1_buf;
+        cmd += id1_buf;
 
         // Pass in the ID of Socket1 to the KDS server and download the certificate
         if(!ExecuteSystemCommand(cmd, &output)) {
@@ -515,7 +514,7 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
         }
 
         // Check if the file got downloaded
-        std::string cert_w_path = output_folder + "/" + "bd9e2fe7356fcd52be9c10008f25f175482d1c8b2bef5b0eb36147dae166573c20d086a7f8d2bb4cdaef09788198e41682355815d4239e8e408c1a4113cd3e95";
+        std::string cert_w_path = output_folder + "/" + id1_buf;
         char tmp_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
         if(ReadFile(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
             printf("Error: command to get cek_ask cert failed\n");

@@ -1,7 +1,7 @@
-# How to Download and Run SEV Tool
+# How to Download and Run SEV-Tool
 &nbsp;
-Version: v5
-Updated: 2019-02-11
+Version: v6
+Updated: 2019-02-20
 &nbsp;
 &nbsp;
 &nbsp;
@@ -10,25 +10,35 @@ Updated: 2019-02-11
 - The SEV API can be found here: https://developer.amd.com/sev/
 
 ## OS Requirements
-  - When using Ubuntu, you must have Ubuntu 18.10 or later to have the latest kernel headers and libc. If you try to use an older kernel and use ukuu to update the kernel manually, this will give you the newest kernel headers, but you will have an old version of libc, which processed the older kernel headers, not the original ones. It’s (probably) possible to update libc and have it process the new kernel headers, but it’s a lot of work.
-- In Linux, the SEV-Tool communicates to the PSP through the ccp driver, so ensure that is working correctly
+  - Your Kernel must support SEV. 
+  - If running Linux, the ccp Kernel driver must be running and supported, as that is how the SEV-Tool communicates to the firmware. To tell if your Kernel supports SEV and the ccp driver is working correctly, run a dmesg and look for the following line
+     ```sh
+      $ ccp [xxxx:xx:xx.x]: SEV API:x.xx build:x
+     ```
+     For example, in Ubuntu 18.10, Kernel 4.18.0-15-generic, you will see something similar to
+     ```sh
+      $ ccp [0000:01:00.2]: SEV API:0.17 build:5
+     ```
+    Note: You might also see a dmesg line noting that "Direct firmware load for amd/sev.fw failed with error -2". This just means that the firmware file is not there, and you will be running with the SEV firmware that is provided in the BIOS. This is totally normal.
+  - Note if running Linux, it is recommended that your OS come with a Kernel that supports SEV by default (Ubuntu 18.10 or later, etc) to have the latest Kernel headers and libc. If you start with an older Kernel and use a Kernel upgrade utility (ex: ukuu in Ubuntu) to update the Kernel manually, this will give you the newest Kernel headers, but you will have an old version of libc, which processed the older Kernel headers, not the new ones. It’s (probably) possible to update libc and have it process the new Kernel Keaders, but it’s a lot of work.
 
-## Downloading the SEV Tool
-These instructions assume you are running a normal Linux kernel. The SEV Tool has only been officially tested on Ubuntu 18.10
-1. Installation Steps
-   - Boot into a kernel that supports SEV (>= Ubuntu 18.10, etc)
-   - Install git, make, gcc, g++ and dependencies
+## Downloading the SEV-Tool
+1. Boot into a Kernel that supports SEV (see above to confirm your Kernel supports SEV)
+2. Install git, make, gcc, g++ and dependencies
+   - If running Debian, Ubuntu
      ```sh
       $ sudo apt install git make gcc g++ -y --allow-unauthenticated
      ```
-2. The Github is located at: [SEV-Tool Github](https://github.com/AMDESE/sev-tool). Do a git clone with SSH
+    - Otherwise, use the method that is supported by your OS
+2. The Github is located at: [SEV-Tool Github](https://github.com/AMDESE/SEV-Tool). Do a git clone with SSH
      ```sh
      $ git clone git@github.com:AMDESE/sev-tool.git
      ```
-3. Compile the driver
-This needs to be done for each kernel you want to test with. Running the build script does the following things:
-   - Downloads, configs, and builds the OpenSSL Git code (submodule init/update)
-   - Cleans and builds the SEV Tool
+3. Compile the SEV-Tool. 
+   - Running the build script does the following things:
+      - Downloads, configs, and builds the OpenSSL Git code (submodule init/update)
+      - Cleans and builds the SEV-Tool
+   - To run the build script
      ```sh
      $ cd sev-tool
      $ sh ./build.sh
@@ -59,7 +69,7 @@ This needs to be done for each kernel you want to test with. Running the build s
      ```sh
      $ sudo ./sevtool -h
      ```
-* The --sysinfo flag will display the system information to the user such as: BIOS version, BIOS release date, SMT status, processor frequency, OS, kernel version, Git commit number of the SEV-Tool
+* The --sysinfo flag will display the system information to the user such as: BIOS version, BIOS release date, SMT status, processor frequency, OS, Kernel version, Git commit number of the SEV-Tool, etc
      ```sh
      $ sudo ./sevtool --sysinfo --get_id
      ```
@@ -83,7 +93,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          ```
 2. platform_status
      - Input args: none
-     - Outputs: The current platform status
+     - Outputs: The current platform status will be printed to the screen
      - Example
          ```sh
          $ sudo ./sevtool --platform_status
@@ -132,10 +142,10 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          ```
 8. get_id
      - Optional input args: --ofolder [folder_path]
-         - This allows the user to specify the folder where the tool will export the IDs for Socket1 and Socket2
+         - This allows the user to specify the folder where the tool will export the IDs for Socket0 and Socket1
      - Outputs:
-         - If --[verbose] flag used: The IDs for Socket1 and Socket2 will be printed out to the screen
-         - If --[ofolder] flag used: The IDs for Socket1 and Socket2 will be written as files to the specified folder. Files: getid_s1_out.txt and getid_s2_out.txt
+         - If --[verbose] flag used: The IDs for Socket0 and Socket1 will be printed out to the screen
+         - If --[ofolder] flag used: The IDs for Socket0 and Socket1 will be written as files to the specified folder. Files: getid_s0_out.txt and getid_s1_out.txt
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --get_id
@@ -188,26 +198,42 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          ```
 12. generate_cek_ask
      - Optional input args: --ofolder [folder_path]
-         - This allows the user to specify the folder where the tool will export the cek_ark.cert to, otherwise it will be exported to the same directory as the sev-tool executable
+         - This allows the user to specify the folder where the tool will export the cek_ark.cert to
      - Outputs:
-        - If --[ofolder] flag used: The cek_ask.cert file for your specific platform (processor in the first socket) will be exported to the folder specified. Otherwise, it will be exported to the same directory as the sev-tool executable. File: cek_ask.cert
+        - If --[ofolder] flag used: The cek_ask.cert file for your specific platform (processor in socket0) will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: cek_ask.cert
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --generate_cek_ask
          ```
 13. get_ask_ark
      - Optional input args: --ofolder [folder_path]
-         - This allows the user to specify the folder where the tool will export the ark_ask certificate to, otherwise it will be exported to the same directory as the sev-tool executable
+         - This allows the user to specify the folder where the tool will export the ask_ark certificate to
      - Outputs:
-        - If --[ofolder] flag used: The ark_ark certificate will be exported to the folder specified. Otherwise, it will be exported to the same directory as the sev-tool executable. File: ask_ark_[platform_type].cert
+        - If --[ofolder] flag used: The ark_ark certificate will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: ask_ark.cert
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --get_ask_ark
          ```
+14. validate_cert_chain
+     - This function validates the entire cert chain, from the PDH to the ARK. The steps are as follows:
+        - Call pdh_cert_export to get the PDH and the Cert Chain (PEK, OCA, CEK)
+        - Call get_ask_ark to download the ask_ark.cert
+        - Call generate_cek_ask to generate the cek_ask.cert
+        - Replace the CEK in the Cert Chain with the cek_ask.cert. In the cek_ask.cert, the CEK is signed by the ask (hence the file name), in the Cert Chain, the CEK is not signed by the ASK
+        - Validates the ARK
+        - Validates the ASK using the ARK
+        - Validates the CEK using the ASK
+        - Validates the PEK using the CEK (from cek_ask.cert) and the OCA
+        - Validates the PEK using the PEK
+     - Optional input args: --ofolder [folder_path]
+         - This allows the user to specify the folder where the tool will export the ask_ark and cek_ask certificates to
+     - Outputs: None (see below)
+        - As a byproduct of running this command, the ask_ark and cek_ask certificates are produced and exported to either the same directory as the SEV-Tool executable, or if --[ofolder] flag is used, the folder specified.
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --validate_cert_chain
+         ```
 
-## Debugging the SEV Tool
-   - kdbg makes it very easy to step through, add breakpoints to, and debug the test suite
-     ```sh
-     $ sudo apt-get install kdbg
-     ```
-- Note: kdbg seems to have some issues with Ubuntu 18.04/18.10, but works fine on Ubuntu 16.04
+## Issues, Feature Requests
+   - For any issues with the tool itself, please create a ticket at https://github.com/AMDESE/sev-tool/issues
+   - For any questions/converns with the SEV API spec, please create a ticket at https://github.com/AMDESE/AMDSEV/issues

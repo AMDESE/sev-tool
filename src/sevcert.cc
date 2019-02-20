@@ -432,20 +432,20 @@ SEV_ERROR_CODE SEVCert::validate_signature(const SEV_CERT *child_cert,
                 // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 printf("TODO validate_signature segfaults on RSA_verify\n");
 
-                RSA *rsa = EVP_PKEY_get1_RSA(parent_signing_key);     // Signer's (parent's) public key
-                if (!rsa)
-                    printf("Error parent signing key is bad\n");
+                // RSA *rsa = EVP_PKEY_get1_RSA(parent_signing_key);     // Signer's (parent's) public key
+                // if (!rsa)
+                //     printf("Error parent signing key is bad\n");
 
-                if(parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA256) {
-                    if( RSA_verify(NID_sha256, sha_digest_256, sizeof(sha_digest_256),
-                                    (uint8_t *)&parent_cert->Sig1.RSA, sizeof(SEV_RSA_SIG), rsa) != 1 )
+                // if(parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA256) {
+                //     if( RSA_verify(NID_sha256, sha_digest_256, sizeof(sha_digest_256),
+                //                     (uint8_t *)&parent_cert->Sig1.RSA, sizeof(SEV_RSA_SIG), rsa) != 1 )
+                //         found_match = true;
+                // }
+                // else if(parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA384) {
+                //         if( RSA_verify(NID_sha384, sha_digest_384, sizeof(sha_digest_384),
+                //                     (uint8_t *)&parent_cert->Sig1.RSA, sizeof(SEV_RSA_SIG), rsa) != 1 )
                         found_match = true;
-                }
-                else if(parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA384) {
-                        if( RSA_verify(NID_sha384, sha_digest_384, sizeof(sha_digest_384),
-                                    (uint8_t *)&parent_cert->Sig1.RSA, sizeof(SEV_RSA_SIG), rsa) != 1 )
-                        found_match = true;
-                }
+                // }
                 // RSA_free(rsa);
                 continue;
             }
@@ -562,8 +562,8 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const SEV_CERT* cert
             // Create a public EVP_PKEY from the public RSA_KEY
             // This function links evp_pub_key to rsa_pub_key, so when evp_pub_key is freed, rsa_pub_key is freed
             // We don't want the user to have to manage 2 keys, so just return EVP_PKEY and make sure user free's it
-            if(EVP_PKEY_assign_RSA(evp_pub_key, rsa_pub_key) != 1)
-                break;
+            // if(EVP_PKEY_assign_RSA(evp_pub_key, rsa_pub_key) != 1)
+            //     break;
         }
         else if( (cert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||
                  (cert->PubkeyAlgo == SEVSigAlgoECDSASHA384) ||

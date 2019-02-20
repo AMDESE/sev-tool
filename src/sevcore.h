@@ -28,7 +28,7 @@
 
 #define DEFAULT_SEV_DEVICE     "/dev/sev"
 
-#define KDS_CERT_SITE           "https://kdsintfdev.amd.com/cek/id/"
+#define KDS_CERT_SITE           "https://kdsintf.amd.com/cek/id/"
 #define AMD_SEV_DEVELOPER_SITE  "https://developer.amd.com/sev/"
 #define ASK_ARK_PATH_SITE       "https://developer.amd.com/wp-content/resources/"
 #define ASK_ARK_NAPLES_FILE     "ask_ark_naples.cert"

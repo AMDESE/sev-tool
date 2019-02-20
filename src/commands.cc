@@ -492,14 +492,14 @@ int Command::validate_cert_chain(std::string& output_folder)
             break;
 
         // Generate the cek_ask
-        // cmd_ret = gSEVDevice.generate_cek_ask(output_folder, cek_ask_file);
-        // if(cmd_ret != STATUS_SUCCESS)
-        //     break;
+        cmd_ret = gSEVDevice.generate_cek_ask(output_folder, cek_ask_file);
+        if(cmd_ret != STATUS_SUCCESS)
+            break;
 
         // Generate the ask_ark
-        // cmd_ret = gSEVDevice.get_ask_ark(output_folder, ask_ark_file);
-        // if(cmd_ret != STATUS_SUCCESS)
-        //     break;
+        cmd_ret = gSEVDevice.get_ask_ark(output_folder, ask_ark_file);
+        if(cmd_ret != STATUS_SUCCESS)
+            break;
 
         // Read in the cek_ask
         std::string cek_ask_full = output_folder + "/" + cek_ask_file;

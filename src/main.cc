@@ -197,6 +197,7 @@ int main(int argc, char** argv)
                 break;
             }
             case 'q': {
+                printf("This command is not complete, do not trust the output\n");
                 cmd_ret = cmd.validate_cert_chain(output_folder);
                 break;
             }
