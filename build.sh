@@ -46,25 +46,25 @@ then
     # Cover all SLE and openSUSE distributions.
     debug "Distribution recognized as SUSE based"
 
-    ${INSTALLER}="zypper"
-    ${LIBELF_NAME}="libelf-devel"
-    ${GCC_CPP}="gcc-c++"
+    INSTALLER="zypper"
+    LIBELF_NAME="libelf-devel"
+    GCC_CPP="gcc-c++"
 elif [[ ${DIST_BASE} =~ 'debian' ]] || [[ ${DIST_BASE} =~ 'ubuntu' ]]
 then
     # Cover all Debian and Ubuntu based distributions.
     debug "Distribution recognized as Debian or Ubuntu based"
 
-    ${INSTALLER}="apt-get"
-    ${LIBELF_NAME}="libelf-dev"
-    ${GCC_CPP}="g++"
+    INSTALLER="apt-get"
+    LIBELF_NAME="libelf-dev"
+    GCC_CPP="g++"
 elif [[ ${DIST_BASE} =~ 'fedora' ]] || [[ ${DIST_BASE} =~ 'rhel' ]]
 then
     # Cover all Redhat based distributions.
     debug "Distribution recognized as Fedora or Rhel based"
 
-    ${INSTALLER}="yum"
-    ${LIBELF_NAME}="elfutils-libelf-devel"
-    ${GCC_CPP}="gcc-c++"
+    INSTALLER="yum"
+    LIBELF_NAME="elfutils-libelf-devel"
+    GCC_CPP="gcc-c++"
 else
     debug "Regular expression could not match: \n" "${OS_RELEASE}"
     echo "Distribution not recognized. Please manually install "\
