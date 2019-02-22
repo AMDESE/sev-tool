@@ -53,6 +53,18 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
     arg.cmd = (uint32_t)cmd;
     arg.data = (uint64_t)data;
 
+    if(cmd == SEV_GET_ID) {
+        printf("Adding a 5 second delay to account for Linux GetID bug...\n");
+        // Note: there is a bug in the Linux implementation of GetID, where it
+        //       will sometimes return the wrong value of P0. This happens when
+        //       it's the first command run after a bootup or when it's run
+        //       a few seconds after switching between self-owned and
+        //       externally-owned (both directions).
+        //       "Band-aid" solution: call it once, wait a few seconds, and call it again!
+        ioctl_ret = ioctl(gSEVDevice.GetFD(), SEV_ISSUE_CMD, &arg);
+        usleep(5000000);    // 5 seconds
+    }
+
     ioctl_ret = ioctl(gSEVDevice.GetFD(), SEV_ISSUE_CMD, &arg);
     *cmd_ret = arg.error;
     // if(ioctl_ret != 0) {    // Sometimes you expect it to fail
