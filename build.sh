@@ -81,7 +81,7 @@ then
     do
         if [[ $(rpm -q ${package} 2>&1) =~ "not installed" ]]
         then
-            ${NEED_DEPS}=1
+            NEED_DEPS=1
             break
         fi
     done
@@ -91,7 +91,7 @@ then
     do
         if [[ $(dpkg -l ${package} 2>&1) =~ "no packages found" ]]
         then
-            ${NEED_DEPS}=1
+            NEED_DEPS=1
             break
         fi
     done
