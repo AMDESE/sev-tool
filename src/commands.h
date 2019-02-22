@@ -25,6 +25,8 @@
 #define PDH_READABLE_FILENAME           "pdh_readable.txt"
 #define PEK_FILENAME                    "pek.cert"          // PEK signed by CEK
 #define PEK_READABLE_FILENAME           "pek_readable.txt"
+#define OCA_FILENAME                    "oca.cert"          // OCA signed by P.O.
+#define OCA_READABLE_FILENAME           "oca_readable.cert"
 #define CEK_FILENAME                    "cek.cert"          // CEK signed by ASK
 #define CEK_READABLE_FILENAME           "cek_readable.cert"
 #define ASK_FILENAME                    "ask.cert"          // ASK signed by ARK
@@ -32,9 +34,7 @@
 #define ARK_FILENAME                    "ark.cert"          // ARK self-signed
 #define ARK_READABLE_FILENAME           "ark_readable.cert"
 
-#define OCA_FILENAME                    "oca.cert"          // OCA signed by P.O.
-#define OCA_READABLE_FILENAME           "oca_readable.cert"
-#define CERTS_ZIP_FILENAME              "certs_zip"
+#define CERTS_ZIP_FILENAME              "certs_export"
 #define ASK_ARK_FILENAME                "ask_ark.cert"      // For get_ask_ark
 #define PEK_CSR_HEX_FILENAME            "pek_csr.cert"
 #define PEK_CSR_READABLE_FILENAME       "pek_csr_readable.txt"
@@ -61,7 +61,7 @@ private:
     int calculate_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
     int generate_all_certs(std::string& output_folder);
     int import_all_certs(std::string& output_folder, SEV_CERT *pdh,
-                                SEV_CERT *pek, SEV_CERT *cek,
+                                SEV_CERT *pek, SEV_CERT *oca, SEV_CERT *cek,
                                 AMD_CERT *ask, AMD_CERT *ark);
 public:
     Command() {};

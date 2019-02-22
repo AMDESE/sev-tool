@@ -182,7 +182,50 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          ```sh
          $ sudo ./sevtool --ofolder ./certs --get_id
          ```
-9. calc_measurement
+9. set_self_owned
+     - Input args: none
+     - Outputs: none
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --set_self_owned
+         ```
+10. set_externally_owned
+     - Required input args: This function, among other things, calls pek_cert_import, so the OCA Private key file (.pem) and OCA cert file (.cert) are required arguments.
+     - Outputs: none
+     - Example
+         ```sh
+         $ sudo ./sevtool --set_externally_owned [oca_priv_key_file] [oca_cert_file]
+         $ sudo ./sevtool --set_externally_owned ../psp-sev-assets/oca_key_in.pem ../psp-sev-assets/oca_in.cert
+         ```
+11. generate_cek_ask
+     - Optional input args: --ofolder [folder_path]
+         - This allows the user to specify the folder where the tool will export the cek_ark.cert to
+     - Outputs:
+        - If --[ofolder] flag used: The cek_ask.cert file for your specific platform (processor in socket0) will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: cek_ask.cert
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --generate_cek_ask
+         ```
+12. get_ask_ark
+     - Optional input args: --ofolder [folder_path]
+         - This allows the user to specify the folder where the tool will export the ask_ark certificate to
+     - Outputs:
+        - If --[ofolder] flag used: The ark_ark certificate will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: ask_ark.cert
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --get_ask_ark
+         ```
+13. export_cert_chain
+     - This command exports all of the certs (PDH, PEK, OCA, CEK, ASK, ARK) and zips them up so that the Platform Owner can send them to the Guest Owner to allow the Guest Owner to validate the cert chain
+     - Optional input args: --ofolder [folder_path]
+         - This allows the user to specify the folder where the tool will export all of the certificates to and the zip folder in
+     - Outputs:
+        - If --[ofolder] flag used: The certificates will be exported to and zipped up in the folder specified. Otherwise, they will be exported to and zipped up in the same directory as the SEV-Tool executable. Files: pdh.cert, pek.cert, oca.cert, cek.cert, ask.cert, ark.cert, certs_export.zip
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --export_cert_chain
+         ```
+14. calc_measurement
      - The purpose of the calc_measurement command is for the user to be able to validate that they are calculating the HMAC/measurement correctly when they would be calling Launch_Measure during the normal API flow. The user can input all of the parameters used to calculate the HMAC and an output will be generated that the user can compare to their calculated measurement.
      - Required input args: [Context] [Api Major] [Api Minor] [Build ID] [Policy] [Digest] [MNonce] [TIK]
          - The format of the input parameters are ascii-encoded hex bytes.
@@ -213,54 +256,18 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
             Command Successful
          ```
     - Note that, for security reasons, the TIK will not be shown when the user runs the tool
-10. set_self_owned
-     - Input args: none
-     - Outputs: none
-     - Example
-         ```sh
-         $ sudo ./sevtool --ofolder ./certs --set_self_owned
-         ```
-11. set_externally_owned
-     - Required input args: This function, among other things, calls pek_cert_import, so the OCA Private key file (.pem) and OCA cert file (.cert) are required arguments.
-     - Outputs: none
-     - Example
-         ```sh
-         $ sudo ./sevtool --set_externally_owned [oca_priv_key_file] [oca_cert_file]
-         $ sudo ./sevtool --set_externally_owned ../psp-sev-assets/oca_key_in.pem ../psp-sev-assets/oca_in.cert
-         ```
-12. generate_cek_ask
-     - Optional input args: --ofolder [folder_path]
-         - This allows the user to specify the folder where the tool will export the cek_ark.cert to
-     - Outputs:
-        - If --[ofolder] flag used: The cek_ask.cert file for your specific platform (processor in socket0) will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: cek_ask.cert
-     - Example
-         ```sh
-         $ sudo ./sevtool --ofolder ./certs --generate_cek_ask
-         ```
-13. get_ask_ark
-     - Optional input args: --ofolder [folder_path]
-         - This allows the user to specify the folder where the tool will export the ask_ark certificate to
-     - Outputs:
-        - If --[ofolder] flag used: The ark_ark certificate will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: ask_ark.cert
-     - Example
-         ```sh
-         $ sudo ./sevtool --ofolder ./certs --get_ask_ark
-         ```
-14. validate_cert_chain
-     - This function validates the entire cert chain, from the PDH to the ARK. The steps are as follows:
-        - Call pdh_cert_export to get the PDH and the Cert Chain (PEK, OCA, CEK)
-        - Call get_ask_ark to download the ask_ark.cert
-        - Call generate_cek_ask to generate the cek_ask.cert
-        - Replace the CEK in the Cert Chain with the cek_ask.cert. In the cek_ask.cert, the CEK is signed by the ask (hence the file name), in the Cert Chain, the CEK is not signed by the ASK
+15. validate_cert_chain
+     - This function imports the entire cert chain as separate cert files and validates it. 
+     - When calling this command, please unzip the certs into the folder you expect the tool to use.
+     - The steps are as follows:
+        - Imports the PDH, PEK, OCA, CEK, ASK, and ARK certs
         - Validates the ARK
         - Validates the ASK using the ARK
         - Validates the CEK using the ASK
-        - Validates the PEK using the CEK (from cek_ask.cert) and the OCA
-        - Validates the PEK using the PEK
+        - Validates the PEK using the CEK and the OCA
+        - Validates the PDH using the PEK
      - Optional input args: --ofolder [folder_path]
-         - This allows the user to specify the folder where the tool will export the ask_ark and cek_ask certificates to
-     - Outputs: None (see below)
-        - As a byproduct of running this command, the ask_ark and cek_ask certificates are produced and exported to either the same directory as the SEV-Tool executable, or if --[ofolder] flag is used, the folder specified.
+         - This allows the user to specify the folder where the tool will import the certs from, otherwise it will use the same folder as the SEV-Tool executable
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_cert_chain

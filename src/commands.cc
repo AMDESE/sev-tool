@@ -340,6 +340,7 @@ int Command::generate_all_certs(std::string& output_folder)
     std::string ask_ark_file = ASK_FILENAME;
     std::string pdh_pek_full = output_folder + PDH_FILENAME;
     std::string pek_cek_full = output_folder + PEK_FILENAME;
+    std::string oca_full     = output_folder + OCA_FILENAME;
     std::string cek_ask_full = output_folder + CEK_FILENAME;
     std::string ask_ark_full = output_folder + ASK_FILENAME;
     std::string ark_ark_full = output_folder + ARK_FILENAME;
@@ -383,11 +384,12 @@ int Command::generate_all_certs(std::string& output_folder)
         // Note that the CEK in the cert chain is unsigned, so we want to use
         //   the one 'cached by the hypervisor' that's signed by the ask
         //   (the one from the AMD dev site)
-        // We don't really care about the OCA here
         size_t ark_size = tmp_amd.amd_cert_get_size(&ark);
         if(WriteFile(pdh_pek_full, pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
         if(WriteFile(pek_cek_full, PEKinCertChain(cert_chain), sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+            break;
+        if(WriteFile(oca_full, OCAinCertChain(cert_chain), sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
         if(WriteFile(ask_ark_full, &ask, ask_size) != ask_size)
             break;
@@ -411,6 +413,7 @@ int Command::export_cert_chain(std::string& output_folder)
     std::string space = " ";
     std::string cert_names = output_folder + PDH_FILENAME + space +
                              output_folder + PEK_FILENAME + space +
+                             output_folder + OCA_FILENAME + space +
                              output_folder + CEK_FILENAME + space +
                              output_folder + ASK_FILENAME + space +
                              output_folder + ARK_FILENAME;
@@ -517,7 +520,7 @@ int Command::calc_measurement(std::string& output_folder, int verbose_flag,
 }
 
 int Command::import_all_certs(std::string& output_folder, SEV_CERT *pdh,
-                                SEV_CERT *pek, SEV_CERT *cek,
+                                SEV_CERT *pek, SEV_CERT *oca, SEV_CERT *cek,
                                 AMD_CERT *ask, AMD_CERT *ark)
 {
     int cmd_ret = ERROR_INVALID_CERTIFICATE;
@@ -536,6 +539,11 @@ int Command::import_all_certs(std::string& output_folder, SEV_CERT *pdh,
         // Read in the cek
         std::string cek_full = output_folder+CEK_FILENAME;
         if(ReadFile(cek_full, cek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+            break;
+
+        // Read in the oca
+        std::string oca_full = output_folder+OCA_FILENAME;
+        if(ReadFile(oca_full, oca, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Read in the pek
@@ -559,6 +567,7 @@ int Command::validate_cert_chain(std::string& output_folder)
     int cmd_ret = -1;
     SEV_CERT pdh;
     SEV_CERT pek;
+    SEV_CERT oca;
     SEV_CERT cek;
     AMD_CERT ask;
     AMD_CERT ark;
@@ -566,7 +575,7 @@ int Command::validate_cert_chain(std::string& output_folder)
     SEV_CERT ask_pubkey;
 
     do {
-        cmd_ret = import_all_certs(output_folder, &pdh, &pek, &cek, &ask, &ark);
+        cmd_ret = import_all_certs(output_folder, &pdh, &pek, &oca, &cek, &ask, &ark);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -600,8 +609,8 @@ int Command::validate_cert_chain(std::string& output_folder)
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
-        // Validate the PEK with the CEK
-        cmd_ret = tmp_sev_pek.verify_sev_cert(&cek);
+        // Validate the PEK with the CEK and OCA
+        cmd_ret = tmp_sev_pek.verify_sev_cert(&cek, &oca);
         if (cmd_ret != STATUS_SUCCESS)
             break;
 

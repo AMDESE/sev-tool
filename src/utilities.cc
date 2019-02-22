@@ -54,7 +54,8 @@ size_t ReadFile(const std::string& filename, void *buffer, size_t len)
     std::streamsize slen = (std::streamsize)len;
 
     if (!file.is_open()) {
-        printf("Readfile Error: Could not open file. Ensure directory exists\n");
+        printf("Readfile Error: Could not open file. Ensure directory exists\n" \
+                    "  Filename: %s\n", filename.c_str());
         return 0;
     }
 
@@ -78,7 +79,8 @@ size_t WriteFile(const std::string& filename, const void *buffer, size_t len)
     std::streamsize slen = (std::streamsize)len;
 
     if (!file.is_open()) {
-        printf("WriteFile Error: Could not open/create file. Ensure directory exists\n");
+        printf("WriteFile Error: Could not open/create file. Ensure directory exists\n" \
+                    "  Filename: %s\n", filename.c_str());
         return 0;
     }
     printf("Writing to file: %s\n", filename.c_str());
