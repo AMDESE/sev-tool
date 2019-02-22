@@ -97,6 +97,7 @@ public:
                                         std::string& oca_cert_file);
     int generate_cek_ask(std::string& output_folder, std::string& cert_file);
     int get_ask_ark(std::string& output_folder, std::string& cert_file);
+    int zip_certs(std::string& output_folder, std::string& zip_name, std::string& files_to_zip);
 };
 
 

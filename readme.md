@@ -1,17 +1,48 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v6
-Updated: 2019-02-20
-&nbsp;
+Version: v7
+Updated: 2019-02-21
 &nbsp;
 &nbsp;
 
 ## Related Docs
 - The SEV API can be found here: https://developer.amd.com/sev/
 
+## Proposed Provisioning Steps
+##### Platform Owner
+1. Get Platform and connect to Internet
+2. Install SEV-supported operating system
+3. Confirm that SEV is supported (using steps in [OS Requirements](#os-requirements))
+4. Make a folder for the SEV-Tool to export certs/IDs to (pass into commands with the --ofolder flag)
+5. Run the get_id command. As a simple check if running when 2 processors, make sure the returned IDs are different by using the --verbose flag
+6. Get the CEK_ASK from the AMD KDS server by running the generate_cek_ask command
+7. Generate your OCA (example using openssl coming soon)
+8. Run the pek_csr command to generate a certificate signing request for your PEK. This will allow you to take ownership of the platform.
+9. Sign PEK with OCA (example using openssl coming soon)
+10. Run the pek_cert_import command
+11. Run the pdh_cert_export command
+12. Run the get_ask_ark command
+13. Run the export_cert_chain command to export the PDH down to the ARK (AMD root) and zip it up
+14. Save the complete cert chain for Guest Owners (GO's)
+15. Make available UEFI image for guests
+
+##### Guest Owner
+1. Get cert chains from the Platform Owner (PO)
+2. Get UEFI image from the Platform Owner
+3. (Out of scope) Confirm the UEFI image is trustable
+4. Run the validate_cert_chain command to verify the cert chain from the PDH down to the ARK (AMD root). (Unzip the cert chain certs given to you by the Platform Owner and use that folder as the --ofolder flag)
+5. (Out of scope) Verify OCA cert chain from the Platform Owner
+6. (Coming soon) Run the generate_launch_blob command
+7. Send the blob to the Platform Owner so they can launch your Guests
+8. Get the measurement from the Platform Owner
+9. Run the calc_measurement and verify the measurement from the Platform owner matches what you calculated
+10. (Coming soon) Run the package_secret command
+11. Send the secret(s) to the Platform Owner
+12. Give "ready to run" approval to the Platform Owner
+
 ## OS Requirements
   - Your Kernel must support SEV. 
-  - If running Linux, the ccp Kernel driver must be running and supported, as that is how the SEV-Tool communicates to the firmware. To tell if your Kernel supports SEV and the ccp driver is working correctly, run a dmesg and look for the following line
+  - If running Linux, the ccp Kernel driver must be running and supported, as that is how the SEV-Tool communicates to the firmware. To tell if your Kernel supports SEV and the ccp driver is working correctly, run a dmesg and look for the following line:
      ```sh
       $ ccp [xxxx:xx:xx.x]: SEV API:x.xx build:x
      ```
@@ -19,7 +50,8 @@ Updated: 2019-02-20
      ```sh
       $ ccp [0000:01:00.2]: SEV API:0.17 build:5
      ```
-    Note: You might also see a dmesg line noting that "Direct firmware load for amd/sev.fw failed with error -2". This just means that the firmware file is not there, and you will be running with the SEV firmware that is provided in the BIOS. This is totally normal.
+    This means that the ccp driver was able to run the Init command against the SEV firmware.
+    Note: You might also see a dmesg line noting that "Direct firmware load for amd/sev.fw failed with error -2". This just means that the firmware file is not there for the ccp driver to run the Download_Firmware command on startup, and you will be running with the SEV firmware that is provided in the BIOS. This is totally normal.
   - Note if running Linux, it is recommended that your OS come with a Kernel that supports SEV by default (Ubuntu 18.10 or later, etc) to have the latest Kernel headers and libc. If you start with an older Kernel and use a Kernel upgrade utility (ex: ukuu in Ubuntu) to update the Kernel manually, this will give you the newest Kernel headers, but you will have an old version of libc, which processed the older Kernel headers, not the new ones. It’s (probably) possible to update libc and have it process the new Kernel Keaders, but it’s a lot of work.
 
 ## Downloading the SEV-Tool

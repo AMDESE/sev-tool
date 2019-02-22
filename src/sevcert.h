@@ -18,7 +18,6 @@
 #define sevcert_h
 
 #include "sevapi.h"
-#include "x509cert.h"
 #include <string>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -30,10 +29,10 @@
 
 // Public global functions
 static std::string sev_empty = "NULL";
-void print_cert_readable(const SEV_CERT *cert, std::string& outStr = sev_empty);
-void print_cert_hex(void *cert);
-void print_cert_chain_buf_readable(void *p, std::string& outStr = sev_empty);
-void print_cert_chain_buf_hex(void *p);
+void print_sev_cert_readable(const SEV_CERT *cert, std::string& outStr = sev_empty);
+void print_sev_cert_hex(const SEV_CERT *cert);
+void print_cert_chain_buf_readable(const SEV_CERT_CHAIN_BUF *p, std::string& outStr = sev_empty);
+void print_cert_chain_buf_hex(const SEV_CERT_CHAIN_BUF *p);
 
 class SEVCert {
 private:
@@ -52,9 +51,6 @@ public:
     ~SEVCert() {};
 
     const SEV_CERT *data() { return &m_child_cert; }
-
-    void sev_cert_to_x509_cert(const X509_CERT *x509_cert, SEV_CERT *sev_cert);
-    void x509_cert_to_sev_cert(const SEV_CERT *sev_cert, X509_CERT *x509_cert);
 
     bool sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
                       const std::string& oca_priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo );

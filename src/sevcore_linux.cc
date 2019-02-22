@@ -485,10 +485,6 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
     memset(&id_buf, 0, sizeof(sev_user_data_get_id));
 
     do {
-        // Prepare the cmd string
-        if(output_folder == "") {
-           output_folder = "./";
-        }
         cmd += "-P " + output_folder + " ";
         cmd += KDS_CERT_SITE;
 
@@ -516,7 +512,7 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
         // Check if the file got downloaded
         // Note that Linux referrs to P0 and P1 as socket1 and socket2 (which is incorrect).
         //   So below, we are getting the ID for P0, which is the first socket
-        std::string cert_w_path = output_folder + "/" + id0_buf;
+        std::string cert_w_path = output_folder + id0_buf;
         char tmp_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
         if(ReadFile(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
             printf("Error: command to get cek_ask cert failed\n");
@@ -525,9 +521,9 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
         }
 
         // Copy the file from (get_id) name to something known (cert_file)
-        std::string to_cert_w_path = output_folder + "/" + cert_file;
+        std::string to_cert_w_path = output_folder + cert_file;
         if(std::rename(cert_w_path.c_str(), to_cert_w_path.c_str()) != 0) {
-            printf("Error: renaming cert file\n");
+            printf("Error: renaming cek cert file\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
         }
@@ -547,12 +543,8 @@ int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
     std::string cert_w_path = "";
 
     do {
-        // Prepare the cmd string
-        if(output_folder == "") {
-           output_folder = "./";
-        }
         cmd += "-P " + output_folder + " ";
-        cert_w_path = output_folder + "/";
+        cert_w_path = output_folder;
 
         get_family_model(&family, &model);
         if(family == NAPLES_FAMILY && model >= NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
@@ -587,15 +579,33 @@ int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
             break;
         }
 
-        // Copy the file (_PlatformType) to something known (cert_file)
-        std::string to_cert_w_path = output_folder + "/" + cert_file;
+        // Rename the file (_PlatformType) to something known (cert_file)
+        std::string to_cert_w_path = output_folder + cert_file;
         if(std::rename(cert_w_path.c_str(), to_cert_w_path.c_str()) != 0) {
-            printf("Error: renaming cert file\n");
+            printf("Error: renaming ask_ark cert file\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
         }
         cmd_ret = SEV_RET_SUCCESS;
     } while (0);
+
+    return cmd_ret;
+}
+
+int SEVDevice::zip_certs(std::string& output_folder, std::string& zip_name, std::string& files_to_zip)
+{
+    int cmd_ret = SEV_RET_SUCCESS;
+    std::string cmd = "";
+    std::string output = "";
+    std::string error = "zip error";
+
+    cmd = "zip " + output_folder + zip_name + " " + files_to_zip;
+    ExecuteSystemCommand(cmd, &output);
+
+    if(output.find(error) != std::string::npos) {
+        printf("Error when zipping up files!");
+        cmd_ret = -1;
+    }
 
     return cmd_ret;
 }

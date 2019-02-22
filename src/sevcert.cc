@@ -25,25 +25,9 @@
 #include <stdio.h>
 
 /**
- * Converts X509_CERTs to SEV_CERTs
- */
-// void SEVCert::sev_cert_to_x509_cert(const X509_CERT *x509_cert, SEV_CERT *sev_cert)
-// {
-
-// }
-
-/**
- * Converts SEV_CERTs to X509_CERTs
- */
-// void SEVCert::x509_cert_to_sev_cert(const SEV_CERT *sev_cert, X509_CERT *x509_cert)
-// {
-
-// }
-
-/**
  * If outStr is passed in, fill up the string, else prints to std::out
  */
-void print_cert_readable(const SEV_CERT *cert, std::string& outStr)
+void print_sev_cert_readable(const SEV_CERT *cert, std::string& outStr)
 {
     char out[sizeof(SEV_CERT)*3+500];   // 2 chars per byte + 1 spaces + ~500 extra chars for text
 
@@ -83,7 +67,7 @@ void print_cert_readable(const SEV_CERT *cert, std::string& outStr)
 /**
  * To print this to a file, just use WriteFile directly
  */
-void print_cert_hex(void *cert)
+void print_sev_cert_hex(const SEV_CERT *cert)
 {
     printf("Printing cert...\n");
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { //bytes to uint8
@@ -96,7 +80,7 @@ void print_cert_hex(void *cert)
  * Prints out the PDK, OCA, and CEK
  * If outStr is passed in, fill up the string, else prints to std::out
  */
-void print_cert_chain_buf_readable(void *p, std::string& outStr)
+void print_cert_chain_buf_readable(const SEV_CERT_CHAIN_BUF *p, std::string& outStr)
 {
     char out_pek[50];    // Just big enough for string below
     char out_oca[50];
@@ -106,15 +90,15 @@ void print_cert_chain_buf_readable(void *p, std::string& outStr)
 
     sprintf(out_pek, "PEK Memory: %ld bytes\n", sizeof(SEV_CERT));
     out_str_local += out_pek;
-    print_cert_readable(((SEV_CERT*)PEKinCertChain(p)), out_str_local);
+    print_sev_cert_readable(((SEV_CERT *)PEKinCertChain(p)), out_str_local);
 
     sprintf(out_oca, "\nOCA Memory: %ld bytes\n", sizeof(SEV_CERT));
     out_str_local += out_oca;
-    print_cert_readable(((SEV_CERT*)OCAinCertChain(p)), out_str_local);
+    print_sev_cert_readable(((SEV_CERT *)OCAinCertChain(p)), out_str_local);
 
     sprintf(out_cek, "\nCEK Memory: %ld bytes\n", sizeof(SEV_CERT));
     out_str_local += out_cek;
-    print_cert_readable(((SEV_CERT*)CEKinCertChain(p)), out_str_local);
+    print_sev_cert_readable(((SEV_CERT *)CEKinCertChain(p)), out_str_local);
 
     if(outStr == "NULL") {
         printf("%s\n", out_str_local.c_str());
@@ -128,7 +112,7 @@ void print_cert_chain_buf_readable(void *p, std::string& outStr)
  * Prints out the PDK, OCA, and CEK
  * To print this to a file, just use WriteFile directly
  */
-void print_cert_chain_buf_hex(void *p)
+void print_cert_chain_buf_hex(const SEV_CERT_CHAIN_BUF *p)
 {
     printf("PEK Memory: %ld bytes\n", sizeof(SEV_CERT));
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { //bytes to uint8
@@ -432,21 +416,23 @@ SEV_ERROR_CODE SEVCert::validate_signature(const SEV_CERT *child_cert,
                 // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 printf("TODO validate_signature segfaults on RSA_verify\n");
 
-                // RSA *rsa = EVP_PKEY_get1_RSA(parent_signing_key);     // Signer's (parent's) public key
-                // if (!rsa)
-                //     printf("Error parent signing key is bad\n");
+                RSA *rsa = EVP_PKEY_get1_RSA(parent_signing_key);     // Signer's (parent's) public key
+                if (!rsa) {
+                    printf("Error parent signing key is bad\n");
+                    break;
+                }
 
-                // if(parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA256) {
-                //     if( RSA_verify(NID_sha256, sha_digest_256, sizeof(sha_digest_256),
-                //                     (uint8_t *)&parent_cert->Sig1.RSA, sizeof(SEV_RSA_SIG), rsa) != 1 )
-                //         found_match = true;
-                // }
-                // else if(parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA384) {
-                //         if( RSA_verify(NID_sha384, sha_digest_384, sizeof(sha_digest_384),
-                //                     (uint8_t *)&parent_cert->Sig1.RSA, sizeof(SEV_RSA_SIG), rsa) != 1 )
-                        found_match = true;
-                // }
-                // RSA_free(rsa);
+                uint32_t sigLen = sizeof(parent_cert->Sig1.RSA);
+                if(parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA256) {
+                    if( RSA_verify(NID_sha256, sha_digest_256, sizeof(sha_digest_256), (uint8_t *)&parent_cert->Sig1.RSA, sigLen, rsa) != 1 )
+                        break;
+                }
+                else if(parent_cert->PubkeyAlgo == SEVSigAlgoRSASHA384) {
+                    if( RSA_verify(NID_sha384, sha_digest_384, sizeof(sha_digest_384), (uint8_t *)&parent_cert->Sig1.RSA, sigLen, rsa) != 1 )
+                        break;
+                }
+                found_match = true;
+                RSA_free(rsa);
                 continue;
             }
             else if( (parent_cert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||

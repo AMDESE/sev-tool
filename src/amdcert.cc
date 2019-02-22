@@ -34,7 +34,7 @@ static const uint8_t amd_root_key_id[AMD_CERT_ID_SIZE_BYTES] = {
 /**
  * If out_str is passed in, fill up the string, else prints to std::out
  */
-void print_amd_cert_readable(AMD_CERT *cert, std::string& out_str)
+void print_amd_cert_readable(const AMD_CERT *cert, std::string& out_str)
 {
     char out[sizeof(AMD_CERT)*3+500];   // 2 chars per byte + 1 spaces + ~500 extra chars for text
 
@@ -68,6 +68,18 @@ void print_amd_cert_readable(AMD_CERT *cert, std::string& out_str)
     else {
         out_str += out;
     }
+}
+
+/**
+ * To print this to a file, just use WriteFile directly
+ */
+void print_amd_cert_hex(const AMD_CERT *cert)
+{
+    printf("Printing cert...\n");
+    for(size_t i = 0; i < (size_t)(sizeof(AMD_CERT)); i++) { //bytes to uint8
+        printf( "%02X ", ((uint8_t *)cert)[i] );
+    }
+    printf("\n");
 }
 
 /**
@@ -317,7 +329,15 @@ SEV_ERROR_CODE AMDCert::amd_cert_export_pubkey(const AMD_CERT *cert,
 
         memset(pubkey_cert, 0, sizeof(*pubkey_cert));
 
-        pubkey_cert->PubkeyAlgo = SEVSigAlgoRSASHA256;
+        // Todo. This has the potential for issues if we keep the key size
+        //       4k and change the SHA type on the next gen
+        if(cert->ModulusSize == AMD_CERT_KEY_BITS_2K) {      // Naples
+            pubkey_cert->PubkeyAlgo = SEVSigAlgoRSASHA256;
+        }
+        else if(cert->ModulusSize == AMD_CERT_KEY_BITS_4K) { // Rome
+            pubkey_cert->PubkeyAlgo = SEVSigAlgoRSASHA384;
+        }
+
         pubkey_cert->PubkeyUsage = cert->KeyUsage;
         pubkey_cert->Pubkey.RSA.ModulusSize = cert->ModulusSize;
         memcpy(pubkey_cert->Pubkey.RSA.PubExp, &cert->PubExp, cert->PubExpSize/8);

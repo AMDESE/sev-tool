@@ -60,6 +60,13 @@ then
     else
         echo "libelf libraries already installed, skipping installation."
     fi
+    if [[ $(dpkg -l zip 2>&1) =~ "no packages found" ]]
+    then
+        echo "Missing zip library dependency. Installing now..."
+        sudo apt-get -y install zip
+    else
+        echo "zip libraries already installed, skipping installation."
+    fi
 elif [[ ${DIST_BASE} =~ 'fedora' ]] || [[ ${DIST_BASE} =~ 'rhel' ]]
 then
     # Cover all Redhat based distributions.

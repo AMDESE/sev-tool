@@ -21,19 +21,28 @@
 #include <openssl/sha.h>    // for SHA256_DIGEST_LENGTH
 #include <string>
 
-#define PEK_CSR_HEX_FILENAME            "pek_csr_out.cert"
-#define PEK_CSR_READABLE_FILENAME       "pek_csr_readable_out.cert"
-#define PDH_CERT_HEX_FILENAME           "pdh_out.cert"
-#define PDH_CERT_READABLE_FILENAME      "pdh_readable_out.cert"
-#define CERT_CHAIN_HEX_FILENAME         "cert_chain_out.cert"
-#define CERT_CHAIN_READABLE_FILENAME    "cert_chain_readable_out.cert"
+#define PDH_FILENAME                    "pdh.cert"          // PDH signed by PEK
+#define PDH_READABLE_FILENAME           "pdh_readable.txt"
+#define PEK_FILENAME                    "pek.cert"          // PEK signed by CEK
+#define PEK_READABLE_FILENAME           "pek_readable.txt"
+#define CEK_FILENAME                    "cek.cert"          // CEK signed by ASK
+#define CEK_READABLE_FILENAME           "cek_readable.cert"
+#define ASK_FILENAME                    "ask.cert"          // ASK signed by ARK
+#define ASK_READABLE_FILENAME           "ask_readable.cert"
+#define ARK_FILENAME                    "ark.cert"          // ARK self-signed
+#define ARK_READABLE_FILENAME           "ark_readable.cert"
+
+#define OCA_FILENAME                    "oca.cert"          // OCA signed by P.O.
+#define OCA_READABLE_FILENAME           "oca_readable.cert"
+#define CERTS_ZIP_FILENAME              "certs_zip"
+#define ASK_ARK_FILENAME                "ask_ark.cert"      // For get_ask_ark
+#define PEK_CSR_HEX_FILENAME            "pek_csr.cert"
+#define PEK_CSR_READABLE_FILENAME       "pek_csr_readable.txt"
+#define CERT_CHAIN_HEX_FILENAME         "cert_chain.cert"
+#define CERT_CHAIN_READABLE_FILENAME    "cert_chain_readable.txt"
 #define GET_ID_S0_FILENAME              "getid_s0_out.txt"
 #define GET_ID_S1_FILENAME              "getid_s1_out.txt"
 #define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.txt"
-#define CEK_ASK_FILENAME                "cek_ask.cert"
-#define ASK_ARK_FILENAME                "ask_ark.cert"
-#define ASK_FILENAME                    "ask.cert"
-#define ARK_FILENAME                    "ark.cert"
 
 #define LAUNCH_MEASURE_CTX 0x4
 struct measurement_t {
@@ -42,7 +51,7 @@ struct measurement_t {
     uint8_t  api_minor;
     uint8_t  build_id;
     uint32_t policy;    // SEV_POLICY
-    uint8_t digest[SHA256_DIGEST_LENGTH];   // gctx_ld
+    uint8_t  digest[SHA256_DIGEST_LENGTH];   // gctx_ld
     Nonce128 mnonce;
     AES128Key tik;
 };
@@ -50,7 +59,9 @@ struct measurement_t {
 class Command {
 private:
     int calculate_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
-    int validate_platform(SEV_CERT *pdh, SEV_CERT_CHAIN_BUF *pdh_cert_chain,
+    int generate_all_certs(std::string& output_folder);
+    int import_all_certs(std::string& output_folder, SEV_CERT *pdh,
+                                SEV_CERT *pek, SEV_CERT *cek,
                                 AMD_CERT *ask, AMD_CERT *ark);
 public:
     Command() {};
@@ -63,19 +74,22 @@ public:
     int pdh_gen(void);
     int pdh_cert_export(std::string& output_folder, int verbose_flag);
     int pek_cert_import(std::string& oca_priv_key_file,
-                                    std::string& oca_cert_file);
+                                std::string& oca_cert_file);
     int get_id(std::string& output_folder, int verbose_flag);
 
     // Non-ioctl (custom) commands
     int sysinfo();
-    int calc_measurement(std::string& output_folder, int verbose_flag,
-                                    measurement_t *user_data);
     int set_self_owned(void);
     int set_externally_owned(std::string& oca_priv_key_file,
-                                        std::string& oca_cert_file);
+                                std::string& oca_cert_file);
     int generate_cek_ask(std::string& output_folder);
     int get_ask_ark(std::string& output_folder);
+    int export_cert_chain(std::string& output_folder);
+    int calc_measurement(std::string& output_folder, int verbose_flag,
+                                measurement_t *user_data);
     int validate_cert_chain(std::string& output_folder);
+    int generate_launch_blob(std::string& output_folder);
+    int package_secret(std::string& output_folder);
 };
 
 #endif /* commands_h */
