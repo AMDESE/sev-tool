@@ -39,7 +39,7 @@ enum amd_cert_key_bits
 // Public global functions
 static std::string amd_empty = "NULL";
 void print_amd_cert_readable(const AMD_CERT *cert, std::string& out_str = amd_empty);
-void print_amd_cert_hex(const AMD_CERT *cert);
+void print_amd_cert_hex(const AMD_CERT *cert, std::string& out_str = amd_empty);
 
 class AMDCert {
 private:

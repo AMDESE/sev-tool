@@ -50,6 +50,9 @@ size_t ReadFile(const std::string& filename, void *buffer, size_t len);
 // Returns number of bytes written
 size_t WriteFile(const std::string& filename, const void *buffer, size_t len);
 
+// Returns the file size in number of bytes
+size_t GetFileSize(const std::string& filename);
+
 // Generate some random bytes
 void GenRandomBytes( void *bytes, size_t numBytes );
 
@@ -68,6 +71,6 @@ bool StrToArray(std::string in_string, uint8_t *array, uint32_t array_size);
 void AsciiHexBytesToBinary(void *out, const char *in_bytes, size_t len);
 
 // Reverses bytes in a section of memory. Used in validating a cert signature
-bool reverse_bytes(uint8_t *bytes, size_t size);
+bool ReverseBytes(uint8_t *bytes, size_t size);
 
 #endif /* utilities_h */

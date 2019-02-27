@@ -71,15 +71,42 @@ void print_amd_cert_readable(const AMD_CERT *cert, std::string& out_str)
 }
 
 /**
- * To print this to a file, just use WriteFile directly
+ * AMD Certs are unions because key sizes can be different. So, you can't just
+ * print out the memory, you need to print each parameter based off its correct
+ * size
+ * Note: there are no spaces in this printout because this function is also used
+ *       to write to a .cert file, not just printing to the screen
  */
-void print_amd_cert_hex(const AMD_CERT *cert)
+void print_amd_cert_hex(const AMD_CERT *cert, std::string& out_str)
 {
-    printf("Printing cert...\n");
-    for(size_t i = 0; i < (size_t)(sizeof(AMD_CERT)); i++) { //bytes to uint8
-        printf( "%02X ", ((uint8_t *)cert)[i] );
+    char out[sizeof(AMD_CERT)*2];   // 2 chars per byte
+    size_t fixed_offset = offsetof(AMD_CERT, PubExp);     // 64 bytes
+
+    out[0] = '\0';       // Gotta get the sprintf started
+
+    // Print fixed parameters
+    for(size_t i = 0; i < fixed_offset; i++) {
+        sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->Version)[i] );
     }
-    printf("\n");
+    // Print PubExp
+    for(size_t i = 0; i < (size_t)(cert->PubExpSize/8); i++) {  // bytes to uint8
+        sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->PubExp)[i] );
+    }
+    // Print nModulus
+    for(size_t i = 0; i < (size_t)(cert->ModulusSize/8); i++) { // bytes to uint8
+        sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->Modulus)[i] );
+    }
+    // Print Sig
+    for(size_t i = 0; i < (size_t)(cert->ModulusSize/8); i++) { // bytes to uint8
+        sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->Sig)[i] );
+    }
+
+    if(out_str == "NULL") {
+        printf("%s\n\n\n", out);
+    }
+    else {
+        out_str += out;
+    }
 }
 
 /**
@@ -138,7 +165,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const AMD_CERT *cert)
         // Swap the bytes of the signature
         memcpy(signature, &cert->Sig, cert->ModulusSize/8);
 
-        if(!reverse_bytes(signature, cert->ModulusSize/8))
+        if(!ReverseBytes(signature, cert->ModulusSize/8))
             break;
 
         // Verify the signature

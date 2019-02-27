@@ -25,42 +25,42 @@
 #include <stdio.h>
 
 /**
- * If outStr is passed in, fill up the string, else prints to std::out
+ * If out_str is passed in, fill up the string, else prints to std::out
  */
-void print_sev_cert_readable(const SEV_CERT *cert, std::string& outStr)
+void print_sev_cert_readable(const SEV_CERT *cert, std::string& out_str)
 {
     char out[sizeof(SEV_CERT)*3+500];   // 2 chars per byte + 1 spaces + ~500 extra chars for text
 
     sprintf(out, "%-15s%08x\n", "Version:", cert->Version);                         // uint32_t
     sprintf(out+strlen(out), "%-15s%02x\n", "ApiMajor:", cert->ApiMajor);           // uint8_t
     sprintf(out+strlen(out), "%-15s%02x\n", "ApiMinor:", cert->ApiMinor);           // uint8_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "pub_key_usage:", cert->PubkeyUsage); // uint32_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "pubkey_algo:", cert->PubkeyAlgo);     // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "pub_key_usage:", cert->PubkeyUsage);   // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "pubkey_algo:", cert->PubkeyAlgo);      // uint32_t
     sprintf(out+strlen(out), "%-15s\n", "Pubkey:");                                 // SEV_PUBKEY
     for(size_t i = 0; i < (size_t)(sizeof(SEV_PUBKEY)); i++) {  //bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->Pubkey)[i] );
     }
     sprintf(out+strlen(out), "\n");
-    sprintf(out+strlen(out), "%-15s%08x\n", "sig1_usage:", cert->Sig1Usage);       // uint32_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "sig1_algo:", cert->Sig1Algo);         // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "sig1_usage:", cert->Sig1Usage);        // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "sig1_algo:", cert->Sig1Algo);          // uint32_t
     sprintf(out+strlen(out), "%-15s\n", "Sig1:");                                   // SEV_SIG
     for(size_t i = 0; i < (size_t)(sizeof(SEV_SIG)); i++) {     //bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->Sig1)[i] );
     }
     sprintf(out+strlen(out), "\n");
-    sprintf(out+strlen(out), "%-15s%08x\n", "Sig2Usage:", cert->Sig2Usage);       // uint32_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "Sig2Algo:", cert->Sig2Algo);         // uint32_t
-    sprintf(out+strlen(out), "%-15s\n", "Sig2:");                                 // SEV_SIG
+    sprintf(out+strlen(out), "%-15s%08x\n", "Sig2Usage:", cert->Sig2Usage);         // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "Sig2Algo:", cert->Sig2Algo);           // uint32_t
+    sprintf(out+strlen(out), "%-15s\n", "Sig2:");                                   // SEV_SIG
     for(size_t i = 0; i < (size_t)(sizeof(SEV_SIG)); i++) {     //bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->Sig2)[i] );
     }
     sprintf(out+strlen(out), "\n");
 
-    if(outStr == "NULL") {
+    if(out_str == "NULL") {
         printf("%s\n", out);
     }
     else {
-        outStr += out;
+        out_str += out;
     }
 }
 
@@ -78,9 +78,9 @@ void print_sev_cert_hex(const SEV_CERT *cert)
 
 /**
  * Prints out the PDK, OCA, and CEK
- * If outStr is passed in, fill up the string, else prints to std::out
+ * If out_str is passed in, fill up the string, else prints to std::out
  */
-void print_cert_chain_buf_readable(const SEV_CERT_CHAIN_BUF *p, std::string& outStr)
+void print_cert_chain_buf_readable(const SEV_CERT_CHAIN_BUF *p, std::string& out_str)
 {
     char out_pek[50];    // Just big enough for string below
     char out_oca[50];
@@ -100,11 +100,11 @@ void print_cert_chain_buf_readable(const SEV_CERT_CHAIN_BUF *p, std::string& out
     out_str_local += out_cek;
     print_sev_cert_readable(((SEV_CERT *)CEKinCertChain(p)), out_str_local);
 
-    if(outStr == "NULL") {
+    if(out_str == "NULL") {
         printf("%s\n", out_str_local.c_str());
     }
     else {
-        outStr = out_str_local;
+        out_str = out_str_local;
     }
 }
 
@@ -127,6 +127,43 @@ void print_cert_chain_buf_hex(const SEV_CERT_CHAIN_BUF *p)
         printf( "%02X ", ((uint8_t *)CEKinCertChain(p))[i] );
     }
     printf("\n");
+}
+
+/**
+ * Create your Guest Owner DH (Elliptic Curve Diffie Hellman (ECDH)) P-384
+ *  private key
+ */
+bool SEVCert::generate_ecdh_keypair(EVP_PKEY *evp_priv_key)
+{
+    if(!evp_priv_key)
+        return false;
+
+    bool ret = false;
+    EC_KEY *ec_priv_key = NULL;
+
+    do {
+        // New up the EC_KEY with the EC_GROUP
+        int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
+        ec_priv_key = EC_KEY_new_by_curve_name(nid);
+
+        // Create the new public/private EC key pair
+        if(EC_KEY_generate_key(ec_priv_key) != 1)
+            break;
+
+        // Convert EC key to EVP_PKEY
+        // This function links evp_priv_key to ec_priv_key, so when evp_priv_key is
+        //  freed, ec_priv_key is freed. We don't want the user to have to manage 2
+        //  keys, so just return EVP_PKEY and make sure user free's it
+        if(EVP_PKEY_assign_EC_KEY(evp_priv_key, ec_priv_key) != 1)
+            break;
+
+        if (!evp_priv_key)
+            break;
+
+        ret = true;
+    } while (0);
+
+    return ret;
 }
 
 bool SEVCert::calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint32_t pub_key_offset,
@@ -512,7 +549,7 @@ SEV_ERROR_CODE SEVCert::validate_body(const SEV_CERT *cert)
  * Inputs: cert is the parent cert
  *         pubKey is the parent's public key
  */
-SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const SEV_CERT* cert, EVP_PKEY* evp_pub_key)
+SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const SEV_CERT *cert, EVP_PKEY *evp_pub_key)
 {
     if(!cert)
         return ERROR_INVALID_CERTIFICATE;
@@ -546,8 +583,9 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const SEV_CERT* cert
             //     break;
 
             // Create a public EVP_PKEY from the public RSA_KEY
-            // This function links evp_pub_key to rsa_pub_key, so when evp_pub_key is freed, rsa_pub_key is freed
-            // We don't want the user to have to manage 2 keys, so just return EVP_PKEY and make sure user free's it
+            // This function links evp_pub_key to rsa_pub_key, so when evp_pub_key
+            //  is freed, rsa_pub_key is freed. We don't want the user to have to
+            //  manage 2 keys, so just return EVP_PKEY and make sure user free's it
             // if(EVP_PKEY_assign_RSA(evp_pub_key, rsa_pub_key) != 1)
             //     break;
         }
@@ -574,8 +612,9 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const SEV_CERT* cert
                 break;
 
             // Create a public EVP_PKEY from the public EC_KEY
-            // This function links evp_pub_key to ec_pub_key, so when evp_pub_key is freed, ec_pub_key is freed
-            // We don't want the user to have to manage 2 keys, so just return EVP_PKEY and make sure user free's it
+            // This function links evp_pub_key to ec_pub_key, so when evp_pub_key
+            //  is freed, ec_pub_key is freed. We don't want the user to have to
+            //  manage 2 keys, so just return EVP_PKEY and make sure user free's it
             if(EVP_PKEY_assign_EC_KEY(evp_pub_key, ec_pub_key) != 1)
                 break;
         }

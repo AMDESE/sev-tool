@@ -92,6 +92,23 @@ size_t WriteFile(const std::string& filename, const void *buffer, size_t len)
     return count;
 }
 
+// Returns the file size in number of bytes
+size_t GetFileSize(const std::string& filename)
+{
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+
+    if (!file.is_open()) {
+        printf("Readfile Error: Could not open file. Ensure directory exists\n" \
+                    "  Filename: %s\n", filename.c_str());
+        return 0;
+    }
+
+    size_t count = (size_t)file.tellg();
+    file.close();
+
+    return count;
+}
+
 void GenRandomBytes( void *bytes, size_t numBytes )
 {
     uint8_t *addr = (uint8_t *)bytes;
@@ -144,7 +161,7 @@ void AsciiHexBytesToBinary(void *out, const char *in_bytes, size_t len)
 
 }
 
-bool reverse_bytes(uint8_t *bytes, size_t size)
+bool ReverseBytes(uint8_t *bytes, size_t size)
 {
 	uint8_t *start = bytes;
 	uint8_t *end = bytes + size - 1;

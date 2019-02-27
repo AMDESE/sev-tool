@@ -29,9 +29,9 @@
 
 // Public global functions
 static std::string sev_empty = "NULL";
-void print_sev_cert_readable(const SEV_CERT *cert, std::string& outStr = sev_empty);
+void print_sev_cert_readable(const SEV_CERT *cert, std::string& out_str = sev_empty);
 void print_sev_cert_hex(const SEV_CERT *cert);
-void print_cert_chain_buf_readable(const SEV_CERT_CHAIN_BUF *p, std::string& outStr = sev_empty);
+void print_cert_chain_buf_readable(const SEV_CERT_CHAIN_BUF *p, std::string& out_str = sev_empty);
 void print_cert_chain_buf_hex(const SEV_CERT_CHAIN_BUF *p);
 
 class SEVCert {
@@ -52,6 +52,7 @@ public:
 
     const SEV_CERT *data() { return &m_child_cert; }
 
+    bool generate_ecdh_keypair(EVP_PKEY *priv_evp_key);
     bool sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
                       const std::string& oca_priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo );
     SEV_ERROR_CODE compile_public_key_from_certificate(const SEV_CERT *cert, EVP_PKEY *evp_pub_key);

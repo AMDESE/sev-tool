@@ -54,6 +54,7 @@ char helpArray[] =  "The following commands are supported:\n" \
                     "          uint8_t gctx_tik[128/8]\n" \
                     "  validate_cert_chain\n" \
                     "  generate_launch_blob\n" \
+                    "          uint32_t policy\n" \
                     "  package_secret\n" \
                     ;
 
@@ -84,9 +85,8 @@ static struct option long_options[] =
     /* Guest Owner commands */
     {"calc_measurement",     required_argument, 0, 't'},
     {"validate_cert_chain",  no_argument,       0, 'u'},
-    {"generate_launch_blob", no_argument,       0, 'v'},
+    {"generate_launch_blob", required_argument, 0, 'v'},
     {"package_secret",       no_argument,       0, 'w'},
-
 
     {"help",                 no_argument,       0, 'H'},
     {"sysinfo",              no_argument,       0, 'I'},
@@ -216,11 +216,18 @@ int main(int argc, char** argv)
                 break;
             }
             case 'v': {         // GENERATE_LAUNCH_BLOB
-                // cmd_ret = cmd.generate_launch_blob(output_folder);
+                optind--;   // Can't use option_index because it doesn't account for '-' flags
+                if(argc - optind != 1) {
+                    printf("Error: Expecting exactly 1 args\n");
+                    break;
+                }
+
+                uint32_t guest_policy = (uint8_t)strtol(argv[optind++], NULL, 16);
+                cmd_ret = cmd.generate_launch_blob(output_folder, verbose_flag, guest_policy);
                 break;
             }
             case 'w': {         // PACKAGE_SECRET
-                // cmd_ret = cmd.package_secret(output_folder);
+                cmd_ret = cmd.package_secret(output_folder, verbose_flag);
                 break;
             }
             case 0:

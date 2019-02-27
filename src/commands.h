@@ -18,6 +18,7 @@
 #define commands_h
 
 #include "sevapi.h"         // for HMACSHA256, Nonce128, AES128Key
+#include <openssl/evp.h>    // for EVP_PKEY
 #include <openssl/sha.h>    // for SHA256_DIGEST_LENGTH
 #include <string>
 
@@ -43,6 +44,19 @@
 #define GET_ID_S0_FILENAME              "getid_s0_out.txt"
 #define GET_ID_S1_FILENAME              "getid_s1_out.txt"
 #define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.txt"
+#define LAUNCH_BLOB_FILENAME            "launch_blob.txt"
+#define GUEST_OWNER_PUBKEY_FILENAME     "godh_pubkey.pem"
+#define SECRET_FILENAME                 "secret.txt"
+#define PACKAGED_SECRET_FILENAME        "packaged_secret.txt"
+
+#define BITS_PER_BYTE    8
+#define NIST_KDF_H_BYTES 32
+#define NIST_KDF_H       (NIST_KDF_H_BYTES*BITS_PER_BYTE)   // 32*8=256
+#define NIST_KDF_R       sizeof(uint32_t)*BITS_PER_BYTE     // 32
+
+#define SEV_MASTER_SECRET_LABEL "sev-master-secret"
+#define SEV_KEK_LABEL           "sev-kek"
+#define SEV_KIK_LABEL           "sev-kik"
 
 #define LAUNCH_MEASURE_CTX 0x4
 struct measurement_t {
@@ -63,6 +77,22 @@ private:
     int import_all_certs(std::string& output_folder, SEV_CERT *pdh,
                                 SEV_CERT *pek, SEV_CERT *oca, SEV_CERT *cek,
                                 AMD_CERT *ask, AMD_CERT *ark);
+    bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
+             size_t key_in_length, const uint8_t *label, size_t label_length,
+             const uint8_t *context, size_t context_length);
+    uint8_t* calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
+                                   size_t& shared_key_len_out);
+    bool derive_master_secret(AES128Key master_secret,
+                            const SEV_CERT *pdh_public,
+                            const uint8_t nonce[sizeof(Nonce128)]);
+    bool derive_kek(AES128Key kik, const AES128Key master_secret);
+    bool derive_kik(HMACKey128 kik, const AES128Key master_secret);
+    bool gen_hmac(HMACSHA256 *out, HMACKey128 key, uint8_t *msg, size_t msg_len);
+    bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
+                 const AES128Key Key, const uint8_t IV[128/8]);
+    int build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy, SEV_CERT *pdh_pub);
+
+    std::string m_output_folder = "";
 public:
     Command() {};
     ~Command() {};
@@ -88,8 +118,12 @@ public:
     int calc_measurement(std::string& output_folder, int verbose_flag,
                                 measurement_t *user_data);
     int validate_cert_chain(std::string& output_folder);
-    int generate_launch_blob(std::string& output_folder);
-    int package_secret(std::string& output_folder);
+    int generate_launch_blob(std::string& output_folder, int verbose_flag,
+                                uint32_t policy);
+    int package_secret(std::string& output_folder, uint32_t verbose_flag);
+    int encrypt_with_tek(uint8_t *encrypted_mem, const uint8_t *secret_mem,
+                                size_t secret_mem_size, const AES128Key tek,
+                                const IV128 iv);
 };
 
 #endif /* commands_h */
