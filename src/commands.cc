@@ -919,26 +919,20 @@ bool Command::derive_master_secret(AES128Key master_secret,
             break;
 
         // Derive the master secret from the intermediate secret
-        ret = kdf((unsigned char*)master_secret, sizeof(AES128Key),
-            shared_key, shared_key_len,
-            (uint8_t*)SEV_MASTER_SECRET_LABEL, sizeof(SEV_MASTER_SECRET_LABEL)-1,
-            nonce, sizeof(Nonce128));            // sizeof(nonce), bad?
+        if(!kdf((unsigned char*)master_secret, sizeof(AES128Key), shared_key,
+            shared_key_len, (uint8_t*)SEV_MASTER_SECRET_LABEL,
+            sizeof(SEV_MASTER_SECRET_LABEL)-1, nonce, sizeof(Nonce128))) // sizeof(nonce), bad?
+            break;
 
         // Free memory allocated in CalculateSharedSecret
         OPENSSL_free(shared_key);    // Local variable
 
         // TODO. This is definitely not where this should be done
-        FILE *pFile = NULL;
         std::string file_full = m_output_folder + GUEST_OWNER_PUBKEY_FILENAME;
-        pFile = fopen(file_full.c_str(), "wt");
-        if(!pFile)
+        if(!tempObj.write_pubkey_pem(file_full, &priv_key))
             break;
 
-        printf("Writing to file: %s\n", file_full.c_str());
-        if(PEM_write_PUBKEY(pFile, priv_key) != 1) {
-            printf("Error writing GPDH pubkey to file\n");
-            break;
-        }
+        ret = true;
     } while (0);
 
     // Free memory

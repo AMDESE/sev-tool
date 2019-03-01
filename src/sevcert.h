@@ -19,13 +19,13 @@
 
 #include "sevapi.h"
 #include <string>
+#include <openssl/ecdh.h>
+#include <openssl/ecdsa.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
-#include <openssl/ts.h>
-#include <openssl/ecdsa.h>
-#include <openssl/ecdh.h>
-#include <openssl/rsa.h>
 #include <openssl/pem.h>
+#include <openssl/rsa.h>
+#include <openssl/ts.h>
 
 // Public global functions
 static std::string sev_empty = "NULL";
@@ -36,7 +36,6 @@ void print_cert_chain_buf_hex(const SEV_CERT_CHAIN_BUF *p);
 
 class SEVCert {
 private:
-    SEV_CERT m_child_cert;
     bool calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint32_t pub_key_offset,
                              HMACSHA256 *sha_digest_256, HMACSHA512 *sha_digest_384);
     SEV_ERROR_CODE validate_usage(uint32_t Usage);
@@ -46,16 +45,23 @@ private:
                                      EVP_PKEY *parent_signing_key);
     SEV_ERROR_CODE validate_body(const SEV_CERT *cert);
 
+    SEV_CERT m_child_cert;
+
 public:
     SEVCert( SEV_CERT& cert ) { m_child_cert = cert; }
     ~SEVCert() {};
 
     const SEV_CERT *data() { return &m_child_cert; }
 
-    bool generate_ecdh_keypair(EVP_PKEY *priv_evp_key);
-    bool sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
-                      const std::string& oca_priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo );
+    bool write_pubkey_pem(std::string& file_name, EVP_PKEY **evp_keypair);
+    bool write_privkey_pem(std::string& file_name, EVP_PKEY **evp_keypair);
+    bool generate_ecdh_keypair(EVP_PKEY *evp_keypair);
+    bool create_godh_cert(uint8_t api_major, uint8_t api_minor,
+                          std::string godh_pubkey_full, std::string godh_privkey_full);
+    bool sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
+                       const std::string& oca_priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo);
     SEV_ERROR_CODE compile_public_key_from_certificate(const SEV_CERT *cert, EVP_PKEY *evp_pub_key);
+    SEV_ERROR_CODE decompile_public_key_into_certificate(SEV_CERT *cert, EVP_PKEY *evp_pubkey);
     SEV_ERROR_CODE verify_sev_cert(const SEV_CERT *parent_cert1, const SEV_CERT *parent_cert2 = NULL);
 };
 

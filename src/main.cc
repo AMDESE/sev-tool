@@ -33,8 +33,8 @@ char helpArray[] =  "The following commands are supported:\n" \
                     "  pdh_cert_export\n" \
                     "  pek_cert_import\n" \
                     "      Input params:\n" \
-                    "          [oca private key].pem file " \
-                    "          [oca].cert file " \
+                    "          [oca private key].pem file\n" \
+                    "          [oca].cert file\n" \
                     "  get_id\n" \
                     "  set_self_owed\n" \
                     "  set_externally_owned\n" \
