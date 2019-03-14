@@ -365,7 +365,7 @@ int Command::generate_all_certs(std::string& output_folder)
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
-        // Read in the ask so we can split it into 2 separate cert files
+        // Read in the ask_ark so we can split it into 2 separate cert files
         uint8_t ask_ark_buf[sizeof(AMD_CERT)*2] = {0};
         if(ReadFile(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0)
             break;
@@ -564,6 +564,7 @@ int Command::import_all_certs(std::string& output_folder, SEV_CERT *pdh,
         std::string cek_full = output_folder+CEK_FILENAME;
         if(ReadFile(cek_full, cek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
+print_sev_cert_readable(cek);
 
         // Read in the oca
         std::string oca_full = output_folder+OCA_FILENAME;
@@ -722,7 +723,7 @@ int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
 
         // Read in the secret
         // printf("Attempting to read in Secrets file\n");
-        if(ReadFile(secret_file, secret_mem, sizeof(secret_size)) != sizeof(secret_size))
+        if(ReadFile(secret_file, secret_mem, sizeof(secret_size)) != secret_size)
             break;
 
         // Read in the blob to import the TEK

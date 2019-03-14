@@ -91,12 +91,19 @@ typedef enum SEV_API_COMMANDS
  * @INIT    - The platform is initialized, but not currently managed by any
  *            guests.
  * @WORKING - The platform is initialized, and currently managing guests.
+ *
+ * Allowed Platform Commands:
+ * @UNINIT  - INIT, PLATFORM_RESET, PLATFORM_STATUS, DOWNLOAD_FIRMWARE, GET_ID
+ * @INIT    - SHUTDOWN, PLATFORM_STATUS, PEK_GEN, PEK_CSR, PEK_CERT_IMPORT,
+ *            PDH_GEN, PDH_CERT_EXPORT, DF_FLUSH, GET_ID
+ * @WORKING - SHUTDOWN, PLATFORM_STATUS, PDH_GEN, PDH_CERT_EXPORT, DF_FLUSH,
+ *            GET_ID
  */
 typedef enum SEV_PLATFORM_STATE
 {
-    PLATFORM_UNINIT		= 0,
-    PLATFORM_INIT		= 1,
-    PLATFORM_WORKING	= 2,
+    PLATFORM_UNINIT     = 0,
+    PLATFORM_INIT       = 1,
+    PLATFORM_WORKING    = 2,
 } SEV_PLATFORM_STATE;
 
 // Chapter 6.1.1 - GSTATE Finite State Machine
@@ -128,12 +135,12 @@ typedef enum SEV_PLATFORM_STATE
  */
 typedef enum SEV_GUEST_STATE
 {
-    GUEST_UNINIT	= 0,
-    GUEST_LUPDATE	= 1,
-    GUEST_LSECRET	= 2,
-    GUEST_RUNNING	= 3,
-    GUEST_SUPDATE	= 4,
-    GUEST_RUPDATE	= 5,
+    GUEST_UNINIT     = 0,
+    GUEST_LUPDATE    = 1,
+    GUEST_LSECRET    = 2,
+    GUEST_RUNNING    = 3,
+    GUEST_SUPDATE    = 4,
+    GUEST_RUPDATE    = 5,
 } SEV_GUEST_STATE;
 
 // Chapter 4.4 - Status Codes
@@ -538,7 +545,7 @@ typedef struct __attribute__ ((__packed__)) SEV_MEASURE_BUF
 } SEV_MEASURE_BUF;
 
 /**
- * LAUNCH_SECRET, SEND_UPDATE_DATA/VMSA, RECEIVE_UPDATE_DATA/VMSA 
+ * LAUNCH_SECRET, SEND_UPDATE_DATA/VMSA, RECEIVE_UPDATE_DATA/VMSA
  * HDR Buffer
  */
 typedef struct __attribute__ ((__packed__)) SEV_HDR_BUF

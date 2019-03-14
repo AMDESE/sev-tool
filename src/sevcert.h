@@ -59,7 +59,7 @@ public:
     bool create_godh_cert(uint8_t api_major, uint8_t api_minor,
                           std::string godh_pubkey_full, std::string godh_privkey_full);
     bool sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
-                       const std::string& oca_priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo);
+                       const std::string& priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo);
     SEV_ERROR_CODE compile_public_key_from_certificate(const SEV_CERT *cert, EVP_PKEY *evp_pub_key);
     SEV_ERROR_CODE decompile_public_key_into_certificate(SEV_CERT *cert, EVP_PKEY *evp_pubkey);
     SEV_ERROR_CODE verify_sev_cert(const SEV_CERT *parent_cert1, const SEV_CERT *parent_cert2 = NULL);

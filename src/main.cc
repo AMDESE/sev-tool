@@ -38,6 +38,9 @@ char helpArray[] =  "The following commands are supported:\n" \
                     "  get_id\n" \
                     "  set_self_owed\n" \
                     "  set_externally_owned\n" \
+                    "      Input params:\n" \
+                    "          [oca private key].pem file\n" \
+                    "          [oca].cert file\n" \
                     "  generate_cek_ask\n" \
                     "  get_ask_ark\n" \
                     "  export_cert_chain\n" \
@@ -54,8 +57,11 @@ char helpArray[] =  "The following commands are supported:\n" \
                     "          uint8_t gctx_tik[128/8]\n" \
                     "  validate_cert_chain\n" \
                     "  generate_launch_blob\n" \
+                    "      Input params:\n" \
                     "          uint32_t policy\n" \
                     "  package_secret\n" \
+                    "      Input params:\n" \
+                    "          launch_blob.txt file\n" \
                     ;
 
 /* Flag set by '--verbose' */

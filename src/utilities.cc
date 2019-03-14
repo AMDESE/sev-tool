@@ -42,8 +42,10 @@ bool ExecuteSystemCommand(const std::string cmd, std::string *log)
     return true;
 }
 
-// Read up to len bytes from the beginning of a file
-// Returns number of bytes read, or 0 if the file couldn't be opened.
+/*
+ * Read up to len bytes from the beginning of a file
+ * Returns number of bytes read, or 0 if the file couldn't be opened.
+ */
 size_t ReadFile(const std::string& filename, void *buffer, size_t len)
 {
     std::ifstream file(filename, std::ios::binary);
@@ -66,9 +68,11 @@ size_t ReadFile(const std::string& filename, void *buffer, size_t len)
     return count;
 }
 
-// Writes len bytes from the beginning of a file. Does NOT append
-// Returns number of bytes written, or 0 if the file couldn't be opened.
-// ostream CANNOT create a folder, so it has to exist already, to succeed
+/*
+ * Writes len bytes from the beginning of a file. Does NOT append
+ * Returns number of bytes written, or 0 if the file couldn't be opened.
+ * ostream CANNOT create a folder, so it has to exist already, to succeed
+ */
 size_t WriteFile(const std::string& filename, const void *buffer, size_t len)
 {
     std::ofstream file(filename, std::ofstream::out);

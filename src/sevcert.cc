@@ -254,10 +254,8 @@ bool SEVCert::create_godh_cert(uint8_t api_major, uint8_t api_minor,
             break;
 
         // Create temporary pubkey and privkey files because that's what the
-        // existing functions take in. TODO, eventually refector sign_with_key
-        // to take a EVP_PKEY or some generic keytype that also works with RSA
-
-        // Write the pubkey
+        // existing functions take in
+		// Write the pubkey
         write_pubkey_pem(godh_pubkey_full, &godh_keypair);
 
         // Write the privkey
@@ -279,6 +277,8 @@ bool SEVCert::create_godh_cert(uint8_t api_major, uint8_t api_minor,
 
         // Set the rest of the params and sign the signature with the newly
         // generated GODH privkey
+        // Technically this step is not necessary, as the firmware doesn't
+        // validate the GODH signature
         if(!sign_with_key(SEV_CERT_MAX_VERSION, SEVUsagePDH, SEVSigAlgoECDHSHA256,
                         godh_privkey_full, SEVUsagePEK, SEVSigAlgoECDSASHA256))
             break;
@@ -334,12 +334,37 @@ bool SEVCert::calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint3
 }
 
 /**
- * Description: Reads in the oca private key pem file and write it to a EC_KEY
- * Notes:       This function allocates a new ECPrivateKey which must be freed
- *              by the calling function
- * Parameters:  [priv_ec_key] EC_KEY where the oca private key gets stored
+ * Description:   Reads in a private key pem file and write it to a RSA key
+ * Notes:         This function allocates a new RSA key which must be
+ *                freed by the calling function
+ * Parameters:    [priv_rsa_key] RSA key where the private key gets stored
  */
-static void read_oca_info_ec(EC_KEY **priv_ec_key)
+static void ReadPrivKeyPEMIntoRSAKey(const std::string& file_name, RSA **priv_rsa_key)
+{
+    do {
+        // New up the EC_KEY with the EC_GROUP
+        if(!(*priv_rsa_key = RSA_new()))
+            break;
+
+        // Read in the private key file into RSA
+        FILE *pFile = fopen(file_name.c_str(), "r");
+        if(!pFile)
+            break;
+        *priv_rsa_key = PEM_read_RSAPrivateKey(pFile, NULL, NULL, NULL);
+        fclose(pFile);
+        if(!priv_rsa_key)
+            break;
+    } while (0);
+}
+
+/**
+ * Description:   Reads in a private key pem file and write it to a EC_KEY
+ * Notes:         This function allocates a new EC PrivateKey which must be
+ *                freed by the calling function
+ * Typical Usage: Usually used to read in OCA or GODH private key
+ * Parameters:    [priv_ec_key] EC_KEY where the private key gets stored
+ */
+static void read_privkey_pem_into_eckey(const std::string& file_name, EC_KEY **priv_ec_key)
 {
     do {
         // New up the EC_KEY with the EC_GROUP
@@ -347,8 +372,7 @@ static void read_oca_info_ec(EC_KEY **priv_ec_key)
         *priv_ec_key = EC_KEY_new_by_curve_name(nid);
 
         // Read in the private key file into EVP_PKEY
-        // You cannot call a sub-function here because the priv_ec_key doesn't get set correctly
-        FILE *pFile = fopen("../psp-sev-assets/oca_key.pem", "r");
+        FILE *pFile = fopen(file_name.c_str(), "r");
         if(!pFile)
             break;
         *priv_ec_key = PEM_read_ECPrivateKey(pFile, NULL, NULL, NULL);
@@ -365,8 +389,12 @@ static void read_oca_info_ec(EC_KEY **priv_ec_key)
  *              function, be sure to manually set the other parameters which
  *              this function does not specifically set, such as ApiMajor,
  *              ApiMajor, and Pubkey, so they get included in the signature
- * Notes:       sev_cert.c -> sev_cert_create() (kinda)
- *              Signs the PEK's sig1 with the OCA (private key)
+ * Notes:       - sev_cert.c -> sev_cert_create() (kinda)
+ *              - Signs the PEK's sig1 with the OCA (private key)
+ *              - The PrivKeyFile cannot easily be changed to a **_KEY format
+ *                because this function handles RSA and EC keys, so you'd have
+ *                to have 2 params, one RSA_KEY and one EVP_PKEY and the one not
+ *                being used would be empty
  *              The firmware signs sig2 with the CEK during PEK_CERT_IMPORT
  * Parameters:  [Version][PubKeyUsage][PubKeyAlgorithm] are for the child cert (PEK)
  *              [PrivKeyFile][Sig1Usage][Sig1Algo] are for the parent cert (OCA)
@@ -379,7 +407,7 @@ static void read_oca_info_ec(EC_KEY **priv_ec_key)
  * params later (don't know what other params it needed to validate correctly)
  */
 bool SEVCert::sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
-                           const std::string& oca_priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo )
+                           const std::string& priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo )
 {
     bool isValid = false;
     HMACSHA256 sha_digest_256;           // Hash on the cert from Version to PubKey
@@ -408,18 +436,8 @@ bool SEVCert::sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t 
             printf("Error: RSA signing untested!");
             // This code probably does not work!
 
-            if (!(priv_rsa_key = RSA_new()))
-                break;
-
-            // Read in the private key file into EVP_PKEY
-            // You cannot call a sub-function here because the priv_rsa_key doesn't get set correctly
-            FILE *pFile = fopen(oca_priv_key_file.c_str(), "r");
-            if(!pFile) {
-                printf("OCA private key file not found\n");
-                break;
-            }
-            priv_rsa_key = PEM_read_RSAPrivateKey(pFile, NULL, NULL, NULL);
-            fclose (pFile);
+            // Allocates a new RSA private key which is freed at the bottom of this function
+            ReadPrivKeyPEMIntoRSAKey(priv_key_file, &priv_rsa_key);
             if(!priv_rsa_key)
                 break;
 
@@ -440,8 +458,8 @@ bool SEVCert::sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t 
         else if( (sig1_algo == SEVSigAlgoECDSASHA256) ||
                  (sig1_algo ==  SEVSigAlgoECDSASHA384)) {
 
-            // Allocates a new ECPrivateKey which is freed at the bottom of this function
-            read_oca_info_ec(&priv_ec_key);
+            // Allocates a new EC private key which is freed at the bottom of this function
+            read_privkey_pem_into_eckey(priv_key_file, &priv_ec_key);
             if(!priv_ec_key)
                 break;
 
@@ -838,7 +856,6 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(SEV_CERT *cert, EV
             // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
             printf("WARNING: You are using untested code in" \
                    "decompile_public_key_into_certificate for RSA cert type!\n");
-
         }
         else if( (cert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||
                  (cert->PubkeyAlgo == SEVSigAlgoECDSASHA384) ||

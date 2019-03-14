@@ -301,7 +301,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const AMD_CERT *ark)
         memset(&fused_hash, 0, sizeof(fused_hash));
 
         // Validate the certificate
-        cmd_ret = amd_cert_validate(ark, NULL, AMDUsageARK);
+        cmd_ret = amd_cert_validate(ark, NULL, AMDUsageARK);    //TODO Rome ARK will be self-signed
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
