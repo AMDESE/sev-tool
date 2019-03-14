@@ -46,6 +46,8 @@
 #define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.txt"
 #define LAUNCH_BLOB_FILENAME            "launch_blob.txt"
 #define GUEST_OWNER_PUBKEY_FILENAME     "godh_pubkey.pem"
+#define GUEST_OWNER_PRIVKEY_FILENAME    "godh_privkey.pem"
+#define GUEST_OWNER_DH_FILENAME         "godh.cert"
 #define SECRET_FILENAME                 "secret.txt"
 #define PACKAGED_SECRET_FILENAME        "packaged_secret.txt"
 

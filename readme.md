@@ -1,7 +1,7 @@
 # How to Download and Run SEV-Tool
 &nbsp;
 Version: v9
-Updated: 2019-03-12
+Updated: 2019-03-14
 &nbsp;
 &nbsp;
 
@@ -287,12 +287,12 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          $ sudo ./sevtool --ofolder ./certs --validate_cert_chain
          ```
 16. generate_launch_blob
-     - This function imports the PDH certificate from the Platform Owner and builds the Launch_Start session buffer (blob). As part of the session buffer, a new public/private Diffie-Hellman keypair for the Guest Owner is generated, which is then used with the Platform Owner's public DH key to calculate a shared secret, and then a master secret, which then is then used generate a new TEK and TIK. 
+     - This function imports the PDH certificate from the Platform Owner and builds the Launch_Start session buffer (blob) and the Guest Owner Diffie-Hellman public key certificate. As part of the session buffer, a new public/private Diffie-Hellman keypair for the Guest Owner is generated, which is then used with the Platform Owner's public DH key to calculate a shared secret, and then a master secret, which then is then used generate a new TEK and TIK. The session buffer (launch blob) and Guest Owner DH public key cert will be used as inputs to LaunchStart.
      - Required input args: Guest policy in hex format
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the blob file to
      - Outputs:
-        - If --[ofolder] flag used: The blob file and Guest Owner DH public key will be exported to the folder specified. Otherwise, they will be exported to the same directory as the SEV-Tool executable. File: launch_blob.txt, godh_pubkey.pem
+        - If --[ofolder] flag used: The blob file and Guest Owner DH public key certificate will be exported to the folder specified. The Guest Owner DH public and private keys are also exported during the process and are only to be used by the SEV-Tool. Otherwise, all files will be exported to the same directory as the SEV-Tool executable. Files: launch_blob.txt, godh.cert, (ignore these: godh_pubkey.pem, godh_privkey.pem).
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --generate_launch_blob 39

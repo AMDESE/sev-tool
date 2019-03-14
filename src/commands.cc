@@ -564,7 +564,6 @@ int Command::import_all_certs(std::string& output_folder, SEV_CERT *pdh,
         std::string cek_full = output_folder+CEK_FILENAME;
         if(ReadFile(cek_full, cek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
-print_sev_cert_readable(cek);
 
         // Read in the oca
         std::string oca_full = output_folder+OCA_FILENAME;
@@ -929,8 +928,25 @@ bool Command::derive_master_secret(AES128Key master_secret,
         OPENSSL_free(shared_key);    // Local variable
 
         // TODO. This is definitely not where this should be done
-        std::string file_full = m_output_folder + GUEST_OWNER_PUBKEY_FILENAME;
-        if(!tempObj.write_pubkey_pem(file_full, &priv_key))
+        // Write GODH pub and priv keys to files
+        std::string godh_pub_key_file = m_output_folder + GUEST_OWNER_PUBKEY_FILENAME;
+        if(!tempObj.write_pubkey_pem(godh_pub_key_file, &priv_key))
+            break;
+        std::string godh_priv_key_file = m_output_folder + GUEST_OWNER_PRIVKEY_FILENAME;
+        if(!tempObj.write_privkey_pem(godh_priv_key_file, &priv_key))
+            break;
+
+        // Launch Start needs the GODH Pubkey as a cert, so need to create it
+        SEV_CERT godh_cert;
+        SEVCert cert_obj(godh_cert);
+        // This cert is really just a way to send over the godh public key,
+        // so the api major/minor don't matter here
+        if(!cert_obj.create_godh_cert(0, 0, godh_pub_key_file, godh_priv_key_file))
+            break;
+        memcpy(&godh_cert, cert_obj.data(), sizeof(SEV_CERT)); // TODO, shouldn't need this?
+
+        std::string godh_cert_file = m_output_folder + GUEST_OWNER_DH_FILENAME;
+        if(WriteFile(godh_cert_file, &godh_cert, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         ret = true;
