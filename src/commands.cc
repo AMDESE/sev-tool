@@ -715,14 +715,16 @@ int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
     do {
         // Get the size of the secret, so we can allocate that much memory
         size_t secret_size = GetFileSize(secret_file);
-        if(secret_size == 0)
+        if(secret_size < 8) {
+            printf("Error: SEV require a secret greater than 8 bytes\n");
             break;
+        }
         uint8_t secret_mem[secret_size];
         uint8_t encrypted_mem[secret_size];
 
         // Read in the secret
         // printf("Attempting to read in Secrets file\n");
-        if(ReadFile(secret_file, secret_mem, sizeof(secret_size)) != secret_size)
+        if(ReadFile(secret_file, secret_mem, secret_size) != secret_size)
             break;
 
         // Read in the blob to import the TEK
@@ -885,36 +887,36 @@ bool Command::derive_master_secret(AES128Key master_secret,
         return false;
 
     SEV_CERT dummy;
-    SEVCert tempObj(dummy);        // TODO. Hack b/c just want to call function later
+    SEVCert tempObj(dummy);         // TODO. Hack b/c just want to call function later
     bool ret = false;
-    EVP_PKEY *priv_key = NULL;
-    EVP_PKEY *peer_key = NULL;
+    EVP_PKEY *godh_keypair = NULL;  // Our (Guest Owner) pub/priv keypair
+    EVP_PKEY *po_pubkey = NULL;     // Platform owner public key
     size_t shared_key_len = 0;
 
     do {
         // New up the Guest Owner's private EVP_PKEY
-        if (!(priv_key = EVP_PKEY_new()))
+        if (!(godh_keypair = EVP_PKEY_new()))
             break;
 
         // Create your Guest Owner DH (Elliptic Curve Diffie Hellman (ECDH)) P-384 private key
-        if(!tempObj.generate_ecdh_keypair(priv_key))
+        if(!tempObj.generate_ecdh_keypair(godh_keypair))
             break;
 
         // New up the Platform Owner's public EVP_PKEY
-        if (!(peer_key = EVP_PKEY_new()))
+        if (!(po_pubkey = EVP_PKEY_new()))
             break;
 
         // Get the friend's Public EVP_PKEY from the certificate
         // This function allocates memory and attaches an EC_Key
         //  to your EVP_PKEY so, to prevent mem leaks, make sure
         //  the EVP_PKEY is freed at the end of this function
-        if(tempObj.compile_public_key_from_certificate(pdh_public, peer_key) != STATUS_SUCCESS)
+        if(tempObj.compile_public_key_from_certificate(pdh_public, po_pubkey) != STATUS_SUCCESS)
             break;
 
         // Calculate the shared secret
         // This function is allocating memory for this uint8_t[],
         //  must free it at the end of this function
-        uint8_t *shared_key = calculate_shared_secret(priv_key, peer_key, shared_key_len);
+        uint8_t *shared_key = calculate_shared_secret(godh_keypair, po_pubkey, shared_key_len);
         if (!shared_key)
             break;
 
@@ -930,10 +932,10 @@ bool Command::derive_master_secret(AES128Key master_secret,
         // TODO. This is definitely not where this should be done
         // Write GODH pub and priv keys to files
         std::string godh_pub_key_file = m_output_folder + GUEST_OWNER_PUBKEY_FILENAME;
-        if(!tempObj.write_pubkey_pem(godh_pub_key_file, &priv_key))
+        if(!tempObj.write_pubkey_pem(godh_pub_key_file, &godh_keypair))
             break;
         std::string godh_priv_key_file = m_output_folder + GUEST_OWNER_PRIVKEY_FILENAME;
-        if(!tempObj.write_privkey_pem(godh_priv_key_file, &priv_key))
+        if(!tempObj.write_privkey_pem(godh_priv_key_file, &godh_keypair))
             break;
 
         // Launch Start needs the GODH Pubkey as a cert, so need to create it
@@ -941,7 +943,7 @@ bool Command::derive_master_secret(AES128Key master_secret,
         SEVCert cert_obj(godh_cert);
         // This cert is really just a way to send over the godh public key,
         // so the api major/minor don't matter here
-        if(!cert_obj.create_godh_cert(0, 0, godh_pub_key_file, godh_priv_key_file))
+        if(!cert_obj.create_godh_cert(&godh_keypair, 0, 0, godh_priv_key_file))
             break;
         memcpy(&godh_cert, cert_obj.data(), sizeof(SEV_CERT)); // TODO, shouldn't need this?
 
@@ -953,15 +955,15 @@ bool Command::derive_master_secret(AES128Key master_secret,
     } while (0);
 
     // Free memory
-    EVP_PKEY_free(peer_key);
-    EVP_PKEY_free(priv_key);
+    EVP_PKEY_free(po_pubkey);
+    EVP_PKEY_free(godh_keypair);
 
     return ret;
 }
 
-bool Command::derive_kek(AES128Key kik, const AES128Key master_secret)
+bool Command::derive_kek(AES128Key kek, const AES128Key master_secret)
 {
-    bool ret = kdf((unsigned char*)kik, sizeof(AES128Key), master_secret, sizeof(AES128Key),
+    bool ret = kdf((unsigned char*)kek, sizeof(AES128Key), master_secret, sizeof(AES128Key),
                    (uint8_t*)SEV_KEK_LABEL, sizeof(SEV_KEK_LABEL)-1, NULL, 0);
     return ret;
 }
@@ -970,7 +972,6 @@ bool Command::derive_kik(HMACKey128 kik, const AES128Key master_secret)
 {
     bool ret = kdf((unsigned char*)kik, sizeof(AES128Key), master_secret, sizeof(AES128Key),
                    (uint8_t*)SEV_KIK_LABEL, sizeof(SEV_KIK_LABEL)-1, NULL, 0);
-
     return ret;
 }
 

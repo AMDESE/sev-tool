@@ -87,7 +87,7 @@ private:
     bool derive_master_secret(AES128Key master_secret,
                             const SEV_CERT *pdh_public,
                             const uint8_t nonce[sizeof(Nonce128)]);
-    bool derive_kek(AES128Key kik, const AES128Key master_secret);
+    bool derive_kek(AES128Key kek, const AES128Key master_secret);
     bool derive_kik(HMACKey128 kik, const AES128Key master_secret);
     bool gen_hmac(HMACSHA256 *out, HMACKey128 key, uint8_t *msg, size_t msg_len);
     bool encrypt(uint8_t *out, const uint8_t *in, size_t length,

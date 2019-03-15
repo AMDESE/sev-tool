@@ -56,8 +56,8 @@ public:
     bool write_pubkey_pem(std::string& file_name, EVP_PKEY **evp_keypair);
     bool write_privkey_pem(std::string& file_name, EVP_PKEY **evp_keypair);
     bool generate_ecdh_keypair(EVP_PKEY *evp_keypair);
-    bool create_godh_cert(uint8_t api_major, uint8_t api_minor,
-                          std::string godh_pubkey_full, std::string godh_privkey_full);
+    bool create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major,
+                          uint8_t api_minor, std::string godh_privkey_full);
     bool sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
                        const std::string& priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo);
     SEV_ERROR_CODE compile_public_key_from_certificate(const SEV_CERT *cert, EVP_PKEY *evp_pub_key);

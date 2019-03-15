@@ -227,39 +227,24 @@ bool SEVCert::generate_ecdh_keypair(EVP_PKEY *evp_keypair)
 }
 
 /**
- * Description:   Populates an empty SEV_CERT using a generated ECDH keypair
+ * Description:   Populates an empty SEV_CERT using an an existing ECDH keypair
  * Typical Usage: Used to generate the Guest Owner Diffie-Hellman cert used in
  *                LaunchStart
  * Parameters:    [ApiMajor] the ApiMajor returned from a PlatformStatus command
  *                  as input to this function, to help populate the cert
  *                [ApiMinor] the ApiMinor returned from a PlatformStatus command
  *                  as input to this function, to help populate the cert
+ * Notes:         Yes, the godh_keypair has the godh_privkey. Could refactor to
+ *                make sign_with_key take a EVP_PKEY, not a file. But the OCA is
+ *                a cert file and we might need to support that also
  */
-bool SEVCert::create_godh_cert(uint8_t api_major, uint8_t api_minor,
-                             std::string godh_pubkey_full,
-                             std::string godh_privkey_full)
+bool SEVCert::create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major,
+                               uint8_t api_minor, std::string godh_privkey_full)
 {
     bool cmd_ret = false;
-    EVP_PKEY *godh_keypair = NULL;
 
     do {
         memset(&m_child_cert, 0, sizeof(SEV_CERT));
-
-        // New up the Guest Owner's private EVP_PKEY
-        if (!(godh_keypair = EVP_PKEY_new()))
-            break;
-
-        // Generate a new public/private keypair
-        if(!generate_ecdh_keypair(godh_keypair))
-            break;
-
-        // Create temporary pubkey and privkey files because that's what the
-        // existing functions take in
-		// Write the pubkey
-        write_pubkey_pem(godh_pubkey_full, &godh_keypair);
-
-        // Write the privkey
-        write_privkey_pem(godh_privkey_full, &godh_keypair);
 
         m_child_cert.Version = SEV_CERT_MAX_VERSION;
         m_child_cert.ApiMajor = api_major;
@@ -272,7 +257,7 @@ bool SEVCert::create_godh_cert(uint8_t api_major, uint8_t api_minor,
         m_child_cert.Sig2Algo = SEVSigAlgoInvalid;
 
         // Set the pubkey portion of the cert
-        if(decompile_public_key_into_certificate(&m_child_cert, godh_keypair) != STATUS_SUCCESS)
+        if(decompile_public_key_into_certificate(&m_child_cert, *godh_keypair) != STATUS_SUCCESS)
             break;
 
         // Set the rest of the params and sign the signature with the newly
