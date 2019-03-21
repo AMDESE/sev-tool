@@ -19,13 +19,7 @@
 
 #include "sevapi.h"
 #include <string>
-#include <openssl/ecdh.h>
-#include <openssl/ecdsa.h>
 #include <openssl/evp.h>
-#include <openssl/hmac.h>
-#include <openssl/pem.h>
-#include <openssl/rsa.h>
-#include <openssl/ts.h>
 
 // Public global functions
 static std::string sev_empty = "NULL";
@@ -33,9 +27,14 @@ void print_sev_cert_readable(const SEV_CERT *cert, std::string& out_str = sev_em
 void print_sev_cert_hex(const SEV_CERT *cert);
 void print_cert_chain_buf_readable(const SEV_CERT_CHAIN_BUF *p, std::string& out_str = sev_empty);
 void print_cert_chain_buf_hex(const SEV_CERT_CHAIN_BUF *p);
+void read_priv_key_pem_into_rsakey(const std::string& file_name, RSA **rsa_priv_key);
+void read_priv_key_pem_into_eckey(const std::string& file_name, EC_KEY **ec_priv_key);
+bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_priv_key);
 
 class SEVCert {
 private:
+    bool write_pubkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair);
+    bool write_privkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair);
     bool calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint32_t pub_key_offset,
                              HMACSHA256 *sha_digest_256, HMACSHA512 *sha_digest_384);
     SEV_ERROR_CODE validate_usage(uint32_t Usage);
@@ -53,13 +52,11 @@ public:
 
     const SEV_CERT *data() { return &m_child_cert; }
 
-    bool write_pubkey_pem(std::string& file_name, EVP_PKEY **evp_keypair);
-    bool write_privkey_pem(std::string& file_name, EVP_PKEY **evp_keypair);
-    bool generate_ecdh_keypair(EVP_PKEY *evp_keypair);
-    bool create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major,
-                          uint8_t api_minor, std::string godh_privkey_full);
+    bool generate_ecdh_keypair(EVP_PKEY **evp_keypair);
+    bool create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major, uint8_t api_minor);
+    bool create_oca_cert(EVP_PKEY **oca_keypair, uint8_t api_major, uint8_t api_minor);
     bool sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
-                       const std::string& priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo);
+                       EVP_PKEY **priv_key, uint32_t sig1_usage, uint32_t sig1_algo);
     SEV_ERROR_CODE compile_public_key_from_certificate(const SEV_CERT *cert, EVP_PKEY *evp_pub_key);
     SEV_ERROR_CODE decompile_public_key_into_certificate(SEV_CERT *cert, EVP_PKEY *evp_pubkey);
     SEV_ERROR_CODE verify_sev_cert(const SEV_CERT *parent_cert1, const SEV_CERT *parent_cert2 = NULL);

@@ -1,6 +1,6 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v10
+Version: v11
 Updated: 2019-03-21
 &nbsp;
 &nbsp;
@@ -20,7 +20,7 @@ Updated: 2019-03-21
      ```
     This means that the ccp driver was able to run the Init command against the SEV firmware.
     Note: You might also see a dmesg line noting that "Direct firmware load for amd/sev.fw failed with error -2". This just means that the firmware file is not there for the ccp driver to run the Download_Firmware command on startup, and you will be running with the SEV firmware that is provided in the BIOS. This is totally normal.
-  - Note if running Linux, it is recommended that your OS come with a Kernel that supports SEV by default (Ubuntu 18.10 or later, etc) to have the latest Kernel headers and libc. If you start with an older Kernel and use a Kernel upgrade utility (ex: ukuu in Ubuntu) to update the Kernel manually, this will give you the newest Kernel headers, but you will have an old version of libc, which processed the older Kernel headers, not the new ones. It’s (probably) possible to update libc and have it process the new Kernel Keaders, but it’s a lot of work.
+  - Note if running Linux, it is recommended that your OS come with a Kernel that supports SEV by default (Ubuntu 18.10 or later, etc) to have the latest Kernel headers and libc. If you start with an older Kernel and use a Kernel upgrade utility (ex: ukuu in Ubuntu) to update the Kernel manually, this will give you the newest Kernel headers, but you will have an old version of libc, which processed the older Kernel headers, not the new ones. It’s (probably) possible to update libc and have it process the new Kernel Headers, but it’s a lot of work.
 
 ## Downloading the SEV-Tool
 1. Boot into a Kernel that supports SEV (see above to confirm your Kernel supports SEV)
@@ -178,12 +178,13 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          $ sudo ./sevtool --ofolder ./certs --pdh_cert_export
          ```
 7. pek_cert_import
-     - Required input args: The OCA Private key file (.pem) and OCA cert file (.cert) are required arguments.
+This command imports an OCA private key from the user, runs a platform_status command to get the API major/minor used to create the certificate, runs the pek_csr to create the PEK certificate signing request, signs the PEK signing request with the OCA private key, and calls pek_cert_import to import the PEK and OCA certificates.
+     - Required input args: The unencrypted OCA Private key file (.pem). 
      - Outputs: none
      - Example
          ```sh
-         $ sudo ./sevtool --pek_cert_import [oca_priv_key_file] [oca_cert_file]
-         $ sudo ./sevtool --pek_cert_import ../psp-sev-assets/oca_key_in.pem ../psp-sev-assets/oca_in.cert
+         $ sudo ./sevtool --pek_cert_import [oca_priv_key_file]
+         $ sudo ./sevtool --pek_cert_import ../psp-sev-assets/oca_key_in.pem
          ```
 8. get_id
      - Optional input args: --ofolder [folder_path]
@@ -203,14 +204,15 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          $ sudo ./sevtool --ofolder ./certs --set_self_owned
          ```
 10. set_externally_owned
-     - Required input args: This function, among other things, calls pek_cert_import, so the OCA Private key file (.pem) and OCA cert file (.cert) are required arguments.
+     - Required input args: This function, among other things, calls pek_cert_import, so the OCA Private key file (.pem) is a required argument.
      - Outputs: none
      - Example
          ```sh
-         $ sudo ./sevtool --set_externally_owned [oca_priv_key_file] [oca_cert_file]
-         $ sudo ./sevtool --set_externally_owned ../psp-sev-assets/oca_key_in.pem ../psp-sev-assets/oca_in.cert
+         $ sudo ./sevtool --set_externally_owned [oca_priv_key_file]
+         $ sudo ./sevtool --set_externally_owned ../psp-sev-assets/oca_key_in.pem
          ```
 11. generate_cek_ask
+This command calls the get_id command and passes that ID into the AMD KDS server to retrieve the cek_ask. If the command returns an error while connecting to the KDS server, please try the command again.
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the cek_ark.cert to
      - Outputs:
@@ -310,4 +312,4 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
 
 ## Issues, Feature Requests
    - For any issues with the tool itself, please create a ticket at https://github.com/AMDESE/sev-tool/issues
-   - For any questions/converns with the SEV API spec, please create a ticket at https://github.com/AMDESE/AMDSEV/issues
+   - For any questions/concerns with the SEV API spec, please create a ticket at https://github.com/AMDESE/AMDSEV/issues

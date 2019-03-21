@@ -84,17 +84,15 @@ public:
     int pek_csr(uint8_t *data, void *PEKMem, SEV_CERT *csr);
     int pdh_gen(void);
     int pdh_cert_export(uint8_t *data,
-                                   void *PDHCertMem, void *CertChainMem);
+                        void *PDHCertMem, void *CertChainMem);
     int pek_cert_import(uint8_t *data,
-                                   SEV_CERT *csr,
-                                   std::string& oca_priv_key_file,
-                                   std::string& oca_cert_file);
+                        SEV_CERT *csr,
+                        std::string& oca_priv_key_file);
     int get_id(void *data, void *IDMem, uint32_t id_length = 0);
 
     int sysinfo();
     int set_self_owned(void);
-    int set_externally_owned(std::string& oca_priv_key_file,
-                                        std::string& oca_cert_file);
+    int set_externally_owned(std::string& oca_priv_key_file);
     int generate_cek_ask(std::string& output_folder, std::string& cert_file);
     int get_ask_ark(std::string& output_folder, std::string& cert_file);
     int zip_certs(std::string& output_folder, std::string& zip_name, std::string& files_to_zip);

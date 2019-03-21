@@ -244,19 +244,18 @@ int SEVDevice::pdh_cert_export(uint8_t *data,
     return (int)cmd_ret;
 }
 
-// todo. dont want to be reading from a file. use openssl to generate
 int SEVDevice::pek_cert_import(uint8_t *data,
-                                          SEV_CERT *PEKcsr,
-                                          std::string& oca_priv_key_file,
-                                          std::string& oca_cert_file)
+                               SEV_CERT *PEKcsr,
+                               std::string& oca_priv_key_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
     sev_user_data_pek_cert_import *data_buf = (sev_user_data_pek_cert_import *)data;
+    sev_user_data_status status_data;  // Platform Status
 
-    void *OCACert = malloc(sizeof(SEV_CERT));
-
-    if(!OCACert)
+    EVP_PKEY *oca_priv_key = NULL;
+    void *oca_cert = malloc(sizeof(SEV_CERT));
+    if(!oca_cert)
         return SEV_RET_HWSEV_RET_PLATFORM;
 
     // Submit the signed cert to PEKCertImport
@@ -267,22 +266,28 @@ int SEVDevice::pek_cert_import(uint8_t *data,
         if(!validate_pek_csr(PEKcsr))
             break;
 
-        // --------- Sign the CSR --------- //
+        // Do a platform_status to get api_major and api_minor to create oca cert
+        cmd_ret = platform_status((uint8_t *)&status_data);
+        if(cmd_ret != 0)
+            break;
+
+        // Import the OCA pem file and turn it into an SEV_CERT
+        SEVCert cert_obj(*(SEV_CERT *)oca_cert);
+        if(!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key))
+            break;
+        if(!cert_obj.create_oca_cert(&oca_priv_key, status_data.api_major, status_data.api_minor))
+            break;
+        memcpy(oca_cert, cert_obj.data(), sizeof(SEV_CERT)); // TODO, shouldn't need this?
+        // print_sev_cert_readable((SEV_CERT *)oca_cert);
+
+        // Sign the PEK CSR with the OCA private key
         SEVCert CSRCert(*PEKcsr);
         CSRCert.sign_with_key(SEV_CERT_MAX_VERSION, SEVUsagePEK, SEVSigAlgoECDSASHA256,
-                         oca_priv_key_file, SEVUsageOCA, SEVSigAlgoECDSASHA256);
-
-        // Fetch the OCA certificate
-        size_t OCACertLength = 0;
-        OCACertLength = ReadFile(oca_cert_file, OCACert, sizeof(SEV_CERT));
-        if(OCACertLength == 0) {
-            printf("File not found: %s\n", oca_cert_file.c_str());
-            break;
-        }
+                              &oca_priv_key, SEVUsageOCA, SEVSigAlgoECDSASHA256);
 
         data_buf->pek_cert_address = (uint64_t)CSRCert.data();
         data_buf->pek_cert_len = sizeof(SEV_CERT);
-        data_buf->oca_cert_address = (uint64_t)OCACert;
+        data_buf->oca_cert_address = (uint64_t)oca_cert;
         data_buf->oca_cert_len = sizeof(SEV_CERT);
 
         // Send the command
@@ -293,7 +298,7 @@ int SEVDevice::pek_cert_import(uint8_t *data,
     } while (0);
 
     // Free memory
-    free(OCACert);
+    free(oca_cert);
 
     return (int)cmd_ret;
 }
@@ -446,8 +451,7 @@ int SEVDevice::set_self_owned()
  *       will do its best to set the Platform state to whatever is required to
  *       run each command, but that does not include shutting down Guests to do so.
  */
-int SEVDevice::set_externally_owned(std::string& oca_priv_key_file,
-                                               std::string& oca_cert_file)
+int SEVDevice::set_externally_owned(std::string& oca_priv_key_file)
 {
     sev_user_data_status status_data;  // Platform Status
     int cmd_ret = SEV_RET_UNSUPPORTED;
@@ -474,7 +478,7 @@ int SEVDevice::set_externally_owned(std::string& oca_priv_key_file,
             // Submit the signed cert to PEKCertImport
             sev_user_data_pek_cert_import pek_cert_import_data;
             cmd_ret = pek_cert_import((uint8_t *)&pek_cert_import_data, &PEKcsr,
-                                      oca_priv_key_file, oca_cert_file);
+                                      oca_priv_key_file);
         }
     } while (0);
 

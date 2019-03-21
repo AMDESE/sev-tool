@@ -18,11 +18,15 @@
 #include "utilities.h"
 #include "crypto/rsa/rsa_locl.h"    // Needed to access internals of struct rsa_st. rsa_pub_key->n
 #include "crypto/ec/ec_lcl.h"       // Needed to access internals of struct ECDSA_SIG_st
+#include <openssl/hmac.h>
+#include <openssl/ecdsa.h>
+#include <openssl/ecdh.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
 #include <cstring>                  // memset
-#include <stdio.h>
-#include <stdexcept>
 #include <fstream>
 #include <stdio.h>
+#include <stdexcept>
 
 /**
  * Description: This function prints out an SEV_CERT in readable ASCII format
@@ -36,8 +40,8 @@ void print_sev_cert_readable(const SEV_CERT *cert, std::string& out_str)
     char out[sizeof(SEV_CERT)*3+500];   // 2 chars per byte + 1 spaces + ~500 extra chars for text
 
     sprintf(out, "%-15s%08x\n", "Version:", cert->Version);                         // uint32_t
-    sprintf(out+strlen(out), "%-15s%02x\n", "ApiMajor:", cert->ApiMajor);           // uint8_t
-    sprintf(out+strlen(out), "%-15s%02x\n", "ApiMinor:", cert->ApiMinor);           // uint8_t
+    sprintf(out+strlen(out), "%-15s%02x\n", "api_major:", cert->ApiMajor);          // uint8_t
+    sprintf(out+strlen(out), "%-15s%02x\n", "api_minor:", cert->ApiMinor);          // uint8_t
     sprintf(out+strlen(out), "%-15s%08x\n", "pub_key_usage:", cert->PubkeyUsage);   // uint32_t
     sprintf(out+strlen(out), "%-15s%08x\n", "pubkey_algo:", cert->PubkeyAlgo);      // uint32_t
     sprintf(out+strlen(out), "%-15s\n", "Pubkey:");                                 // SEV_PUBKEY
@@ -75,7 +79,7 @@ void print_sev_cert_readable(const SEV_CERT *cert, std::string& out_str)
  */
 void print_sev_cert_hex(const SEV_CERT *cert)
 {
-    printf("Printing cert...\n");
+    printf("Printing cert as hex...\n");
     for(size_t i = 0; i < (size_t)(sizeof(SEV_CERT)); i++) { // bytes to uint8
         printf( "%02X ", ((uint8_t *)cert)[i] );
     }
@@ -142,19 +146,97 @@ void print_cert_chain_buf_hex(const SEV_CERT_CHAIN_BUF *p)
 }
 
 /**
+ * Description:   Reads in a private key pem file and write it to a RSA key
+ * Notes:         This function allocates a new RSA key which must be
+ *                freed by the calling function
+ * Parameters:    [rsa_priv_key] RSA key where the private key gets stored
+ */
+void read_priv_key_pem_into_rsakey(const std::string& file_name, RSA **rsa_priv_key)
+{
+    do {
+        // New up the EC_KEY with the EC_GROUP
+        if(!(*rsa_priv_key = RSA_new()))
+            break;
+
+        // Read in the private key file into RSA
+        FILE *pFile = fopen(file_name.c_str(), "r");
+        if(!pFile)
+            break;
+        *rsa_priv_key = PEM_read_RSAPrivateKey(pFile, NULL, NULL, NULL);
+        fclose(pFile);
+        if(!rsa_priv_key)
+            break;
+    } while (0);
+}
+
+/**
+ * Description:   Reads in a private key pem file and write it to a EC_KEY
+ * Notes:         This function allocates a new EC PrivateKey which must be
+ *                freed by the calling function
+ * Typical Usage: Usually used to read in OCA or GODH private key
+ * Parameters:    [ec_priv_key] EC_KEY where the private key gets stored
+ */
+void read_priv_key_pem_into_eckey(const std::string& file_name, EC_KEY **ec_priv_key)
+{
+    do {
+        // New up the EC_KEY with the EC_GROUP
+        int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
+        *ec_priv_key = EC_KEY_new_by_curve_name(nid);
+
+        // Read in the private key file into EVP_PKEY
+        FILE *pFile = fopen(file_name.c_str(), "r");
+        if(!pFile)
+            break;
+        *ec_priv_key = PEM_read_ECPrivateKey(pFile, NULL, NULL, NULL);
+        fclose(pFile);
+        if(!ec_priv_key)
+            break;
+    } while (0);
+}
+
+/**
+ * Description:   Calls read_privkey_pem_into_eckey and converts EC key to EVP key
+ * Notes:         This function allocates a new EVP key which will free the
+ *                associated EC key and the EVP key must be freed by the calling
+ *                function
+ * Parameters:    [file_name] file of the PEM file to read in
+ *                [evp_priv_key] Output EVP key
+ */
+bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_priv_key)
+{
+    EC_KEY *ec_privkey = NULL;
+
+    // New up the EVP_PKEY
+    if (!(*evp_priv_key = EVP_PKEY_new()))
+        return false;
+
+    // Read in the file as an EC key
+    read_priv_key_pem_into_eckey(file_name, &ec_privkey);
+
+    // Convert EC key to EVP_PKEY
+    // This function links EVP_pubKey to EC_pubKey, so when EVP_pubKey
+    //  is freed, EC_pubKey is freed. We don't want the user to have to
+    //  manage 2 keys, so just return EVP_PKEY and make sure user free's it
+    if(EVP_PKEY_assign_EC_KEY(*evp_priv_key, ec_privkey) != 1)
+        return false;
+
+    return true;
+}
+
+/**
  * Description: Writes the public key of an EVP_PKEY to a PEM file
  * Parameters:  [file_name] the full path of the file to write
  *              [evp_keypair] the key which ti pull the public key from
  */
-bool SEVCert::write_pubkey_pem(std::string& file_name, EVP_PKEY **evp_keypair)
+bool SEVCert::write_pubkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
 {
     FILE *pFile = NULL;
     pFile = fopen(file_name.c_str(), "wt");
     if(!pFile)
         return false;
 
-    printf("Writing to file: %s\n", file_name.c_str());
-    if(PEM_write_PUBKEY(pFile, *evp_keypair) != 1) {
+    // printf("Writing to file: %s\n", file_name.c_str());
+    if(PEM_write_PUBKEY(pFile, evp_keypair) != 1) {
         printf("Error writing pubkey to file: %s\n", file_name.c_str());
         return false;
     }
@@ -168,15 +250,15 @@ bool SEVCert::write_pubkey_pem(std::string& file_name, EVP_PKEY **evp_keypair)
  * Parameters:  [file_name] the full path of the file to write
  *              [evp_keypair] the key which ti pull the public key from
  */
-bool SEVCert::write_privkey_pem(std::string& file_name, EVP_PKEY **evp_keypair)
+bool SEVCert::write_privkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
 {
     FILE *pFile = NULL;
     pFile = fopen(file_name.c_str(), "wt");
     if(!pFile)
         return false;
 
-    printf("Writing to file: %s\n", file_name.c_str());
-    if(PEM_write_PrivateKey(pFile, *evp_keypair, NULL, NULL, 0, NULL, 0) != 1) {
+    // printf("Writing to file: %s\n", file_name.c_str());
+    if(PEM_write_PrivateKey(pFile, evp_keypair, NULL, NULL, 0, NULL, 0) != 1) {
         printf("Error writing privkey to file: %s\n", file_name.c_str());
         return false;
     }
@@ -192,7 +274,7 @@ bool SEVCert::write_privkey_pem(std::string& file_name, EVP_PKEY **evp_keypair)
  *                 Note: this key must be initialized (with EVP_PKEY_new())
  *                       before passing in
  */
-bool SEVCert::generate_ecdh_keypair(EVP_PKEY *evp_keypair)
+bool SEVCert::generate_ecdh_keypair(EVP_PKEY **evp_keypair)
 {
     if(!evp_keypair)
         return false;
@@ -201,6 +283,10 @@ bool SEVCert::generate_ecdh_keypair(EVP_PKEY *evp_keypair)
     EC_KEY *ec_keypair = NULL;
 
     do {
+        // New up the Guest Owner's private EVP_PKEY
+        if (!(*evp_keypair = EVP_PKEY_new()))
+            break;
+
         // New up the EC_KEY with the EC_GROUP
         int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
         ec_keypair = EC_KEY_new_by_curve_name(nid);
@@ -214,7 +300,7 @@ bool SEVCert::generate_ecdh_keypair(EVP_PKEY *evp_keypair)
         // This function links evp_keypair to ec_keypair, so when evp_keypair is
         //  freed, ec_keypair is freed. We don't want the user to have to manage 2
         //  keys, so just return EVP_PKEY and make sure user free's it
-        if(EVP_PKEY_assign_EC_KEY(evp_keypair, ec_keypair) != 1)
+        if(EVP_PKEY_assign_EC_KEY(*evp_keypair, ec_keypair) != 1)
             break;
 
         if (!evp_keypair)
@@ -227,21 +313,20 @@ bool SEVCert::generate_ecdh_keypair(EVP_PKEY *evp_keypair)
 }
 
 /**
- * Description:   Populates an empty SEV_CERT using an an existing ECDH keypair
+ * Description:   Populates an empty SEV_CERT using an existing ECDH keypair
  * Typical Usage: Used to generate the Guest Owner Diffie-Hellman cert used in
  *                LaunchStart
- * Parameters:    [ApiMajor] the ApiMajor returned from a PlatformStatus command
+ * Parameters:    [api_major] the api_major returned from a PlatformStatus command
  *                  as input to this function, to help populate the cert
- *                [ApiMinor] the ApiMinor returned from a PlatformStatus command
+ *                [api_minor] the api_minor returned from a PlatformStatus command
  *                  as input to this function, to help populate the cert
- * Notes:         Yes, the godh_keypair has the godh_privkey. Could refactor to
- *                make sign_with_key take a EVP_PKEY, not a file. But the OCA is
- *                a cert file and we might need to support that also
  */
-bool SEVCert::create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major,
-                               uint8_t api_minor, std::string godh_privkey_full)
+bool SEVCert::create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major, uint8_t api_minor)
 {
     bool cmd_ret = false;
+
+    if(!godh_keypair)
+        return false;
 
     do {
         memset(&m_child_cert, 0, sizeof(SEV_CERT));
@@ -265,7 +350,54 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major,
         // Technically this step is not necessary, as the firmware doesn't
         // validate the GODH signature
         if(!sign_with_key(SEV_CERT_MAX_VERSION, SEVUsagePDH, SEVSigAlgoECDHSHA256,
-                        godh_privkey_full, SEVUsagePEK, SEVSigAlgoECDSASHA256))
+                        godh_keypair, SEVUsagePEK, SEVSigAlgoECDSASHA256))
+            break;
+
+        cmd_ret = true;
+    } while (0);
+
+    return cmd_ret;
+}
+
+/**
+ * Description:   Populates an empty SEV_CERT using an existing ECDH keypair
+ * Typical Usage: Used to generate the Guest Owner Diffie-Hellman cert used in
+ *                LaunchStart
+ * Parameters:    [api_major] the api_major returned from a PlatformStatus command
+ *                  as input to this function, to help populate the cert
+ *                [api_minor] the api_minor returned from a PlatformStatus command
+ *                  as input to this function, to help populate the cert
+ */
+bool SEVCert::create_oca_cert(EVP_PKEY **oca_keypair, uint8_t api_major, uint8_t api_minor)
+{
+    bool cmd_ret = false;
+
+    if(!oca_keypair)
+        return false;
+
+    do {
+        memset(&m_child_cert, 0, sizeof(SEV_CERT));
+
+        m_child_cert.Version = SEV_CERT_MAX_VERSION;
+        m_child_cert.ApiMajor = api_major;
+        m_child_cert.ApiMinor = api_minor;
+        m_child_cert.PubkeyUsage = SEVUsageOCA;
+        m_child_cert.PubkeyAlgo = SEVSigAlgoECDSASHA256;
+        m_child_cert.Sig1Usage = SEVUsageOCA;
+        m_child_cert.Sig1Algo = SEVSigAlgoECDSASHA256;
+        m_child_cert.Sig2Usage = SEVUsageInvalid;
+        m_child_cert.Sig2Algo = SEVSigAlgoInvalid;
+
+        // Set the pubkey portion of the cert
+        if(decompile_public_key_into_certificate(&m_child_cert, *oca_keypair) != STATUS_SUCCESS)
+            break;
+
+        // Set the rest of the params and sign the signature with the newly
+        // generated GODH privkey
+        // Technically this step is not necessary, as the firmware doesn't
+        // validate the GODH signature
+        if(!sign_with_key(SEV_CERT_MAX_VERSION, SEVUsageOCA, SEVSigAlgoECDSASHA256,
+                        oca_keypair, SEVUsageOCA, SEVSigAlgoECDSASHA256))
             break;
 
         cmd_ret = true;
@@ -281,8 +413,8 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major,
  *               and whether to use SHA256 or SHA384
  *              [PubKeyOffset] number of bytes to be hashed, from the top of the
  *               SEV_CERT until the first signature. Version through and including Pubkey
- *              [shaDigest256] the output digest, if using SHA256
- *              [shaDigest384] the output digest, if using SHA384
+ *              [sha_digest_256] the output digest, if using SHA256
+ *              [sha_digest_384] the output digest, if using SHA384
  */
 bool SEVCert::calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint32_t pub_key_offset,
                              HMACSHA256 *sha_digest_256, HMACSHA512 *sha_digest_384)
@@ -319,55 +451,6 @@ bool SEVCert::calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint3
 }
 
 /**
- * Description:   Reads in a private key pem file and write it to a RSA key
- * Notes:         This function allocates a new RSA key which must be
- *                freed by the calling function
- * Parameters:    [priv_rsa_key] RSA key where the private key gets stored
- */
-static void ReadPrivKeyPEMIntoRSAKey(const std::string& file_name, RSA **priv_rsa_key)
-{
-    do {
-        // New up the EC_KEY with the EC_GROUP
-        if(!(*priv_rsa_key = RSA_new()))
-            break;
-
-        // Read in the private key file into RSA
-        FILE *pFile = fopen(file_name.c_str(), "r");
-        if(!pFile)
-            break;
-        *priv_rsa_key = PEM_read_RSAPrivateKey(pFile, NULL, NULL, NULL);
-        fclose(pFile);
-        if(!priv_rsa_key)
-            break;
-    } while (0);
-}
-
-/**
- * Description:   Reads in a private key pem file and write it to a EC_KEY
- * Notes:         This function allocates a new EC PrivateKey which must be
- *                freed by the calling function
- * Typical Usage: Usually used to read in OCA or GODH private key
- * Parameters:    [priv_ec_key] EC_KEY where the private key gets stored
- */
-static void read_privkey_pem_into_eckey(const std::string& file_name, EC_KEY **priv_ec_key)
-{
-    do {
-        // New up the EC_KEY with the EC_GROUP
-        int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
-        *priv_ec_key = EC_KEY_new_by_curve_name(nid);
-
-        // Read in the private key file into EVP_PKEY
-        FILE *pFile = fopen(file_name.c_str(), "r");
-        if(!pFile)
-            break;
-        *priv_ec_key = PEM_read_ECPrivateKey(pFile, NULL, NULL, NULL);
-        fclose(pFile);
-        if(!priv_ec_key)
-            break;
-    } while (0);
-}
-
-/**
  * Description: This function sets the many params of a cert (the child cert of
  *              the object used to call the this function) and then signs the
  *              cert with the private key provided. Note: Before calling this
@@ -376,13 +459,9 @@ static void read_privkey_pem_into_eckey(const std::string& file_name, EC_KEY **p
  *              ApiMajor, and Pubkey, so they get included in the signature
  * Notes:       - sev_cert.c -> sev_cert_create() (kinda)
  *              - Signs the PEK's sig1 with the OCA (private key)
- *              - The PrivKeyFile cannot easily be changed to a **_KEY format
- *                because this function handles RSA and EC keys, so you'd have
- *                to have 2 params, one RSA_KEY and one EVP_PKEY and the one not
- *                being used would be empty
  *              The firmware signs sig2 with the CEK during PEK_CERT_IMPORT
  * Parameters:  [Version][PubKeyUsage][PubKeyAlgorithm] are for the child cert (PEK)
- *              [PrivKeyFile][Sig1Usage][Sig1Algo] are for the parent cert (OCA)
+ *              [priv_evp_key][Sig1Usage][Sig1Algo] are for the parent cert (OCA)
  *
  * To optimize this function, can make the PEM read code RSA, EC, or general EVP.
  * The issue is that if it reads it into a common-format EVP_PKEY, how to we get that
@@ -391,8 +470,8 @@ static void read_privkey_pem_into_eckey(const std::string& file_name, EC_KEY **p
  * a GROUP as the input parm, not new up the EC_KEY then assign it a GROUP and all other
  * params later (don't know what other params it needed to validate correctly)
  */
-bool SEVCert::sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
-                           const std::string& priv_key_file, uint32_t sig1_usage, uint32_t sig1_algo )
+bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
+                            EVP_PKEY **priv_evp_key, uint32_t sig1_usage, uint32_t sig1_algo)
 {
     bool isValid = false;
     HMACSHA256 sha_digest_256;           // Hash on the cert from Version to PubKey
@@ -411,7 +490,7 @@ bool SEVCert::sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t 
         m_child_cert.Sig1Usage = sig1_usage;       // Parent cert's sig
         m_child_cert.Sig1Algo = sig1_algo;
 
-        // SHA256/SHA384 hash the cert from the [Version:Pubkey] params
+        // SHA256/SHA384 hash the Cert from the [Version:Pubkey] params
         uint32_t pub_key_offset = offsetof(SEV_CERT, Sig1Usage);  // 16 + sizeof(SEV_PUBKEY)
         if(!calc_hash_digest(&m_child_cert, sig1_algo, pub_key_offset, &sha_digest_256, &sha_digest_384))
             break;
@@ -422,7 +501,8 @@ bool SEVCert::sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t 
             // This code probably does not work!
 
             // Allocates a new RSA private key which is freed at the bottom of this function
-            ReadPrivKeyPEMIntoRSAKey(priv_key_file, &priv_rsa_key);
+            priv_rsa_key = RSA_new();
+            priv_rsa_key = EVP_PKEY_get1_RSA(*priv_evp_key);
             if(!priv_rsa_key)
                 break;
 
@@ -441,10 +521,11 @@ bool SEVCert::sign_with_key( uint32_t Version, uint32_t pub_key_usage, uint32_t 
             }
         }
         else if( (sig1_algo == SEVSigAlgoECDSASHA256) ||
-                 (sig1_algo ==  SEVSigAlgoECDSASHA384)) {
+                 (sig1_algo == SEVSigAlgoECDSASHA384)) {
+            int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
+            priv_ec_key = EC_KEY_new_by_curve_name(nid);
 
-            // Allocates a new EC private key which is freed at the bottom of this function
-            read_privkey_pem_into_eckey(priv_key_file, &priv_ec_key);
+            priv_ec_key = EVP_PKEY_get1_EC_KEY(*priv_evp_key);
             if(!priv_ec_key)
                 break;
 
@@ -606,7 +687,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const SEV_CERT *child_cert,
     HMACSHA512 sha_digest_384;        // Hash on the cert from Version to PubKey
 
     do{
-        // 1. SHA256 hash the cert from Version through Pubkey parameters
+        // 1. SHA256 hash the Cert from Version through Pubkey parameters
         // Calculate the digest of the input message   rsa.c -> rsa_pss_verify_msg()
         uint32_t pub_key_offset = offsetof(SEV_CERT, Sig1Usage);  // 16 + sizeof(SEV_PUBKEY)
         if(!calc_hash_digest(child_cert, parent_cert->PubkeyAlgo, pub_key_offset, &sha_digest_256, &sha_digest_384)) {
@@ -752,7 +833,7 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const SEV_CERT *cert
             rsa_pub_key = RSA_new();
 
             modulus = BN_lebin2bn(cert->Pubkey.RSA.Modulus, sizeof(cert->Pubkey.RSA.Modulus), NULL);  // New's up BigNum
-            pub_exp = BN_lebin2bn(cert->Pubkey.RSA.PubExp,  cert->Pubkey.RSA.ModulusSize/8, NULL);
+            pub_exp = BN_lebin2bn(cert->Pubkey.RSA.PubExp,  sizeof(cert->Pubkey.RSA.PubExp), NULL);
             rsa_pub_key->n = modulus;
             rsa_pub_key->e = pub_exp;
 

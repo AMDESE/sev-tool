@@ -77,24 +77,25 @@ private:
     int calculate_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
     int generate_all_certs(std::string& output_folder);
     int import_all_certs(std::string& output_folder, SEV_CERT *pdh,
-                                SEV_CERT *pek, SEV_CERT *oca, SEV_CERT *cek,
-                                AMD_CERT *ask, AMD_CERT *ark);
+                         SEV_CERT *pek, SEV_CERT *oca, SEV_CERT *cek,
+                         AMD_CERT *ask, AMD_CERT *ark);
     bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
              size_t key_in_length, const uint8_t *label, size_t label_length,
              const uint8_t *context, size_t context_length);
     uint8_t* calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
-                                   size_t& shared_key_len_out);
+                                     size_t& shared_key_len_out);
     bool derive_master_secret(AES128Key master_secret,
-                            const SEV_CERT *pdh_public,
-                            const uint8_t nonce[sizeof(Nonce128)]);
+                              EVP_PKEY *godh_priv_key,
+                              const SEV_CERT *pdh_public,
+                              const uint8_t nonce[sizeof(Nonce128)]);
     bool derive_kek(AES128Key kek, const AES128Key master_secret);
     bool derive_kik(HMACKey128 kik, const AES128Key master_secret);
     bool gen_hmac(HMACSHA256 *out, HMACKey128 key, uint8_t *msg, size_t msg_len);
     bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
                  const AES128Key Key, const uint8_t IV[128/8]);
-    int build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy, SEV_CERT *pdh_pub);
+    int build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy,
+                             EVP_PKEY *godh_priv_key, SEV_CERT *pdh_pub);
 
-    std::string m_output_folder = "";
 public:
     Command() {};
     ~Command() {};
@@ -105,27 +106,25 @@ public:
     int pek_csr(std::string& output_folder, int verbose_flag);
     int pdh_gen(void);
     int pdh_cert_export(std::string& output_folder, int verbose_flag);
-    int pek_cert_import(std::string& oca_priv_key_file,
-                                std::string& oca_cert_file);
+    int pek_cert_import(std::string& oca_priv_key_file);
     int get_id(std::string& output_folder, int verbose_flag);
 
     // Non-ioctl (custom) commands
     int sysinfo();
     int set_self_owned(void);
-    int set_externally_owned(std::string& oca_priv_key_file,
-                                std::string& oca_cert_file);
+    int set_externally_owned(std::string& oca_priv_key_file);
     int generate_cek_ask(std::string& output_folder);
     int get_ask_ark(std::string& output_folder);
     int export_cert_chain(std::string& output_folder);
     int calc_measurement(std::string& output_folder, int verbose_flag,
-                                measurement_t *user_data);
+                         measurement_t *user_data);
     int validate_cert_chain(std::string& output_folder);
     int generate_launch_blob(std::string& output_folder, int verbose_flag,
-                                uint32_t policy);
+                             uint32_t policy);
     int package_secret(std::string& output_folder, uint32_t verbose_flag);
     int encrypt_with_tek(uint8_t *encrypted_mem, const uint8_t *secret_mem,
-                                size_t secret_mem_size, const AES128Key tek,
-                                const IV128 iv);
+                         size_t secret_mem_size, const AES128Key tek,
+                         const IV128 iv);
 };
 
 #endif /* commands_h */
