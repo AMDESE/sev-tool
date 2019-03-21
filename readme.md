@@ -1,57 +1,12 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v9
-Updated: 2019-03-14
+Version: v10
+Updated: 2019-03-21
 &nbsp;
 &nbsp;
 
 ## Related Docs
 - The SEV API can be found here: https://developer.amd.com/sev/
-
-## Proposed Provisioning Steps
-##### Platform Owner
-1. Generate your OCA (example using openssl coming soon)
-2. Get Platform and connect to Internet
-3. Install SEV-supported operating system
-4. Confirm that SEV is supported (using steps in [OS Requirements](#os-requirements))
-5. Make a folder for the SEV-Tool to import/export certs/IDs from/to (pass into commands with the --ofolder flag)
-6. Run the get_id command. As a simple check if running when 2 processors, make sure the returned IDs are different by using the --verbose flag
-7. Get the CEK_ASK from the AMD KDS server by running the generate_cek_ask command
-8. Run the pek_csr command to generate a certificate signing request for your PEK. This will allow you to take ownership of the platform.
-9. Sign PEK with OCA (example using openssl coming soon)
-10. Run the pek_cert_import command
-11. Run the pdh_cert_export command
-12. Run the get_ask_ark command
-13. Run the export_cert_chain command to export the PDH down to the ARK (AMD root) and zip it up
-14. Save the complete cert chain for Guest Owners (GO's)
-15. Make available UEFI image for guests
-
-##### Guest Owner
-1. Make a folder for the SEV-Tool to import/export certs/IDs from/to (pass into commands with the --ofolder flag)
-2. Get UEFI image from the Platform Owner
-3. (Out of scope) Confirm the UEFI image is trustable.
-4. Get cert chain (PDH through ARK) from the Platform Owner (PO) and unzip them into a local folder
-5. Run the validate_cert_chain command to verify the cert chain from the PDH down to the ARK (AMD root)
-   - TODO. Wouldn't we want the GO to download the ASK_ARK, otherwise, the PO can make up the entire chain and we'd validate it and it'd pass?
-6. (Out of scope) Verify OCA cert chain from the Platform Owner
-7. Run the generate_launch_blob command
-   - Reads in Platform Owner Diffie-Hellman key (PDH cert from Platform Owner) and generates new public/private Guest Owner Diffie-Hellman keypair. The DH key exchange is completed when the PO calls Launch_Start using the GODH public key.
-8. Send the blob and the Guest Owner's DH public key to the Platform Owner so it can launch your Guests
-9. Get the measurement from the Platform Owner
-10. Run the calc_measurement command and verify the measurement from the Platform owner matches what you calculated/expected
-    - The UEFI image is the digest param that we hash, so we  know the Platform Owner isn't modifying that
-11. Run the package_secret command
-12. Send the secret(s) to the Platform Owner
-13. Give "ready to run" approval to the Platform Owner
-
-##### Hypervisor
-This is the flow that the Hypervisor will take to prepare the guest
-1. After receiving the launch blob and the GO Diffie-Hellman public key from the Guest Owner, the Hypervisor can launch (call Launch_Start on) the guest
-2. Call Launch_Update_Data and Activate, etc
-3. Call Launch_Measure and send the measurement received from the PSP to the Guest Owner so it can verify against its expected result
-4. Call Launch_Finish, etc
-5. After receiving the packaged secrets from the Guest Owner (this step is optional), call Launch_Secret to pass the Guest Owner's secrets into the guest
-6. The Guest Owner should now give the Hypervisor approval to run its Guest
 
 ## OS Requirements
   - Your Kernel must support SEV. 
@@ -124,6 +79,51 @@ This is the flow that the Hypervisor will take to prepare the guest
      $ sudo ./sevtool --brief --pek_csr
      ```
 * Certain commands support the --ofolder flag which will allow the user to select the output folder for the certs exported by the command. See specific command for details
+
+## Proposed Provisioning Steps
+##### Platform Owner
+1. Generate your OCA (example using openssl coming soon)
+2. Get Platform and connect to Internet
+3. Install SEV-supported operating system
+4. Confirm that SEV is supported (using steps in [OS Requirements](#os-requirements))
+5. Make a folder for the SEV-Tool to import/export certs/IDs from/to (pass into commands with the --ofolder flag)
+6. Run the get_id command. As a simple check if running when 2 processors, make sure the returned IDs are different by using the --verbose flag
+7. Get the CEK_ASK from the AMD KDS server by running the generate_cek_ask command
+8. Run the pek_csr command to generate a certificate signing request for your PEK. This will allow you to take ownership of the platform.
+9. Sign PEK with OCA (example using openssl coming soon)
+10. Run the pek_cert_import command
+11. Run the pdh_cert_export command
+12. Run the get_ask_ark command
+13. Run the export_cert_chain command to export the PDH down to the ARK (AMD root) and zip it up
+14. Save the complete cert chain for Guest Owners (GO's)
+15. Make available UEFI image for guests
+
+##### Guest Owner
+1. Make a folder for the SEV-Tool to import/export certs/IDs from/to (pass into commands with the --ofolder flag)
+2. Get UEFI image from the Platform Owner
+3. (Out of scope) Confirm the UEFI image is trustable.
+4. Get cert chain (PDH through ARK) from the Platform Owner (PO) and unzip them into a local folder
+5. Run the validate_cert_chain command to verify the cert chain from the PDH down to the ARK (AMD root)
+   - TODO. Wouldn't we want the GO to download the ASK_ARK, otherwise, the PO can make up the entire chain and we'd validate it and it'd pass?
+6. (Out of scope) Verify OCA cert chain from the Platform Owner
+7. Run the generate_launch_blob command
+   - Reads in Platform Owner Diffie-Hellman key (PDH cert from Platform Owner) and generates new public/private Guest Owner Diffie-Hellman keypair. The DH key exchange is completed when the PO calls Launch_Start using the GODH public key.
+8. Send the blob and the Guest Owner's DH public key to the Platform Owner so it can launch your Guests
+9. Get the measurement from the Platform Owner
+10. Run the calc_measurement command and verify the measurement from the Platform owner matches what you calculated/expected
+    - The UEFI image is the digest param that we hash, so we  know the Platform Owner isn't modifying that
+11. Run the package_secret command
+12. Send the secret(s) to the Platform Owner
+13. Give "ready to run" approval to the Platform Owner
+
+##### Hypervisor
+This is the flow that the Hypervisor will take to prepare the guest
+1. After receiving the launch blob and the GO Diffie-Hellman public key from the Guest Owner, the Hypervisor can launch (call Launch_Start on) the guest
+2. Call Launch_Update_Data and Activate, etc
+3. Call Launch_Measure and send the measurement received from the PSP to the Guest Owner so it can verify against its expected result
+4. Call Launch_Finish, etc
+5. After receiving the packaged secrets from the Guest Owner (this step is optional), call Launch_Secret to pass the Guest Owner's secrets into the guest
+6. The Guest Owner should now give the Hypervisor approval to run its Guest
 
 ## Command List
 The following commands are supposed be the SEV-Tool. Please see the SEV-API for info on each specific command
