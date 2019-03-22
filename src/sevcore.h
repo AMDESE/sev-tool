@@ -62,6 +62,10 @@
 class SEVDevice {
 private:
     int mFd;
+
+    inline int GetFD(void) { return mFd; }
+    int sev_ioctl(int cmd, void *data, int *cmd_ret);
+
     int get_platform_owner(void* data);
     int get_platform_es(void* data);
     bool validate_pek_csr(SEV_CERT *PEKcsr);
@@ -70,9 +74,6 @@ private:
 public:
     SEVDevice();
     ~SEVDevice();
-
-    inline int GetFD(void) { return mFd; }
-    int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
     // Format for below input variables:
     // data is a uint8_t pointer to an empty buffer the size of the cmd_buffer
@@ -97,10 +98,5 @@ public:
     int get_ask_ark(std::string& output_folder, std::string& cert_file);
     int zip_certs(std::string& output_folder, std::string& zip_name, std::string& files_to_zip);
 };
-
-
-// We need precisely one instance of the SEVDevice class.
-// Easiest to make it a global
-extern SEVDevice gSEVDevice;
 
 #endif /* sevcore_linux_h */

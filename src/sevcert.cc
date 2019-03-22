@@ -228,7 +228,7 @@ bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_p
  * Parameters:  [file_name] the full path of the file to write
  *              [evp_keypair] the key which ti pull the public key from
  */
-bool SEVCert::write_pubkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
+bool write_pubkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
 {
     FILE *pFile = NULL;
     pFile = fopen(file_name.c_str(), "wt");
@@ -250,7 +250,7 @@ bool SEVCert::write_pubkey_pem(const std::string& file_name, EVP_PKEY *evp_keypa
  * Parameters:  [file_name] the full path of the file to write
  *              [evp_keypair] the key which ti pull the public key from
  */
-bool SEVCert::write_privkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
+bool write_privkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
 {
     FILE *pFile = NULL;
     pFile = fopen(file_name.c_str(), "wt");

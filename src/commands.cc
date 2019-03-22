@@ -16,7 +16,6 @@
 
 #include "amdcert.h"
 #include "commands.h"
-#include "sevcore.h"
 #include "sevcert.h"
 #include "utilities.h"      // for WriteToFile
 #include <openssl/hmac.h>   // for calc_measurement
@@ -27,7 +26,7 @@ int Command::factory_reset()
 {
     int cmd_ret = -1;
 
-    cmd_ret = gSEVDevice.factory_reset();
+    cmd_ret = m_sev_device.factory_reset();
 
     return (int)cmd_ret;
 }
@@ -38,7 +37,7 @@ int Command::platform_status()
     SEV_PLATFORM_STATUS_CMD_BUF *data_buf = (SEV_PLATFORM_STATUS_CMD_BUF *)&data;
     int cmd_ret = -1;
 
-    cmd_ret = gSEVDevice.platform_status(data);
+    cmd_ret = m_sev_device.platform_status(data);
 
     if(cmd_ret == STATUS_SUCCESS) {
         // Print ID arrays
@@ -65,7 +64,7 @@ int Command::pek_gen()
 {
     int cmd_ret = -1;
 
-    cmd_ret = gSEVDevice.pek_gen();
+    cmd_ret = m_sev_device.pek_gen();
 
     return (int)cmd_ret;
 }
@@ -82,7 +81,7 @@ int Command::pek_csr(std::string& output_folder, int verbose_flag)
     if(!pek_mem)
         return -1;
 
-    cmd_ret = gSEVDevice.pek_csr(data, pek_mem, &pek_csr);
+    cmd_ret = m_sev_device.pek_csr(data, pek_mem, &pek_csr);
 
     if(cmd_ret == STATUS_SUCCESS) {
         if(verbose_flag) {          // Print off the cert to stdout
@@ -90,13 +89,13 @@ int Command::pek_csr(std::string& output_folder, int verbose_flag)
             print_sev_cert_readable(&pek_csr);
         }
         if(output_folder != "") {   // Print off the cert to a text file
-            std::string PEKcsr_readable = "";
-            std::string PEKcsr_readable_path = output_folder+PEK_CSR_READABLE_FILENAME;
-            std::string PEKcsr_hex_path = output_folder+PEK_CSR_HEX_FILENAME;
+            std::string pek_csr_readable = "";
+            std::string pek_csr_readable_path = output_folder+PEK_CSR_READABLE_FILENAME;
+            std::string pek_csr_hex_path = output_folder+PEK_CSR_HEX_FILENAME;
 
-            print_sev_cert_readable(&pek_csr, PEKcsr_readable);
-            WriteFile(PEKcsr_readable_path, (void *)PEKcsr_readable.c_str(), PEKcsr_readable.size());
-            WriteFile(PEKcsr_hex_path, (void *)&pek_csr, sizeof(pek_csr));
+            print_sev_cert_readable(&pek_csr, pek_csr_readable);
+            WriteFile(pek_csr_readable_path, (void *)pek_csr_readable.c_str(), pek_csr_readable.size());
+            WriteFile(pek_csr_hex_path, (void *)&pek_csr, sizeof(pek_csr));
         }
     }
 
@@ -110,7 +109,7 @@ int Command::pdh_gen()
 {
     int cmd_ret = -1;
 
-    cmd_ret = gSEVDevice.pdh_gen();
+    cmd_ret = m_sev_device.pdh_gen();
 
     return (int)cmd_ret;
 }
@@ -126,7 +125,7 @@ int Command::pdh_cert_export(std::string& output_folder, int verbose_flag)
     if(!pdh_cert_mem || !cert_chain_mem)
         return -1;
 
-    cmd_ret = gSEVDevice.pdh_cert_export(data, pdh_cert_mem, cert_chain_mem);
+    cmd_ret = m_sev_device.pdh_cert_export(data, pdh_cert_mem, cert_chain_mem);
 
     if(cmd_ret == STATUS_SUCCESS) {
         if(verbose_flag) {          // Print off the cert to stdout
@@ -162,7 +161,7 @@ int Command::pek_cert_import(std::string& oca_priv_key_file)
 {
     int cmd_ret = -1;
 
-    // Initial cert chain export, so we can confirm that it changed after running the pek_cert_import
+    // Initial PDH cert chain export, so we can confirm that it changed after running the pek_cert_import
     uint8_t pdh_cert_export_data[sizeof(SEV_PDH_CERT_EXPORT_CMD_BUF)];  // pdh_cert_export
     void *pdh_cert_mem = malloc(sizeof(SEV_CERT));
     void *cert_chain_mem = malloc(sizeof(SEV_CERT_CHAIN_BUF));
@@ -175,7 +174,7 @@ int Command::pek_cert_import(std::string& oca_priv_key_file)
     // The actual pek_cert_import command
     uint8_t pek_cert_import_data[sizeof(SEV_PEK_CERT_IMPORT_CMD_BUF)];  // pek_cert_import
 
-    // Afterwards cert chain export, to verify that the certs have changed after running pek_cert_import
+    // Afterwards PDH cert chain export, to verify that the certs have changed after running pek_cert_import
     uint8_t pdh_cert_export_data2[sizeof(SEV_PDH_CERT_EXPORT_CMD_BUF)]; // pdh_cert_export
     void *pdh_cert_mem2 = malloc(sizeof(SEV_CERT));
     void *cert_chain_mem2 = malloc(sizeof(SEV_CERT_CHAIN_BUF));
@@ -186,27 +185,27 @@ int Command::pek_cert_import(std::string& oca_priv_key_file)
             break;
         }
 
-        cmd_ret = gSEVDevice.set_self_owned();
+        cmd_ret = m_sev_device.set_self_owned();
         if(cmd_ret != 0)
             break;
 
         // Just used to confirm afterwards that the cert chain has changed
-        cmd_ret = gSEVDevice.pdh_cert_export(pdh_cert_export_data, pdh_cert_mem, cert_chain_mem);
+        cmd_ret = m_sev_device.pdh_cert_export(pdh_cert_export_data, pdh_cert_mem, cert_chain_mem);
         if(cmd_ret != 0)
             break;
 
         // Run the PEK certificate signing request
-        cmd_ret = gSEVDevice.pek_csr(pek_csr_data, pek_mem, &pek_csr);
+        cmd_ret = m_sev_device.pek_csr(pek_csr_data, pek_mem, &pek_csr);
         if(cmd_ret != 0)
             break;
 
         // Run the pek_cert_import command
-        cmd_ret = gSEVDevice.pek_cert_import(pek_cert_import_data, &pek_csr, oca_priv_key_file);
+        cmd_ret = m_sev_device.pek_cert_import(pek_cert_import_data, &pek_csr, oca_priv_key_file);
         if(cmd_ret != 0)
             break;
 
         // Export the cert chain again, so we can compare that it has changed after running the pek_cert_import
-        cmd_ret = gSEVDevice.pdh_cert_export(pdh_cert_export_data2, pdh_cert_mem2, cert_chain_mem2);
+        cmd_ret = m_sev_device.pdh_cert_export(pdh_cert_export_data2, pdh_cert_mem2, cert_chain_mem2);
         if(cmd_ret != 0)
             break;
 
@@ -239,7 +238,7 @@ int Command::get_id(std::string& output_folder, int verbose_flag)
     // Send the first command with a length of 0, then use the returned length
     // as the input parameter for the 'real' command which will succeed
     SEV_GET_ID_CMD_BUF data_buf_temp;
-    cmd_ret = gSEVDevice.get_id((uint8_t *)&data_buf_temp, NULL);  // Sets IDLength
+    cmd_ret = m_sev_device.get_id((uint8_t *)&data_buf_temp, NULL);  // Sets IDLength
     if(cmd_ret != ERROR_INVALID_LENGTH)     // What we expect to happen
         return cmd_ret;
     default_id_length = data_buf_temp.IDLength;
@@ -250,7 +249,7 @@ int Command::get_id(std::string& output_folder, int verbose_flag)
     if(!IDMem)
         return cmd_ret;
 
-    cmd_ret = gSEVDevice.get_id(data, IDMem, 2*default_id_length);
+    cmd_ret = m_sev_device.get_id(data, IDMem, 2*default_id_length);
 
     if(cmd_ret == STATUS_SUCCESS) {
         char id0_buf[default_id_length*2+1] = {0};  // 2 chars per byte +1 for null term
@@ -287,7 +286,7 @@ int Command::sysinfo()
 {
     int cmd_ret = -1;
 
-    cmd_ret = gSEVDevice.sysinfo();
+    cmd_ret = m_sev_device.sysinfo();
 
     return (int)cmd_ret;
 }
@@ -296,7 +295,7 @@ int Command::set_self_owned()
 {
     int cmd_ret = -1;
 
-    cmd_ret = gSEVDevice.set_self_owned();
+    cmd_ret = m_sev_device.set_self_owned();
 
     return (int)cmd_ret;
 }
@@ -305,7 +304,7 @@ int Command::set_externally_owned(std::string& oca_priv_key_file)
 {
     int cmd_ret = -1;
 
-    cmd_ret = gSEVDevice.set_externally_owned(oca_priv_key_file);
+    cmd_ret = m_sev_device.set_externally_owned(oca_priv_key_file);
 
     return (int)cmd_ret;
 }
@@ -316,7 +315,7 @@ int Command::generate_cek_ask(std::string& output_folder)
 
     std::string cert_file = CEK_FILENAME;
 
-    cmd_ret = gSEVDevice.generate_cek_ask(output_folder, cert_file);
+    cmd_ret = m_sev_device.generate_cek_ask(output_folder, cert_file);
 
     return (int)cmd_ret;
 }
@@ -327,7 +326,7 @@ int Command::get_ask_ark(std::string& output_folder)
 
     std::string cert_file = ASK_ARK_FILENAME;
 
-    cmd_ret = gSEVDevice.get_ask_ark(output_folder, cert_file);
+    cmd_ret = m_sev_device.get_ask_ark(output_folder, cert_file);
 
     return (int)cmd_ret;
 }
@@ -356,17 +355,17 @@ int Command::generate_all_certs(std::string& output_folder)
 
     do {
         // Get the pdh Cert Chain (pdh and pek, oca, cek)
-        cmd_ret = gSEVDevice.pdh_cert_export(pdh_cert_export_data, pdh, cert_chain);
+        cmd_ret = m_sev_device.pdh_cert_export(pdh_cert_export_data, pdh, cert_chain);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
         // Generate the cek from the AMD KDS server
-        cmd_ret = gSEVDevice.generate_cek_ask(output_folder, cek_file);
+        cmd_ret = m_sev_device.generate_cek_ask(output_folder, cek_file);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
         // Get the ask_ark from AMD dev site
-        cmd_ret = gSEVDevice.get_ask_ark(output_folder, ask_ark_file);
+        cmd_ret = m_sev_device.get_ask_ark(output_folder, ask_ark_file);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -437,29 +436,37 @@ int Command::export_cert_chain(std::string& output_folder)
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
-        cmd_ret = gSEVDevice.zip_certs(output_folder, zip_name, cert_names);
+        cmd_ret = m_sev_device.zip_certs(output_folder, zip_name, cert_names);
     } while (0);
     return (int)cmd_ret;
 }
 
 // We cannot call LaunchMeasure to get the MNonce because that command doesn't
-// exist in this context, so we user the user input params for all of our data
-// This function assumes the API version is at >= 0.17
+// exist in this context, so we read the user input params for all of our data
 int Command::calculate_measurement(measurement_t *user_data, HMACSHA256 *final_meas)
 {
-    SEV_ERROR_CODE cmd_ret = ERROR_UNSUPPORTED;
+    int cmd_ret = ERROR_UNSUPPORTED;
 
-    uint32_t MeasurementLength = sizeof(final_meas);
+    uint32_t measurement_length = sizeof(final_meas);
 
     // Create and initialize the context
     HMAC_CTX *ctx;
     if (!(ctx = HMAC_CTX_new()))
         return ERROR_BAD_MEASUREMENT;
 
+    // Need platform_status to determine API version
+    uint8_t status_data[sizeof(SEV_PLATFORM_STATUS_CMD_BUF)];
+    SEV_PLATFORM_STATUS_CMD_BUF *status_data_buf = (SEV_PLATFORM_STATUS_CMD_BUF *)&status_data;
+
     do {
+        // Need platform_status to determine API version
+        cmd_ret = m_sev_device.platform_status(status_data);
+        if(cmd_ret != STATUS_SUCCESS)
+            break;
+
         if (HMAC_Init_ex(ctx, user_data->tik, sizeof(user_data->tik), EVP_sha256(), NULL) != 1)
             break;
-        //if (MinAPIVersion(0,17)) {
+        if(status_data_buf->ApiMinor >= 17) {
             if (HMAC_Update(ctx, &user_data->meas_ctx, sizeof(user_data->meas_ctx)) != 1)
                 break;
             if (HMAC_Update(ctx, &user_data->api_major, sizeof(user_data->api_major)) != 1)
@@ -468,7 +475,7 @@ int Command::calculate_measurement(measurement_t *user_data, HMACSHA256 *final_m
                 break;
             if (HMAC_Update(ctx, &user_data->build_id, sizeof(user_data->build_id)) != 1)
                 break;
-        //}
+        }
         if (HMAC_Update(ctx, (uint8_t *)&user_data->policy, sizeof(user_data->policy)) != 1)
             break;
         if (HMAC_Update(ctx, (uint8_t *)&user_data->digest, sizeof(user_data->digest)) != 1)
@@ -476,7 +483,7 @@ int Command::calculate_measurement(measurement_t *user_data, HMACSHA256 *final_m
         // Use the same random MNonce as the FW in our validation calculations
         if (HMAC_Update(ctx, (uint8_t *)&user_data->mnonce, sizeof(user_data->mnonce)) != 1)
             break;
-        if (HMAC_Final(ctx, (uint8_t *)final_meas, &MeasurementLength) != 1)  // size = 32
+        if (HMAC_Final(ctx, (uint8_t *)final_meas, &measurement_length) != 1)  // size = 32
             break;
 
         cmd_ret = STATUS_SUCCESS;
@@ -692,6 +699,11 @@ int Command::generate_launch_blob(std::string& output_folder, int verbose_flag,
         if(WriteFile(godh_cert_file, &godh_pubkey_cert, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
+        // Write the unencrypted TK (TIK and TEK) to a tmp file so it can be
+        // read in during package_secret
+        std::string tmp_tk_file = output_folder + GUEST_TK_FILENAME;
+        WriteFile(tmp_tk_file, &m_tk, sizeof(m_tk));
+
         cmd_ret = build_session_buffer(&session_data_buf, policy, godh_keypair, &pdh);
         if(cmd_ret == STATUS_SUCCESS) {
             if(verbose_flag) {
@@ -733,10 +745,13 @@ int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     SEV_SESSION_BUF session_data_buf;
+    SEV_HDR_BUF packaged_secret_header;
     std::string secret_file = output_folder + SECRET_FILENAME;
-    std::string blob_file = output_folder + LAUNCH_BLOB_FILENAME;
+    std::string launch_blob_file = output_folder + LAUNCH_BLOB_FILENAME;
     std::string packaged_secret_file = output_folder + PACKAGED_SECRET_FILENAME;
+    std::string packaged_secret_header_file = output_folder + PACKAGED_SECRET_HEADER_FILENAME;
 
+    uint32_t flags = 0;
     IV128 iv;
     GenRandomBytes(&iv, sizeof(iv));     // Pick a random IV
 
@@ -744,7 +759,7 @@ int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
         // Get the size of the secret, so we can allocate that much memory
         size_t secret_size = GetFileSize(secret_file);
         if(secret_size < 8) {
-            printf("Error: SEV require a secret greater than 8 bytes\n");
+            printf("Error: SEV requires a secret greater than 8 bytes\n");
             break;
         }
         uint8_t secret_mem[secret_size];
@@ -757,11 +772,18 @@ int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
 
         // Read in the blob to import the TEK
         // printf("Attempting to read in LaunchBlob file to import TEK\n");
-        if(ReadFile(blob_file, &session_data_buf, sizeof(SEV_SESSION_BUF)) != sizeof(SEV_SESSION_BUF))
+        if(ReadFile(launch_blob_file, &session_data_buf, sizeof(SEV_SESSION_BUF)) != sizeof(SEV_SESSION_BUF))
             break;
 
+        // Read in the unencrypted TK (TIK and TEK) created in build_session_buffer
+        std::string tmp_tk_file = output_folder + GUEST_TK_FILENAME;
+        if(ReadFile(tmp_tk_file, &m_tk, sizeof(m_tk) != sizeof(m_tk))) {
+            printf("Error reading in %s\n", tmp_tk_file.c_str());
+            break;
+        }
+
         // Encrypt the secret with the TEK
-        encrypt_with_tek(encrypted_mem, secret_mem, secret_size, session_data_buf.WrapTK.TEK, iv);
+        encrypt_with_tek(encrypted_mem, secret_mem, secret_size, iv);
 
         if(verbose_flag) {
             printf("Random IV\n");
@@ -771,8 +793,24 @@ int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
             printf("\n");
         }
 
+        // Read in the measurement, to be used as part of the launch secret header hmac
+        std::string measurement_file = output_folder + CALC_MEASUREMENT_FILENAME;
+        if(ReadFile(measurement_file, &m_measurement, sizeof(m_measurement)) != sizeof(m_measurement)) {
+            printf("Error reading in %s\n", measurement_file.c_str());
+            break;
+        }
+
         // Write the encrypted secret to a file
         WriteFile(packaged_secret_file, encrypted_mem, secret_size);
+
+        // Set up the Launch_Secret packet header
+        if(!create_launch_secret_header(&packaged_secret_header, &iv, encrypted_mem,
+                                        sizeof(encrypted_mem), flags)) {
+            break;
+        }
+
+        // Write the header to a file
+        WriteFile(packaged_secret_header_file, &packaged_secret_header, sizeof(packaged_secret_header));
 
         cmd_ret = STATUS_SUCCESS;
     } while (0);
@@ -783,8 +821,9 @@ int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
 // --------------------------------------------------------------- //
 // ---------------- generate_launch_blob functions --------------- //
 // --------------------------------------------------------------- //
-
-// NIST Compliant KDF
+/*
+ * NIST Compliant KDF
+ */
 bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
                   const uint8_t *key_in,  size_t key_in_length,
                   const uint8_t *label,   size_t label_length,
@@ -987,7 +1026,9 @@ bool Command::gen_hmac(HMACSHA256 *out, HMACKey128 key, uint8_t *msg, size_t msg
         return false;
 }
 
-// AES128 Encrypt a buffer
+/*
+ * AES128 Encrypt a buffer
+ */
 bool Command::encrypt(uint8_t *out, const uint8_t *in, size_t length,
                       const AES128Key Key, const IV128 IV)
 {
@@ -1032,7 +1073,6 @@ int Command::build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy,
     int cmd_ret = -1;
 
     AES128Key master_secret;
-    TEKTIK tk;
     Nonce128 nonce;
     AES128Key kek;
     HMACKey128 kik;
@@ -1057,12 +1097,12 @@ int Command::build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy,
 
         // Generate a random TEK and TIK. Combine in to TK. Wrap.
         // Preserve TK for use in LAUNCH_MEASURE and LAUNCH_SECRET
-        GenRandomBytes(tk.TEK, sizeof(tk.TEK));
-        GenRandomBytes(tk.TIK, sizeof(tk.TIK));
+        GenRandomBytes(m_tk.TEK, sizeof(m_tk.TEK));
+        GenRandomBytes(m_tk.TIK, sizeof(m_tk.TIK));
 
         // Create an IV and wrap the TK with KEK and IV
         GenRandomBytes(iv, sizeof(IV128));
-        if (!encrypt((uint8_t *)&wrap_tk, (uint8_t *)&tk, sizeof(tk), kek, iv))
+        if (!encrypt((uint8_t *)&wrap_tk, (uint8_t *)&m_tk, sizeof(m_tk), kek, iv))
             break;
 
         // Generate the HMAC for the wrap_tk
@@ -1070,7 +1110,7 @@ int Command::build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy,
             break;
 
         // Generate the HMAC for the Policy bits
-        if (!gen_hmac(&policy_mac, tk.TIK, (uint8_t *)&guest_policy, sizeof(guest_policy)))
+        if (!gen_hmac(&policy_mac, m_tk.TIK, (uint8_t *)&guest_policy, sizeof(guest_policy)))
             break;
 
         // Copy everything to the session data buffer
@@ -1089,9 +1129,71 @@ int Command::build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy,
 // --------------------------------------------------------------- //
 // ------------------- package_secret functions ------------------ //
 // --------------------------------------------------------------- //
-// Used in LAUNCH_SECRET to encrypt the transfer data with the TEK
+/*
+ * Used in Launch_Secret to encrypt the transfer data with the TEK
+ */
 int Command::encrypt_with_tek(uint8_t *encrypted_mem, const uint8_t *secret_mem,
-                              size_t secret_mem_size, const AES128Key tek, const IV128 iv)
+                              size_t secret_mem_size, const IV128 iv)
 {
-    return encrypt(encrypted_mem, secret_mem, secret_mem_size, tek, iv); // AES-128-CTR
+    return encrypt(encrypted_mem, secret_mem, secret_mem_size, m_tk.TEK, iv); // AES-128-CTR
+}
+
+bool Command::create_launch_secret_header(SEV_HDR_BUF *out_header, IV128 *iv,
+                                          uint8_t *buf, size_t buffer_len,
+                                          uint32_t hdr_flags)
+{
+    bool ret = false;
+
+    // Note: API <= 0.16 and older does LaunchSecret differently than Naples API >= 0.17
+    const uint8_t meas_ctx = 0x01;
+    SEV_HDR_BUF header;
+    uint32_t measurement_length = sizeof(header.MAC);
+    const uint32_t buf_len = (uint32_t)buffer_len;
+
+    memcpy(header.IV, iv, sizeof(IV128));
+    header.Flags = hdr_flags;
+
+    // Create and initialize the context
+    HMAC_CTX *ctx;
+    if (!(ctx = HMAC_CTX_new()))
+        return ret;
+
+    // Need platform_status to determine API version
+    uint8_t status_data[sizeof(SEV_PLATFORM_STATUS_CMD_BUF)];
+    SEV_PLATFORM_STATUS_CMD_BUF *status_data_buf = (SEV_PLATFORM_STATUS_CMD_BUF *)&status_data;
+    int cmd_ret = -1;
+
+    do {
+        cmd_ret = m_sev_device.platform_status(status_data);
+        if(cmd_ret != STATUS_SUCCESS)
+            break;
+
+        if (HMAC_Init_ex(ctx, m_tk.TIK, sizeof(m_tk.TIK), EVP_sha256(), NULL) != 1)
+            break;
+        if (HMAC_Update(ctx, &meas_ctx, sizeof(meas_ctx)) != 1)
+            break;
+        if (HMAC_Update(ctx, (uint8_t*)&header.Flags, sizeof(header.Flags)) != 1)
+            break;
+        if (HMAC_Update(ctx, (uint8_t*)&header.IV, sizeof(header.IV)) != 1)
+            break;
+        if (HMAC_Update(ctx, (uint8_t*)&buf_len, sizeof(buf_len)) != 1) // Guest Length
+            break;
+        if (HMAC_Update(ctx, (uint8_t*)&buf_len, sizeof(buf_len)) != 1) // Trans Length
+            break;
+        if (HMAC_Update(ctx, buf, buf_len) != 1)                        // Data
+            break;
+        if(status_data_buf->ApiMinor >= 17) {
+            if (HMAC_Update(ctx, m_measurement, sizeof(m_measurement)) != 1) // Measure
+                break;
+        }
+        if (HMAC_Final(ctx, (uint8_t*)&header.MAC, &measurement_length) != 1)
+            break;
+
+        memcpy(out_header, &header, sizeof(SEV_HDR_BUF));
+        ret = true;
+    } while (0);
+
+    HMAC_CTX_free(ctx);
+
+    return ret;
 }

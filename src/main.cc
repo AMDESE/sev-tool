@@ -15,6 +15,7 @@
  * ************************************************************************/
 
 #include "commands.h"  // has measurement_t
+#include "tests.h"     // for test_all
 #include "utilities.h" // for StrToArray
 #include <cstring>     // memcpy
 #include <getopt.h>    // for getopt_long
@@ -91,6 +92,9 @@ static struct option long_options[] =
     {"validate_cert_chain",  no_argument,       0, 'u'},
     {"generate_launch_blob", required_argument, 0, 'v'},
     {"package_secret",       no_argument,       0, 'w'},
+
+    /* Run tests */
+    {"test_all",             no_argument,       0, 'T'},
 
     {"help",                 no_argument,       0, 'H'},
     {"sysinfo",              no_argument,       0, 'I'},
@@ -230,6 +234,11 @@ int main(int argc, char** argv)
             }
             case 'w': {         // PACKAGE_SECRET
                 cmd_ret = cmd.package_secret(output_folder, verbose_flag);
+                break;
+            }
+            case 'T': {         // Run Tests
+                Tests test;
+                cmd_ret = (test.test_all(output_folder, verbose_flag) == 0); // 0 = fail, 1 = pass
                 break;
             }
             case 0:

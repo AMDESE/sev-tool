@@ -18,6 +18,7 @@
 #define commands_h
 
 #include "sevapi.h"         // for HMACSHA256, Nonce128, AES128Key
+#include "sevcore.h"        // for SEVDevice
 #include <openssl/evp.h>    // for EVP_PKEY
 #include <openssl/sha.h>    // for SHA256_DIGEST_LENGTH
 #include <string>
@@ -45,11 +46,11 @@
 #define GET_ID_S1_FILENAME              "getid_s1_out.txt"
 #define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.txt"
 #define LAUNCH_BLOB_FILENAME            "launch_blob.txt"
-#define GUEST_OWNER_PUBKEY_FILENAME     "godh_pubkey.pem"
-#define GUEST_OWNER_PRIVKEY_FILENAME    "godh_privkey.pem"
 #define GUEST_OWNER_DH_FILENAME         "godh.cert"
+#define GUEST_TK_FILENAME               "tmp_tk.txt"
 #define SECRET_FILENAME                 "secret.txt"
 #define PACKAGED_SECRET_FILENAME        "packaged_secret.txt"
+#define PACKAGED_SECRET_HEADER_FILENAME "packaged_secret_header.txt"
 
 #define BITS_PER_BYTE    8
 #define NIST_KDF_H_BYTES 32
@@ -74,6 +75,10 @@ struct measurement_t {
 
 class Command {
 private:
+    SEVDevice m_sev_device;
+    TEKTIK m_tk;                // Unencrypted TIK/TEK. WrapTK is this enc with KEK
+    HMACSHA256 m_measurement;   // Measurement. Used in LaunchSecret header HMAC
+
     int calculate_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
     int generate_all_certs(std::string& output_folder);
     int import_all_certs(std::string& output_folder, SEV_CERT *pdh,
@@ -95,6 +100,11 @@ private:
                  const AES128Key Key, const uint8_t IV[128/8]);
     int build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy,
                              EVP_PKEY *godh_priv_key, SEV_CERT *pdh_pub);
+    int encrypt_with_tek(uint8_t *encrypted_mem, const uint8_t *secret_mem,
+                         size_t secret_mem_size, const IV128 iv);
+    bool create_launch_secret_header(SEV_HDR_BUF *out_header, IV128 *iv,
+                                     uint8_t *buf, size_t buffer_len,
+                                     uint32_t hdr_flags);
 
 public:
     Command() {};
@@ -122,9 +132,6 @@ public:
     int generate_launch_blob(std::string& output_folder, int verbose_flag,
                              uint32_t policy);
     int package_secret(std::string& output_folder, uint32_t verbose_flag);
-    int encrypt_with_tek(uint8_t *encrypted_mem, const uint8_t *secret_mem,
-                         size_t secret_mem_size, const AES128Key tek,
-                         const IV128 iv);
 };
 
 #endif /* commands_h */
