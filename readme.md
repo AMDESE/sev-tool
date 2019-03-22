@@ -1,7 +1,7 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v11
-Updated: 2019-03-21
+Version: v12
+Updated: 2019-03-22
 &nbsp;
 &nbsp;
 
@@ -310,6 +310,15 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          $ sudo ./sevtool --ofolder ./certs --package_secret
          ```
 
+## Running tests
+To run tests to check that each command is functioning correctly, run the test_all command and check that the entire thing returns success. 
+1. test_all
+     - Required input args: --ofolder [folder_path]
+         - Make a directly that the tests can use to store certs/data in during the test. Note that the tool will clear this directly before the tests are run.   
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./tests --test_all
+         ```
 ## Issues, Feature Requests
    - For any issues with the tool itself, please create a ticket at https://github.com/AMDESE/sev-tool/issues
    - For any questions/concerns with the SEV API spec, please create a ticket at https://github.com/AMDESE/AMDSEV/issues
