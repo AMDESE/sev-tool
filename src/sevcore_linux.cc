@@ -50,13 +50,17 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
     arg.data = (uint64_t)data;
 
     if(cmd == SEV_GET_ID) {
-        printf("Adding a 5 second delay to account for Linux GetID bug...\n");
-        // Note: there is a bug in the Linux implementation of GetID, where it
-        //       will sometimes return the wrong value of P0. This happens when
-        //       it's the first command run after a bootup or when it's run
-        //       a few seconds after switching between self-owned and
-        //       externally-owned (both directions).
-        //       "Band-aid" solution: call it once, wait a few seconds, and call it again!
+        /*
+         * Note: There is a cache bug in Naples SEV Firmware version < 0.17.19
+         *       where it will sometimes return the wrong value of P0. This
+         *       happens when it's the first command run after a bootup or when
+         *       it's run a few seconds after switching between self-owned and
+         *       externally-owned (both directions).
+         * Note: there is a bug in the Linux implementation of GetID,
+         *       "Band-aid" solution: call it once, wait a few seconds, and call
+         *       it again!
+         */
+        printf("Adding a 5 second delay to account for Naples GetID bug...\n");
         ioctl_ret = ioctl(GetFD(), SEV_ISSUE_CMD, &arg);
         usleep(5000000);    // 5 seconds
     }
@@ -428,16 +432,33 @@ int SEVDevice::set_self_owned()
     sev_user_data_status status_data;  // Platform Status
     int cmd_ret = SEV_RET_UNSUPPORTED;
 
-    do {
-        cmd_ret = platform_status((uint8_t *)&status_data);
-        if(cmd_ret != SEV_RET_SUCCESS) {
-            break;
-        }
+    cmd_ret = platform_status((uint8_t *)&status_data);
+    if(cmd_ret != SEV_RET_SUCCESS) {
+        return cmd_ret;
+    }
 
-        if (get_platform_owner(&status_data) != PLATFORM_STATUS_OWNER_SELF) {
-            cmd_ret = pek_gen();
+    if (get_platform_owner(&status_data) != PLATFORM_STATUS_OWNER_SELF) {
+        switch (status_data.state) {
+            case PLATFORM_WORKING:
+                break;          // Can't Change Owner. Guests are running!
+            case PLATFORM_UNINIT: {
+                cmd_ret = factory_reset();  // Change owner from ext to self-owned
+                if(cmd_ret != SEV_RET_SUCCESS) {
+                    return cmd_ret;
+                }
+                break;
+            }
+            case PLATFORM_INIT: {
+                cmd_ret = pek_gen();        // Self-owned to different self-owned
+                if(cmd_ret != SEV_RET_SUCCESS) {
+                    return cmd_ret;
+                }
+                break;
+            }
+            default:
+                break;              // Unrecognized Platform state!
         }
-    } while (0);
+    }
 
     return (int)cmd_ret;
 }
@@ -548,7 +569,7 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
                 cert_found = true;
                 break;
             }
-            sleep(2);
+            sleep(4);
             printf("Trying again\n");
             retries++;
         }

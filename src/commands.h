@@ -36,21 +36,21 @@
 #define ARK_FILENAME                    "ark.cert"          // ARK self-signed
 #define ARK_READABLE_FILENAME           "ark_readable.cert"
 
-#define CERTS_ZIP_FILENAME              "certs_export"
-#define ASK_ARK_FILENAME                "ask_ark.cert"      // For get_ask_ark
-#define PEK_CSR_HEX_FILENAME            "pek_csr.cert"
-#define PEK_CSR_READABLE_FILENAME       "pek_csr_readable.txt"
-#define CERT_CHAIN_HEX_FILENAME         "cert_chain.cert"
-#define CERT_CHAIN_READABLE_FILENAME    "cert_chain_readable.txt"
-#define GET_ID_S0_FILENAME              "getid_s0_out.txt"
-#define GET_ID_S1_FILENAME              "getid_s1_out.txt"
-#define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.txt"
-#define LAUNCH_BLOB_FILENAME            "launch_blob.txt"
-#define GUEST_OWNER_DH_FILENAME         "godh.cert"
-#define GUEST_TK_FILENAME               "tmp_tk.txt"
-#define SECRET_FILENAME                 "secret.txt"
-#define PACKAGED_SECRET_FILENAME        "packaged_secret.txt"
-#define PACKAGED_SECRET_HEADER_FILENAME "packaged_secret_header.txt"
+#define CERTS_ZIP_FILENAME              "certs_export"          // export_cert_chain
+#define ASK_ARK_FILENAME                "ask_ark.cert"          // get_ask_ark
+#define PEK_CSR_HEX_FILENAME            "pek_csr.cert"          // pek_csr
+#define PEK_CSR_READABLE_FILENAME       "pek_csr_readable.txt"  // pek_csr
+#define CERT_CHAIN_HEX_FILENAME         "cert_chain.cert"       // pdh_cert_export
+#define CERT_CHAIN_READABLE_FILENAME    "cert_chain_readable.txt"// pdh_cert_export
+#define GET_ID_S0_FILENAME              "getid_s0_out.txt"      // get_id
+#define GET_ID_S1_FILENAME              "getid_s1_out.txt"      // get_id
+#define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.bin" // calc_measurement
+#define LAUNCH_BLOB_FILENAME            "launch_blob.bin"       // generate_launch_blob
+#define GUEST_OWNER_DH_FILENAME         "godh.cert"             // generate_launch_blob
+#define GUEST_TK_FILENAME               "tmp_tk.bin"            // generate_launch_blob
+#define SECRET_FILENAME                 "secret.txt"            // package_secret
+#define PACKAGED_SECRET_FILENAME        "packaged_secret.bin"   // package_secret
+#define PACKAGED_SECRET_HEADER_FILENAME "packaged_secret_header.bin" // package_secret
 
 #define BITS_PER_BYTE    8
 #define NIST_KDF_H_BYTES 32
@@ -120,7 +120,9 @@ public:
     int get_id(std::string& output_folder, int verbose_flag);
 
     // Non-ioctl (custom) commands
-    int sysinfo();
+    int sysinfo(void);
+    int get_platform_owner(void);
+    int get_platform_es(void);
     int set_self_owned(void);
     int set_externally_owned(std::string& oca_priv_key_file);
     int generate_cek_ask(std::string& output_folder);

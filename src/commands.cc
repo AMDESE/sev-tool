@@ -291,6 +291,31 @@ int Command::sysinfo()
     return (int)cmd_ret;
 }
 
+
+int Command::get_platform_owner()
+{
+    uint8_t data[sizeof(SEV_PLATFORM_STATUS_CMD_BUF)];
+    int cmd_ret = -1;
+
+    cmd_ret = m_sev_device.platform_status(data);
+    if(cmd_ret != STATUS_SUCCESS)
+        return -1;
+
+    return m_sev_device.get_platform_owner(data);
+}
+
+int Command::get_platform_es()
+{
+    uint8_t data[sizeof(SEV_PLATFORM_STATUS_CMD_BUF)];
+    int cmd_ret = -1;
+
+    cmd_ret = m_sev_device.platform_status(data);
+    if(cmd_ret != STATUS_SUCCESS)
+        return -1;
+
+    return m_sev_device.get_platform_es(data);
+}
+
 int Command::set_self_owned()
 {
     int cmd_ret = -1;

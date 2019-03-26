@@ -66,8 +66,6 @@ private:
     inline int GetFD(void) { return mFd; }
     int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
-    int get_platform_owner(void* data);
-    int get_platform_es(void* data);
     bool validate_pek_csr(SEV_CERT *PEKcsr);
     void get_family_model(uint32_t *family, uint32_t *model);
 
@@ -93,6 +91,8 @@ public:
 
     int sysinfo();
     int set_self_owned(void);
+    int get_platform_owner(void* data);
+    int get_platform_es(void* data);
     int set_externally_owned(std::string& oca_priv_key_file);
     int generate_cek_ask(std::string& output_folder, std::string& cert_file);
     int get_ask_ark(std::string& output_folder, std::string& cert_file);
