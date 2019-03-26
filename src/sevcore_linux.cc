@@ -51,18 +51,23 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
 
     if(cmd == SEV_GET_ID) {
         /*
-         * Note: There is a cache bug in Naples SEV Firmware version < 0.17.19
-         *       where it will sometimes return the wrong value of P0. This
-         *       happens when it's the first command run after a bootup or when
-         *       it's run a few seconds after switching between self-owned and
-         *       externally-owned (both directions).
-         * Note: there is a bug in the Linux implementation of GetID,
-         *       "Band-aid" solution: call it once, wait a few seconds, and call
-         *       it again!
+         * Note: There is a cache alignment bug in Naples SEV Firmware
+         *       version < 0.17.19 where it will sometimes return the wrong
+         *       value of P0. This happens when it's the first command run after
+         *       a bootup or when it's run a few seconds after switching between
+         *       self-owned and externally-owned (both directions).
          */
-        printf("Adding a 5 second delay to account for Naples GetID bug...\n");
-        ioctl_ret = ioctl(GetFD(), SEV_ISSUE_CMD, &arg);
-        usleep(5000000);    // 5 seconds
+        sev_user_data_status status_data;  // Platform Status
+        *cmd_ret = platform_status((uint8_t *)&status_data);
+        if(*cmd_ret != 0)
+            return ioctl_ret;
+
+        if(status_data.api_major == 0 && status_data.api_minor <= 17 &&
+           status_data.build < 19) {
+            printf("Adding a 5 second delay to account for Naples GetID bug...\n");
+            ioctl_ret = ioctl(GetFD(), SEV_ISSUE_CMD, &arg);
+            usleep(5000000);    // 5 seconds
+        }
     }
 
     ioctl_ret = ioctl(GetFD(), SEV_ISSUE_CMD, &arg);
