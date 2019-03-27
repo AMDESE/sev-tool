@@ -16,8 +16,6 @@
 
 #include "amdcert.h"
 #include "utilities.h"
-#include "crypto/rsa/rsa_locl.h"    // Needed to access internals of struct rsa_st. rsa_pub_key->n
-#include "crypto/ec/ec_lcl.h"       // Needed to access internals of struct ECDSA_SIG_st
 #include <cstring>                  // memset
 #include <stdio.h>
 #include <stdexcept>

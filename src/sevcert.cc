@@ -16,8 +16,6 @@
 
 #include "sevcert.h"
 #include "utilities.h"
-#include "crypto/rsa/rsa_locl.h"    // Needed to access internals of struct rsa_st. rsa_pub_key->n
-#include "crypto/ec/ec_lcl.h"       // Needed to access internals of struct ECDSA_SIG_st
 #include <openssl/hmac.h>
 #include <openssl/ecdsa.h>
 #include <openssl/ecdh.h>
@@ -478,6 +476,8 @@ bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t p
     HMACSHA512 sha_digest_384;           // Hash on the cert from Version to PubKey
     EC_KEY *priv_ec_key = NULL;
     RSA *priv_rsa_key = NULL;
+    const BIGNUM *r = NULL;
+    const BIGNUM *s = NULL;
 
     do {
         // Sign the certificate    sev_cert.c -> sev_cert_sign()
@@ -533,8 +533,10 @@ bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t p
                 ECDSA_SIG *sig = ECDSA_do_sign(sha_digest_256, sizeof(sha_digest_256), priv_ec_key); // Contains 2 bignums
                 if(!sig)
                     break;
-                BN_bn2lebinpad(sig->r, m_child_cert.Sig1.ECDSA.R, sizeof(SEV_ECDSA_SIG::R));    // LE to BE
-                BN_bn2lebinpad(sig->s, m_child_cert.Sig1.ECDSA.S, sizeof(SEV_ECDSA_SIG::S));
+
+                ECDSA_SIG_get0(sig, &r, &s);
+                BN_bn2lebinpad(r, m_child_cert.Sig1.ECDSA.R, sizeof(SEV_ECDSA_SIG::R));    // LE to BE
+                BN_bn2lebinpad(s, m_child_cert.Sig1.ECDSA.S, sizeof(SEV_ECDSA_SIG::S));
 
                 // Validation will also be done by the FW
                 if(ECDSA_do_verify(sha_digest_256, sizeof(sha_digest_256), sig, priv_ec_key) != 1) {
@@ -547,8 +549,10 @@ bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t p
                 ECDSA_SIG *sig = ECDSA_do_sign(sha_digest_384, sizeof(sha_digest_384), priv_ec_key); // Contains 2 bignums
                 if(!sig)
                     break;
-                BN_bn2lebinpad(sig->r, m_child_cert.Sig1.ECDSA.R, sizeof(SEV_ECDSA_SIG::R));    // LE to BE
-                BN_bn2lebinpad(sig->s, m_child_cert.Sig1.ECDSA.S, sizeof(SEV_ECDSA_SIG::S));
+
+                ECDSA_SIG_get0(sig, &r, &s);
+                BN_bn2lebinpad(r, m_child_cert.Sig1.ECDSA.R, sizeof(SEV_ECDSA_SIG::R));    // LE to BE
+                BN_bn2lebinpad(s, m_child_cert.Sig1.ECDSA.S, sizeof(SEV_ECDSA_SIG::S));
 
                 // Validation will also be done by the FW
                 if(ECDSA_do_verify(sha_digest_384, sizeof(sha_digest_384), sig, priv_ec_key) != 1) {
@@ -675,8 +679,8 @@ SEV_ERROR_CODE SEVCert::validate_public_key(const SEV_CERT *cert, const EVP_PKEY
  *              Ex) ChildCert = PEK. ParentCert = OCA. ParentSigningKey = OCA PubKey
  */
 SEV_ERROR_CODE SEVCert::validate_signature(const SEV_CERT *child_cert,
-                                          const SEV_CERT *parent_cert,
-                                          EVP_PKEY *parent_signing_key)    // Probably PubKey
+                                           const SEV_CERT *parent_cert,
+                                           EVP_PKEY *parent_signing_key)    // Probably PubKey
 {
     if (!child_cert || !parent_cert || !parent_signing_key)
         return ERROR_INVALID_CERTIFICATE;
@@ -834,8 +838,7 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const SEV_CERT *cert
 
             modulus = BN_lebin2bn(cert->Pubkey.RSA.Modulus, sizeof(cert->Pubkey.RSA.Modulus), NULL);  // New's up BigNum
             pub_exp = BN_lebin2bn(cert->Pubkey.RSA.PubExp,  sizeof(cert->Pubkey.RSA.PubExp), NULL);
-            rsa_pub_key->n = modulus;
-            rsa_pub_key->e = pub_exp;
+            RSA_set0_key(rsa_pub_key, modulus, pub_exp, NULL);
 
             // Make sure the key is good.
             // TODO: This step fails because, from the openssl doc:
