@@ -1,14 +1,24 @@
 #!/bin/bash
 # Script to build AMD SEV Tool
 
-# Set to 1 to enable debugging
-DEBUGGING=0
+# Set to 1 to enable debugging or pass -d or --debug.
+if [ "$(echo $1 | grep -E '^\-{0,2}d(ebug)?$')" != "" ]
+then
+    DEBUGGING=1
+else
+    DEBUGGING=0
+fi
+
+# If dependancies are needed
+NEED_DEPS=0
+INSTALLER=""
+SSL_DEV=""
 
 if [ ${DEBUGGING} -eq 1 ]
 then
   debug()
   {
-    echo ""
+    echo -n "[ DEBUG ] LINE "
     echo $@
   }
 else
@@ -20,79 +30,91 @@ fi
 
 # save the current directory to we can go back to it at the end
 OLD_DIR=$(pwd)
-debug "OLD_DIR => " ${OLD_DIR}
+debug $LINENO ":" "OLD_DIR => " ${OLD_DIR}
 
 OS_RELEASE=$(cat /etc/os-release)
-debug "OS_RELEASE => " ${OS_RELEASE}
+debug $LINENO ":" "OS_RELEASE => " ${OS_RELEASE}
 
 # Regular Expression to read /etc/os-release for major distributions.
 ID_RE='ID\(\_LIKE\)\?\=\"\?[[:alpha:]]\+\([[:space:]][[:alpha:]]\*\)\?\"\?'
 
-debug "ID_RE => " ${ID_RE}
+debug $LINENO ":" "ID_RE => " ${ID_RE}
 
 # Read /etc/os-release to find the distribution base.
 DIST_BASE=$(cat /etc/os-release | grep "${ID_RE}")
 
-debug "DIST_BASE =>" ${DIST_BASE}
-
-# install libelf to be able to correctly build kernel modules/`uname,
-# but only if it isn't already installed.
-if [[ ${DIST_BASE} =~ 'suse' ]]
+debug $LINENO ":" "DIST_BASE =>" ${DIST_BASE}
+if [ "$(echo ${DIST_BASE} | grep 'suse')" != "" ] ||
+   [ "$(echo ${DIST_BASE} | grep 'sles')" != "" ]
 then
     # Cover all SLE and openSUSE distributions.
+    debug $LINENO ":" "Distribution recognized as SUSE based"
 
-    debug "Distribution recognized as SUSE based"
-    if [[ $(rpm -q libelf-devel 2>&1) =~ "not installed" ]]
-    then
-        echo "Missing libelf library dependency. Installing now..."
-        sudo zypper in --non-interactive libelf-devel
-    else
-        echo "libelf libraries already installed, skipping installation."
-    fi
-elif [[ ${DIST_BASE} =~ 'debian' ]] || [[ ${DIST_BASE} =~ 'ubuntu' ]]
+    INSTALLER="zypper"
+    SSL_DEV="libopenssl-devel"
+    GCC_CPP="gcc-c++"
+elif [ "$(echo ${DIST_BASE} | grep 'debian')" != "" ] ||
+     [ "$(echo ${DIST_BASE} | grep 'ubuntu')" != "" ]
 then
     # Cover all Debian and Ubuntu based distributions.
-    debug "Distribution recognized as Debian or Ubuntu based"
-    if [[ $(dpkg -l libelf-dev 2>&1) =~ "no packages found" ]]
-    then
-        echo "Missing libelf library dependency. Installing now..."
-        sudo apt-get -y install libelf-dev
-    else
-        echo "libelf libraries already installed, skipping installation."
-    fi
-    if [[ $(dpkg -l zip 2>&1) =~ "no packages found" ]]
-    then
-        echo "Missing zip library dependency. Installing now..."
-        sudo apt-get -y install zip
-    else
-        echo "zip libraries already installed, skipping installation."
-    fi
-elif [[ ${DIST_BASE} =~ 'fedora' ]] || [[ ${DIST_BASE} =~ 'rhel' ]]
+    debug $LINENO ":" "Distribution recognized as Debian or Ubuntu based"
+
+    INSTALLER="apt-get"
+    SSL_DEV="libssl-dev"
+    GCC_CPP="g++"
+elif [ "$(echo ${DIST_BASE} | grep 'fedora')" != "" ] ||
+     [ "$(echo ${DIST_BASE} | grep 'rhel')" != "" ]
 then
     # Cover all Redhat based distributions.
-    debug "Distribution recognized as Fedora or Rhel based"
-    if [[ $(rpm -q elfutils-libelf-devel 2>&1) =~ "not installed" ]]
-    then
-        # Using yum as this will be used for CentOS.
-        echo "Missing libelf library dependency. Installing now..."
-        sudo yum install -y elfutils-libelf-devel
-    else
-        echo "libelf libraries already installed, skipping installation."
-    fi
+    debug $LINENO ":" "Distribution recognized as Fedora or Rhel based"
+
+    INSTALLER="yum"
+    SSL_DEV="openssl-devel"
+    GCC_CPP="gcc-c++"
 else
-    debug "Regular expression could not match: \n" "${OS_RELEASE}"
-    echo "Distribution not recognized. Please manually install libelf libraries."
+    debug $LINENO ":" "Regular expression could not match: \n" "${OS_RELEASE}"
+    echo "Distribution not recognized. Please manually install "\
+         "libelf libraries, make, zip, gcc, g++, and git." >&2
+    exit 1
 fi
 
-# Fetch openssl submodule
-git submodule init
-git submodule update
+debug $LINENO ":" "Checking for dependencies..."
 
-# Config and make openssl
-cd openssl/
-./config
-make -j64
-cd ../
+# Check for all required dependancies
+if [ "${INSTALLER}" = "zypper" ] || [ "${INSTALLER}" = "yum" ]
+then
+    if [ "$(rpm -q 'git' 2>&1 | grep 'not installed')" != "" ]      ||
+       [ "$(rpm -q 'make' 2>&1 | grep 'not installed')" != "" ]     ||
+       [ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]      ||
+       [ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]      ||
+       [ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ] ||
+       [ "$(rpm -q ${GCC_CPP} 2>&1 | grep 'not installed')" != "" ]
+    then
+        debug $LINENO ":" "A dependency is missing, setting flag!"
+        NEED_DEPS=1
+    fi
+elif [ "${INSTALLER}" = "apt-get" ]
+then
+    if [ "$(dpkg -l 'git' 2>&1 | grep 'no packages')" != "" ]      ||
+       [ "$(dpkg -l 'make' 2>&1 | grep 'no packages')" != "" ]     ||
+       [ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]      ||
+       [ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]      ||
+       [ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ] ||
+       [ "$(dpkg -l ${GCC_CPP} 2>&1 | grep 'no packages')" != "" ]
+    then
+        debug $LINENO ":" "A dependency is missing, setting flag!"
+        NEED_DEPS=1
+    fi
+fi
+
+# Install dependencies if they are needed.
+if [ ${NEED_DEPS} -eq 1 ]
+then
+    debug $LINENO ":" "A dependency is missing, installing now."
+    debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
+          "zip ${SSL_DEV} ${GCC_CPP}\""
+    sudo ${INSTALLER} install -y git make gcc zip ${SSL_DEV} ${GCC_CPP}
+fi
 
 # Rebuild SEV Tool binary
 cd src/
