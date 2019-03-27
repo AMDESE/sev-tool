@@ -25,10 +25,6 @@
 #include <unistd.h>         // for close()
 #include <stdexcept>        // for std::runtime_error()
 
-// The single instance of the SEVDevice class that everyone can
-// access to get the mFd of the kernel driver.
-SEVDevice gSEVDevice;
-
 SEVDevice::SEVDevice()
 {
     mFd = open(DEFAULT_SEV_DEVICE, O_RDWR);
@@ -145,6 +141,7 @@ int SEVDevice::get_id(void *data, void *IDMem, uint32_t id_length)
 
 static std::string DisplayBuildInfo()
 {
+    SEVDevice sev_device;
     uint8_t status_data[sizeof(SEV_PLATFORM_STATUS_CMD_BUF)];
     SEV_PLATFORM_STATUS_CMD_BUF *status_data_buf = (SEV_PLATFORM_STATUS_CMD_BUF *)&status_data;
     int cmd_ret = -1;
@@ -153,7 +150,7 @@ static std::string DisplayBuildInfo()
     std::string api_minor_ver = "API_Minor: xxx";
     std::string build_id_ver  = "BuildID: xxx";
 
-    cmd_ret = gSEVDevice.platform_status(status_data);
+    cmd_ret = sev_device.platform_status(status_data);
     if (cmd_ret != 0)
         return "";
 

@@ -15,6 +15,7 @@
  * ************************************************************************/
 
 #include "commands.h"  // has measurement_t
+#include "tests.h"     // for test_all
 #include "utilities.h" // for StrToArray
 #include <cstring>     // memcpy
 #include <getopt.h>    // for getopt_long
@@ -34,10 +35,11 @@ char helpArray[] =  "The following commands are supported:\n" \
                     "  pek_cert_import\n" \
                     "      Input params:\n" \
                     "          [oca private key].pem file\n" \
-                    "          [oca].cert file\n" \
                     "  get_id\n" \
                     "  set_self_owed\n" \
                     "  set_externally_owned\n" \
+                    "      Input params:\n" \
+                    "          [oca private key].pem file\n" \
                     "  generate_cek_ask\n" \
                     "  get_ask_ark\n" \
                     "  export_cert_chain\n" \
@@ -54,8 +56,11 @@ char helpArray[] =  "The following commands are supported:\n" \
                     "          uint8_t gctx_tik[128/8]\n" \
                     "  validate_cert_chain\n" \
                     "  generate_launch_blob\n" \
+                    "      Input params:\n" \
                     "          uint32_t policy\n" \
                     "  package_secret\n" \
+                    "      Input params:\n" \
+                    "          launch_blob.txt file\n" \
                     ;
 
 /* Flag set by '--verbose' */
@@ -87,6 +92,9 @@ static struct option long_options[] =
     {"validate_cert_chain",  no_argument,       0, 'u'},
     {"generate_launch_blob", required_argument, 0, 'v'},
     {"package_secret",       no_argument,       0, 'w'},
+
+    /* Run tests */
+    {"test_all",             no_argument,       0, 'T'},
 
     {"help",                 no_argument,       0, 'H'},
     {"sysinfo",              no_argument,       0, 'I'},
@@ -149,14 +157,13 @@ int main(int argc, char** argv)
             }
             case 'g': {         // PEK_CERT_IMPORT
                 optind--;   // Can't use option_index because it doesn't account for '-' flags
-                if(argc - optind != 2) {
-                    printf("Error: Expecting exactly 2 args\n");
+                if(argc - optind != 1) {
+                    printf("Error: Expecting exactly 1 arg\n");
                     break;
                 }
 
                 std::string oca_priv_key_file = argv[optind++];
-                std::string oca_cert_file = argv[optind++];
-                cmd_ret = cmd.pek_cert_import(oca_priv_key_file, oca_cert_file);
+                cmd_ret = cmd.pek_cert_import(oca_priv_key_file);
                 break;
             }
             case 'j': {         // GET_ID
@@ -169,14 +176,13 @@ int main(int argc, char** argv)
             }
             case 'l': {         // SET_EXTERNALLY_OWNED
                 optind--;   // Can't use option_index because it doesn't account for '-' flags
-                if(argc - optind != 2) {
-                    printf("Error: Expecting exactly 2 args\n");
+                if(argc - optind != 1) {
+                    printf("Error: Expecting exactly 1 args\n");
                     break;
                 }
 
                 std::string oca_priv_key_file = argv[optind++];
-                std::string oca_cert_file = argv[optind++];
-                cmd_ret = cmd.set_externally_owned(oca_priv_key_file, oca_cert_file);
+                cmd_ret = cmd.set_externally_owned(oca_priv_key_file);
                 break;
             }
             case 'm': {         // GENERATE_CEK_ASK
@@ -228,6 +234,11 @@ int main(int argc, char** argv)
             }
             case 'w': {         // PACKAGE_SECRET
                 cmd_ret = cmd.package_secret(output_folder, verbose_flag);
+                break;
+            }
+            case 'T': {         // Run Tests
+                Tests test;
+                cmd_ret = (test.test_all(output_folder, verbose_flag) == 0); // 0 = fail, 1 = pass
                 break;
             }
             case 0:

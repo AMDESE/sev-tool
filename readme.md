@@ -1,57 +1,12 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v8
-Updated: 2019-02-26
+Version: v12
+Updated: 2019-03-22
 &nbsp;
 &nbsp;
 
 ## Related Docs
 - The SEV API can be found here: https://developer.amd.com/sev/
-
-## Proposed Provisioning Steps
-##### Platform Owner
-1. Generate your OCA (example using openssl coming soon)
-2. Get Platform and connect to Internet
-3. Install SEV-supported operating system
-4. Confirm that SEV is supported (using steps in [OS Requirements](#os-requirements))
-5. Make a folder for the SEV-Tool to import/export certs/IDs from/to (pass into commands with the --ofolder flag)
-6. Run the get_id command. As a simple check if running when 2 processors, make sure the returned IDs are different by using the --verbose flag
-7. Get the CEK_ASK from the AMD KDS server by running the generate_cek_ask command
-8. Run the pek_csr command to generate a certificate signing request for your PEK. This will allow you to take ownership of the platform.
-9. Sign PEK with OCA (example using openssl coming soon)
-10. Run the pek_cert_import command
-11. Run the pdh_cert_export command
-12. Run the get_ask_ark command
-13. Run the export_cert_chain command to export the PDH down to the ARK (AMD root) and zip it up
-14. Save the complete cert chain for Guest Owners (GO's)
-15. Make available UEFI image for guests
-
-##### Guest Owner
-1. Make a folder for the SEV-Tool to import/export certs/IDs from/to (pass into commands with the --ofolder flag)
-2. Get UEFI image from the Platform Owner
-3. (Out of scope) Confirm the UEFI image is trustable.
-4. Get cert chain (PDH through ARK) from the Platform Owner (PO) and unzip them into a local folder
-5. Run the validate_cert_chain command to verify the cert chain from the PDH down to the ARK (AMD root)
-   - TODO. Wouldn't we want the GO to download the ASK_ARK, otherwise, the PO can make up the entire chain and we'd validate it and it'd pass?
-6. (Out of scope) Verify OCA cert chain from the Platform Owner
-7. Run the generate_launch_blob command
-   - Reads in Platform Owner Diffie-Hellman key (PDH cert from Platform Owner) and generates new public/private Guest Owner Diffie-Hellman keypair. The DH key exchange is completed when the PO calls Launch_Start using the GODH public key.
-8. Send the blob and the Guest Owner's DH public key to the Platform Owner so it can launch your Guests
-9. Get the measurement from the Platform Owner
-10. Run the calc_measurement command and verify the measurement from the Platform owner matches what you calculated/expected
-    - The UEFI image is the digest param that we hash, so we  know the Platform Owner isn't modifying that
-11. Run the package_secret command
-12. Send the secret(s) to the Platform Owner
-13. Give "ready to run" approval to the Platform Owner
-
-##### Hypervisor
-This is the flow that the Hypervisor will take to prepare the guest
-1. After receiving the launch blob and the GO Diffie-Hellman public key from the Guest Owner, the Hypervisor can launch (call Launch_Start on) the guest
-2. Call Launch_Update_Data and Activate, etc
-3. Call Launch_Measure and send the measurement received from the PSP to the Guest Owner so it can verify against its expected result
-4. Call Launch_Finish, etc
-5. After receiving the packaged secrets from the Guest Owner (this step is optional), call Launch_Secret to pass the Guest Owner's secrets into the guest
-6. The Guest Owner should now give the Hypervisor approval to run its Guest
 
 ## OS Requirements
   - Your Kernel must support SEV. 
@@ -65,7 +20,7 @@ This is the flow that the Hypervisor will take to prepare the guest
      ```
     This means that the ccp driver was able to run the Init command against the SEV firmware.
     Note: You might also see a dmesg line noting that "Direct firmware load for amd/sev.fw failed with error -2". This just means that the firmware file is not there for the ccp driver to run the Download_Firmware command on startup, and you will be running with the SEV firmware that is provided in the BIOS. This is totally normal.
-  - Note if running Linux, it is recommended that your OS come with a Kernel that supports SEV by default (Ubuntu 18.10 or later, etc) to have the latest Kernel headers and libc. If you start with an older Kernel and use a Kernel upgrade utility (ex: ukuu in Ubuntu) to update the Kernel manually, this will give you the newest Kernel headers, but you will have an old version of libc, which processed the older Kernel headers, not the new ones. It’s (probably) possible to update libc and have it process the new Kernel Keaders, but it’s a lot of work.
+  - Note if running Linux, it is recommended that your OS come with a Kernel that supports SEV by default (Ubuntu 18.10 or later, etc) to have the latest Kernel headers and libc. If you start with an older Kernel and use a Kernel upgrade utility (ex: ukuu in Ubuntu) to update the Kernel manually, this will give you the newest Kernel headers, but you will have an old version of libc, which processed the older Kernel headers, not the new ones. It’s (probably) possible to update libc and have it process the new Kernel Headers, but it’s a lot of work.
 
 ## Downloading the SEV-Tool
 1. Boot into a Kernel that supports SEV (see above to confirm your Kernel supports SEV)
@@ -125,6 +80,51 @@ This is the flow that the Hypervisor will take to prepare the guest
      ```
 * Certain commands support the --ofolder flag which will allow the user to select the output folder for the certs exported by the command. See specific command for details
 
+## Proposed Provisioning Steps
+##### Platform Owner
+1. Generate your OCA (example using openssl coming soon)
+2. Get Platform and connect to Internet
+3. Install SEV-supported operating system
+4. Confirm that SEV is supported (using steps in [OS Requirements](#os-requirements))
+5. Make a folder for the SEV-Tool to import/export certs/IDs from/to (pass into commands with the --ofolder flag)
+6. Run the get_id command. As a simple check if running when 2 processors, make sure the returned IDs are different by using the --verbose flag
+7. Get the CEK_ASK from the AMD KDS server by running the generate_cek_ask command
+8. Run the pek_csr command to generate a certificate signing request for your PEK. This will allow you to take ownership of the platform.
+9. Sign PEK with OCA (example using openssl coming soon)
+10. Run the pek_cert_import command
+11. Run the pdh_cert_export command
+12. Run the get_ask_ark command
+13. Run the export_cert_chain command to export the PDH down to the ARK (AMD root) and zip it up
+14. Save the complete cert chain for Guest Owners (GO's)
+15. Make available UEFI image for guests
+
+##### Guest Owner
+1. Make a folder for the SEV-Tool to import/export certs/IDs from/to (pass into commands with the --ofolder flag)
+2. Get UEFI image from the Platform Owner
+3. (Out of scope) Confirm the UEFI image is trustable.
+4. Get cert chain (PDH through ARK) from the Platform Owner (PO) and unzip them into a local folder
+5. Run the validate_cert_chain command to verify the cert chain from the PDH down to the ARK (AMD root)
+   - TODO. Wouldn't we want the GO to download the ASK_ARK, otherwise, the PO can make up the entire chain and we'd validate it and it'd pass?
+6. (Out of scope) Verify OCA cert chain from the Platform Owner
+7. Run the generate_launch_blob command
+   - Reads in Platform Owner Diffie-Hellman key (PDH cert from Platform Owner) and generates new public/private Guest Owner Diffie-Hellman keypair. The DH key exchange is completed when the PO calls Launch_Start using the GODH public key.
+8. Send the blob and the Guest Owner's DH public key to the Platform Owner so it can launch your Guests
+9. Get the measurement from the Platform Owner
+10. Run the calc_measurement command and verify the measurement from the Platform owner matches what you calculated/expected
+    - The UEFI image is the digest param that we hash, so we  know the Platform Owner isn't modifying that
+11. Run the package_secret command
+12. Send the secret(s) to the Platform Owner
+13. Give "ready to run" approval to the Platform Owner
+
+##### Hypervisor
+This is the flow that the Hypervisor will take to prepare the guest
+1. After receiving the launch blob and the GO Diffie-Hellman public key from the Guest Owner, the Hypervisor can launch (call Launch_Start on) the guest
+2. Call Launch_Update_Data and Activate, etc
+3. Call Launch_Measure and send the measurement received from the PSP to the Guest Owner so it can verify against its expected result
+4. Call Launch_Finish, etc
+5. After receiving the packaged secrets from the Guest Owner (this step is optional), call Launch_Secret to pass the Guest Owner's secrets into the guest
+6. The Guest Owner should now give the Hypervisor approval to run its Guest
+
 ## Command List
 The following commands are supposed be the SEV-Tool. Please see the SEV-API for info on each specific command
 Note: All input and output cert's mentioned below are SEV (special format) Certs. See SEV API for details
@@ -178,12 +178,13 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          $ sudo ./sevtool --ofolder ./certs --pdh_cert_export
          ```
 7. pek_cert_import
-     - Required input args: The OCA Private key file (.pem) and OCA cert file (.cert) are required arguments.
+This command imports an OCA private key from the user, runs a platform_status command to get the API major/minor used to create the certificate, runs the pek_csr to create the PEK certificate signing request, signs the PEK signing request with the OCA private key, and calls pek_cert_import to import the PEK and OCA certificates.
+     - Required input args: The unencrypted OCA Private key file (.pem). 
      - Outputs: none
      - Example
          ```sh
-         $ sudo ./sevtool --pek_cert_import [oca_priv_key_file] [oca_cert_file]
-         $ sudo ./sevtool --pek_cert_import ../psp-sev-assets/oca_key_in.pem ../psp-sev-assets/oca_in.cert
+         $ sudo ./sevtool --pek_cert_import [oca_priv_key_file]
+         $ sudo ./sevtool --pek_cert_import ../psp-sev-assets/oca_key_in.pem
          ```
 8. get_id
      - Optional input args: --ofolder [folder_path]
@@ -203,14 +204,15 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          $ sudo ./sevtool --ofolder ./certs --set_self_owned
          ```
 10. set_externally_owned
-     - Required input args: This function, among other things, calls pek_cert_import, so the OCA Private key file (.pem) and OCA cert file (.cert) are required arguments.
+     - Required input args: This function, among other things, calls pek_cert_import, so the OCA Private key file (.pem) is a required argument.
      - Outputs: none
      - Example
          ```sh
-         $ sudo ./sevtool --set_externally_owned [oca_priv_key_file] [oca_cert_file]
-         $ sudo ./sevtool --set_externally_owned ../psp-sev-assets/oca_key_in.pem ../psp-sev-assets/oca_in.cert
+         $ sudo ./sevtool --set_externally_owned [oca_priv_key_file]
+         $ sudo ./sevtool --set_externally_owned ../psp-sev-assets/oca_key_in.pem
          ```
 11. generate_cek_ask
+This command calls the get_id command and passes that ID into the AMD KDS server to retrieve the cek_ask. If the command returns an error while connecting to the KDS server, please try the command again.
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the cek_ark.cert to
      - Outputs:
@@ -275,7 +277,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
      - When calling this command, please unzip the certs into the folder you expect the tool to use.
      - The steps are as follows:
         - Imports the PDH, PEK, OCA, CEK, ASK, and ARK certs
-        - Validates the ARK
+        - Validates the ARK using the ARK (self-signed)
         - Validates the ASK using the ARK
         - Validates the CEK using the ASK
         - Validates the PEK using the CEK and the OCA
@@ -287,19 +289,19 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          $ sudo ./sevtool --ofolder ./certs --validate_cert_chain
          ```
 16. generate_launch_blob
-     - This function imports the PDH certificate from the Platform Owner and builds the Launch_Start session buffer (blob). As part of the session buffer, a new public/private Diffie-Hellman keypair for the Guest Owner is generated, which is then used with the Platform Owner's public DH key to calculate a shared secret, and then a master secret, which then is then used generate a new TEK and TIK. 
+     - This function imports the PDH certificate from the Platform Owner and builds the Launch_Start session buffer (blob) and the Guest Owner Diffie-Hellman public key certificate. As part of the session buffer, a new public/private Diffie-Hellman keypair for the Guest Owner is generated, which is then used with the Platform Owner's public DH key to calculate a shared secret, and then a master secret, which then is then used generate a new TEK and TIK. The session buffer (launch blob) and Guest Owner DH public key cert will be used as inputs to LaunchStart.
      - Required input args: Guest policy in hex format
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the blob file to
      - Outputs:
-        - If --[ofolder] flag used: The blob file and Guest Owner DH public key will be exported to the folder specified. Otherwise, they will be exported to the same directory as the SEV-Tool executable. File: launch_blob.txt, godh_pubkey.pem
+        - If --[ofolder] flag used: The blob file and Guest Owner DH public key certificate will be exported to the folder specified. The Guest Owner DH public and private keys are also exported during the process and are only to be used by the SEV-Tool. Otherwise, all files will be exported to the same directory as the SEV-Tool executable. Files: launch_blob.txt, godh.cert, (ignore these: godh_pubkey.pem, godh_privkey.pem).
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --generate_launch_blob 39
          ```
 17. package_secret
      - This command reads in the file generated by generate_launch_blob (launch_blob.txt) to get the TEK and also reads in the secert file (secret.txt) to be encrypted/wrapped by the TEK. It then outputs a file (packaged_secret.txt) which is then passed into Launch_Secret as part of the normal API flow 
-     - Optional input args: --ofolder [folder_path]
+     - Required input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will look for the launch blob file and the secrets file, and where it will export the packaged secret file to
      - Outputs:
         - If --[ofolder] flag used: The blob file will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: packaged_secret.txt
@@ -308,6 +310,15 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          $ sudo ./sevtool --ofolder ./certs --package_secret
          ```
 
+## Running tests
+To run tests to check that each command is functioning correctly, run the test_all command and check that the entire thing returns success. 
+1. test_all
+     - Required input args: --ofolder [folder_path]
+         - Make a directly that the tests can use to store certs/data in during the test. Note that the tool will clear this directly before the tests are run.   
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./tests --test_all
+         ```
 ## Issues, Feature Requests
    - For any issues with the tool itself, please create a ticket at https://github.com/AMDESE/sev-tool/issues
-   - For any questions/converns with the SEV API spec, please create a ticket at https://github.com/AMDESE/AMDSEV/issues
+   - For any questions/concerns with the SEV API spec, please create a ticket at https://github.com/AMDESE/AMDSEV/issues

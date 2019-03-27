@@ -25,10 +25,6 @@
 #include <unistd.h>         // for close()
 #include <stdexcept>        // for std::runtime_error()
 
-// The single instance of the SEVDevice class that everyone can
-// access to get the mFd of the kernel driver.
-SEVDevice gSEVDevice;
-
 SEVDevice::SEVDevice()
 {
     mFd = open(DEFAULT_SEV_DEVICE, O_RDWR);
@@ -54,18 +50,27 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
     arg.data = (uint64_t)data;
 
     if(cmd == SEV_GET_ID) {
-        printf("Adding a 5 second delay to account for Linux GetID bug...\n");
-        // Note: there is a bug in the Linux implementation of GetID, where it
-        //       will sometimes return the wrong value of P0. This happens when
-        //       it's the first command run after a bootup or when it's run
-        //       a few seconds after switching between self-owned and
-        //       externally-owned (both directions).
-        //       "Band-aid" solution: call it once, wait a few seconds, and call it again!
-        ioctl_ret = ioctl(gSEVDevice.GetFD(), SEV_ISSUE_CMD, &arg);
-        usleep(5000000);    // 5 seconds
+        /*
+         * Note: There is a cache alignment bug in Naples SEV Firmware
+         *       version < 0.17.19 where it will sometimes return the wrong
+         *       value of P0. This happens when it's the first command run after
+         *       a bootup or when it's run a few seconds after switching between
+         *       self-owned and externally-owned (both directions).
+         */
+        sev_user_data_status status_data;  // Platform Status
+        *cmd_ret = platform_status((uint8_t *)&status_data);
+        if(*cmd_ret != 0)
+            return ioctl_ret;
+
+        if(status_data.api_major == 0 && status_data.api_minor <= 17 &&
+           status_data.build < 19) {
+            printf("Adding a 5 second delay to account for Naples GetID bug...\n");
+            ioctl_ret = ioctl(GetFD(), SEV_ISSUE_CMD, &arg);
+            usleep(5000000);    // 5 seconds
+        }
     }
 
-    ioctl_ret = ioctl(gSEVDevice.GetFD(), SEV_ISSUE_CMD, &arg);
+    ioctl_ret = ioctl(GetFD(), SEV_ISSUE_CMD, &arg);
     *cmd_ret = arg.error;
     // if(ioctl_ret != 0) {    // Sometimes you expect it to fail
     //     printf("Error: cmd %#x ioctl_ret=%d (%#x)\n", cmd, ioctl_ret, arg.error);
@@ -85,7 +90,7 @@ int SEVDevice::factory_reset()
 
     do {
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_FACTORY_RESET, &data, &cmd_ret);
+        ioctl_ret = sev_ioctl(SEV_FACTORY_RESET, &data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -114,7 +119,7 @@ int SEVDevice::platform_status(uint8_t *data)
 
     do {
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PLATFORM_STATUS, data, &cmd_ret);
+        ioctl_ret = sev_ioctl(SEV_PLATFORM_STATUS, data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -134,7 +139,7 @@ int SEVDevice::pek_gen()
 
     do {
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PEK_GEN, &data, &cmd_ret);
+        ioctl_ret = sev_ioctl(SEV_PEK_GEN, &data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -175,7 +180,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *PEKMem, SEV_CERT *PEKcsr)
 
         // Send the command. This is to get the MinSize length. If you
         // already know it, then you don't have to send the command twice
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PEK_CSR, data_buf, &cmd_ret);
+        ioctl_ret = sev_ioctl(SEV_PEK_CSR, data_buf, &cmd_ret);
         if(ioctl_ret != -1)
             break;
 
@@ -184,7 +189,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *PEKMem, SEV_CERT *PEKcsr)
             break;
 
         // Send the command again with CSRLength=MinSize
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PEK_CSR, data_buf, &cmd_ret);
+        ioctl_ret = sev_ioctl(SEV_PEK_CSR, data_buf, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -209,7 +214,7 @@ int SEVDevice::pdh_gen()
 
     do {
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PDH_GEN, &data, &cmd_ret);
+        ioctl_ret = sev_ioctl(SEV_PDH_GEN, &data, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -235,7 +240,7 @@ int SEVDevice::pdh_cert_export(uint8_t *data,
         data_buf->cert_chain_len = sizeof(SEV_CERT_CHAIN_BUF);
 
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PDH_CERT_EXPORT, data_buf, &cmd_ret);
+        ioctl_ret = sev_ioctl(SEV_PDH_CERT_EXPORT, data_buf, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -244,19 +249,18 @@ int SEVDevice::pdh_cert_export(uint8_t *data,
     return (int)cmd_ret;
 }
 
-// todo. dont want to be reading from a file. use openssl to generate
 int SEVDevice::pek_cert_import(uint8_t *data,
-                                          SEV_CERT *PEKcsr,
-                                          std::string& oca_priv_key_file,
-                                          std::string& oca_cert_file)
+                               SEV_CERT *PEKcsr,
+                               std::string& oca_priv_key_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
     sev_user_data_pek_cert_import *data_buf = (sev_user_data_pek_cert_import *)data;
+    sev_user_data_status status_data;  // Platform Status
 
-    void *OCACert = malloc(sizeof(SEV_CERT));
-
-    if(!OCACert)
+    EVP_PKEY *oca_priv_key = NULL;
+    void *oca_cert = malloc(sizeof(SEV_CERT));
+    if(!oca_cert)
         return SEV_RET_HWSEV_RET_PLATFORM;
 
     // Submit the signed cert to PEKCertImport
@@ -267,33 +271,39 @@ int SEVDevice::pek_cert_import(uint8_t *data,
         if(!validate_pek_csr(PEKcsr))
             break;
 
-        // --------- Sign the CSR --------- //
+        // Do a platform_status to get api_major and api_minor to create oca cert
+        cmd_ret = platform_status((uint8_t *)&status_data);
+        if(cmd_ret != 0)
+            break;
+
+        // Import the OCA pem file and turn it into an SEV_CERT
+        SEVCert cert_obj(*(SEV_CERT *)oca_cert);
+        if(!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key))
+            break;
+        if(!cert_obj.create_oca_cert(&oca_priv_key, status_data.api_major, status_data.api_minor))
+            break;
+        memcpy(oca_cert, cert_obj.data(), sizeof(SEV_CERT)); // TODO, shouldn't need this?
+        // print_sev_cert_readable((SEV_CERT *)oca_cert);
+
+        // Sign the PEK CSR with the OCA private key
         SEVCert CSRCert(*PEKcsr);
         CSRCert.sign_with_key(SEV_CERT_MAX_VERSION, SEVUsagePEK, SEVSigAlgoECDSASHA256,
-                         oca_priv_key_file, SEVUsageOCA, SEVSigAlgoECDSASHA256);
-
-        // Fetch the OCA certificate
-        size_t OCACertLength = 0;
-        OCACertLength = ReadFile(oca_cert_file, OCACert, sizeof(SEV_CERT));
-        if(OCACertLength == 0) {
-            printf("File not found: %s\n", oca_cert_file.c_str());
-            break;
-        }
+                              &oca_priv_key, SEVUsageOCA, SEVSigAlgoECDSASHA256);
 
         data_buf->pek_cert_address = (uint64_t)CSRCert.data();
         data_buf->pek_cert_len = sizeof(SEV_CERT);
-        data_buf->oca_cert_address = (uint64_t)OCACert;
+        data_buf->oca_cert_address = (uint64_t)oca_cert;
         data_buf->oca_cert_len = sizeof(SEV_CERT);
 
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_PEK_CERT_IMPORT, data_buf, &cmd_ret);
+        ioctl_ret = sev_ioctl(SEV_PEK_CERT_IMPORT, data_buf, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
     } while (0);
 
     // Free memory
-    free(OCACert);
+    free(oca_cert);
 
     return (int)cmd_ret;
 }
@@ -316,7 +326,7 @@ int SEVDevice::get_id(void *data, void *IDMem, uint32_t id_length)
         }
 
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_GET_ID, &id_buf, &cmd_ret);
+        ioctl_ret = sev_ioctl(SEV_GET_ID, &id_buf, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
@@ -336,6 +346,7 @@ int SEVDevice::get_id(void *data, void *IDMem, uint32_t id_length)
 
 static std::string DisplayBuildInfo()
 {
+    SEVDevice sev_device;
     uint8_t status_data[sizeof(SEV_PLATFORM_STATUS_CMD_BUF)];
     SEV_PLATFORM_STATUS_CMD_BUF *status_data_buf = (SEV_PLATFORM_STATUS_CMD_BUF *)&status_data;
     int cmd_ret = -1;
@@ -344,7 +355,7 @@ static std::string DisplayBuildInfo()
     std::string api_minor_ver = "API_Minor: xxx";
     std::string build_id_ver  = "BuildID: xxx";
 
-    cmd_ret = gSEVDevice.platform_status(status_data);
+    cmd_ret = sev_device.platform_status(status_data);
     if (cmd_ret != 0)
         return "";
 
@@ -426,16 +437,33 @@ int SEVDevice::set_self_owned()
     sev_user_data_status status_data;  // Platform Status
     int cmd_ret = SEV_RET_UNSUPPORTED;
 
-    do {
-        cmd_ret = platform_status((uint8_t *)&status_data);
-        if(cmd_ret != SEV_RET_SUCCESS) {
-            break;
-        }
+    cmd_ret = platform_status((uint8_t *)&status_data);
+    if(cmd_ret != SEV_RET_SUCCESS) {
+        return cmd_ret;
+    }
 
-        if (get_platform_owner(&status_data) != PLATFORM_STATUS_OWNER_SELF) {
-            cmd_ret = pek_gen();
+    if (get_platform_owner(&status_data) != PLATFORM_STATUS_OWNER_SELF) {
+        switch (status_data.state) {
+            case PLATFORM_WORKING:
+                break;          // Can't Change Owner. Guests are running!
+            case PLATFORM_UNINIT: {
+                cmd_ret = factory_reset();  // Change owner from ext to self-owned
+                if(cmd_ret != SEV_RET_SUCCESS) {
+                    return cmd_ret;
+                }
+                break;
+            }
+            case PLATFORM_INIT: {
+                cmd_ret = pek_gen();        // Self-owned to different self-owned
+                if(cmd_ret != SEV_RET_SUCCESS) {
+                    return cmd_ret;
+                }
+                break;
+            }
+            default:
+                break;              // Unrecognized Platform state!
         }
-    } while (0);
+    }
 
     return (int)cmd_ret;
 }
@@ -446,10 +474,10 @@ int SEVDevice::set_self_owned()
  *       will do its best to set the Platform state to whatever is required to
  *       run each command, but that does not include shutting down Guests to do so.
  */
-int SEVDevice::set_externally_owned(std::string& oca_priv_key_file,
-                                               std::string& oca_cert_file)
+int SEVDevice::set_externally_owned(std::string& oca_priv_key_file)
 {
-    sev_user_data_status status_data;  // Platform Status
+    sev_user_data_status platform_status_data;
+
     int cmd_ret = SEV_RET_UNSUPPORTED;
     void *PEKMem = malloc(sizeof(SEV_CERT));
 
@@ -457,11 +485,13 @@ int SEVDevice::set_externally_owned(std::string& oca_priv_key_file,
         return SEV_RET_HWSEV_RET_PLATFORM;
 
     do {
-        cmd_ret = platform_status((uint8_t *)&status_data);
+        // Send platform_status command to get ownership status
+        cmd_ret = platform_status((uint8_t *)&platform_status_data);
         if(cmd_ret != SEV_RET_SUCCESS)
             break;
 
-        if (get_platform_owner(&status_data) != PLATFORM_STATUS_OWNER_EXTERNAL) {
+        // Check if we're already externally owned
+        if (get_platform_owner(&platform_status_data) != PLATFORM_STATUS_OWNER_EXTERNAL) {
             // Get the CSR
             sev_user_data_pek_csr pek_csr_data;                  // pek_csr
             SEV_CERT PEKcsr;
@@ -474,7 +504,18 @@ int SEVDevice::set_externally_owned(std::string& oca_priv_key_file,
             // Submit the signed cert to PEKCertImport
             sev_user_data_pek_cert_import pek_cert_import_data;
             cmd_ret = pek_cert_import((uint8_t *)&pek_cert_import_data, &PEKcsr,
-                                      oca_priv_key_file, oca_cert_file);
+                                      oca_priv_key_file);
+            if(cmd_ret != SEV_RET_SUCCESS)
+                break;
+
+            // Send platform_status command to get new ownership status
+            cmd_ret = platform_status((uint8_t *)&platform_status_data);
+            if(cmd_ret != SEV_RET_SUCCESS)
+                break;
+
+            // Confirm that we are now ext owned
+            if (get_platform_owner(&platform_status_data) != PLATFORM_STATUS_OWNER_EXTERNAL)
+                cmd_ret = SEV_RET_HWSEV_RET_PLATFORM;
         }
     } while (0);
 
@@ -502,11 +543,13 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
 
         // Get the ID of the Platform
         // Send the command
-        ioctl_ret = gSEVDevice.sev_ioctl(SEV_GET_ID, &id_buf, &cmd_ret);
+        ioctl_ret = sev_ioctl(SEV_GET_ID, &id_buf, &cmd_ret);
         if(ioctl_ret != 0)
             break;
 
         // Copy the resulting IDs into the real buffer allocated for them
+        // Note that Linux referrs to P0 and P1 as socket1 and socket2 (which is incorrect).
+        //   So below, we are getting the ID for P0, which is the first socket
         char id0_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
         for(uint8_t i = 0; i < sizeof(id_buf.socket1); i++)
         {
@@ -514,19 +557,28 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
         }
         cmd += id0_buf;
 
-        // Pass in the ID of Socket1 to the KDS server and download the certificate
-        if(!ExecuteSystemCommand(cmd, &output)) {
-            printf("Error: pipe not opened for system command\n");
-            cmd_ret = SEV_RET_UNSUPPORTED;
-            break;
-        }
-
-        // Check if the file got downloaded
-        // Note that Linux referrs to P0 and P1 as socket1 and socket2 (which is incorrect).
-        //   So below, we are getting the ID for P0, which is the first socket
+        // The AMD KDS server only accepts requests every 10 seconds
         std::string cert_w_path = output_folder + id0_buf;
         char tmp_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
-        if(ReadFile(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
+        bool cert_found = false;
+        int retries = 0;
+        while(!cert_found || retries < 10) {
+            if(!ExecuteSystemCommand(cmd, &output)) {
+                printf("Error: pipe not opened for system command\n");
+                cmd_ret = SEV_RET_UNSUPPORTED;
+                break;
+            }
+
+            // Check if the file got downloaded
+            if(ReadFile(cert_w_path, tmp_buf, sizeof(tmp_buf)) != 0) {
+                cert_found = true;
+                break;
+            }
+            sleep(4);
+            printf("Trying again\n");
+            retries++;
+        }
+        if(!cert_found) {
             printf("Error: command to get cek_ask cert failed\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;

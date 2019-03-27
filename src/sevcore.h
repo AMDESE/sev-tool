@@ -62,17 +62,16 @@
 class SEVDevice {
 private:
     int mFd;
-    int get_platform_owner(void* data);
-    int get_platform_es(void* data);
+
+    inline int GetFD(void) { return mFd; }
+    int sev_ioctl(int cmd, void *data, int *cmd_ret);
+
     bool validate_pek_csr(SEV_CERT *PEKcsr);
     void get_family_model(uint32_t *family, uint32_t *model);
 
 public:
     SEVDevice();
     ~SEVDevice();
-
-    inline int GetFD(void) { return mFd; }
-    int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
     // Format for below input variables:
     // data is a uint8_t pointer to an empty buffer the size of the cmd_buffer
@@ -84,25 +83,20 @@ public:
     int pek_csr(uint8_t *data, void *PEKMem, SEV_CERT *csr);
     int pdh_gen(void);
     int pdh_cert_export(uint8_t *data,
-                                   void *PDHCertMem, void *CertChainMem);
+                        void *PDHCertMem, void *CertChainMem);
     int pek_cert_import(uint8_t *data,
-                                   SEV_CERT *csr,
-                                   std::string& oca_priv_key_file,
-                                   std::string& oca_cert_file);
+                        SEV_CERT *csr,
+                        std::string& oca_priv_key_file);
     int get_id(void *data, void *IDMem, uint32_t id_length = 0);
 
     int sysinfo();
     int set_self_owned(void);
-    int set_externally_owned(std::string& oca_priv_key_file,
-                                        std::string& oca_cert_file);
+    int get_platform_owner(void* data);
+    int get_platform_es(void* data);
+    int set_externally_owned(std::string& oca_priv_key_file);
     int generate_cek_ask(std::string& output_folder, std::string& cert_file);
     int get_ask_ark(std::string& output_folder, std::string& cert_file);
     int zip_certs(std::string& output_folder, std::string& zip_name, std::string& files_to_zip);
 };
-
-
-// We need precisely one instance of the SEVDevice class.
-// Easiest to make it a global
-extern SEVDevice gSEVDevice;
 
 #endif /* sevcore_linux_h */

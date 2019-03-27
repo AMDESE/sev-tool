@@ -298,10 +298,14 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const AMD_CERT *ark)
         memset(&hash, 0, sizeof(hash));
         memset(&fused_hash, 0, sizeof(fused_hash));
 
-        // Validate the certificate
-        cmd_ret = amd_cert_validate(ark, NULL, AMDUsageARK);
-        if (cmd_ret != STATUS_SUCCESS)
-            break;
+        // Validate the certificate. Check for self-signed ARK
+        cmd_ret = amd_cert_validate(ark, ark, AMDUsageARK);         // Rome
+        if (cmd_ret != STATUS_SUCCESS) {
+		    // Not a self-signed ARK. Check the ARK without a signature
+            cmd_ret = amd_cert_validate(ark, NULL, AMDUsageARK);    // Naples
+            if (cmd_ret != STATUS_SUCCESS)
+                break;
+        }
 
         if (memcmp(&ark->KeyID0, amd_root_key_id, sizeof(ark->KeyID0 + ark->KeyID1)) != 0)
         {
