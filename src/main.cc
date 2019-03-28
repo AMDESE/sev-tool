@@ -108,7 +108,7 @@ int main(int argc, char** argv)
     std::string output_folder = "./";
 
     int cmd_ret = 0xFFFF;
-    Command cmd;
+    Command cmd(output_folder, verbose_flag);
 
     while ((c = getopt_long (argc, argv, "hio:", long_options, &option_index)) != -1)
     {
@@ -143,7 +143,7 @@ int main(int argc, char** argv)
                 break;
             }
             case 'd': {         // PEK_CSR
-                cmd_ret = cmd.pek_csr(output_folder, verbose_flag);
+                cmd_ret = cmd.pek_csr();
                 break;
             }
             case 'e': {         // PDH_GEN
@@ -151,7 +151,7 @@ int main(int argc, char** argv)
                 break;
             }
             case 'f': {         // PDH_CERT_EXPORT
-                cmd_ret = cmd.pdh_cert_export(output_folder, verbose_flag);
+                cmd_ret = cmd.pdh_cert_export();
                 break;
             }
             case 'g': {         // PEK_CERT_IMPORT
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
                 break;
             }
             case 'j': {         // GET_ID
-                cmd_ret = cmd.get_id(output_folder, verbose_flag);
+                cmd_ret = cmd.get_id();
                 break;
             }
             case 'k': {         // SET_SELF_OWNED
@@ -185,15 +185,15 @@ int main(int argc, char** argv)
                 break;
             }
             case 'm': {         // GENERATE_CEK_ASK
-                cmd_ret = cmd.generate_cek_ask(output_folder);
+                cmd_ret = cmd.generate_cek_ask();
                 break;
             }
             case 'n': {         // GET_ASK_ARK
-                cmd_ret = cmd.get_ask_ark(output_folder);
+                cmd_ret = cmd.get_ask_ark();
                 break;
             }
             case 'p': {         // EXPORT_CERT_CHAIN
-                cmd_ret = cmd.export_cert_chain(output_folder);
+                cmd_ret = cmd.export_cert_chain();
                 break;
             }
             case 't': {         // CALC_MEASUREMENT
@@ -212,12 +212,12 @@ int main(int argc, char** argv)
                 str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.digest, sizeof(user_data.digest));
                 str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.mnonce, sizeof(user_data.mnonce));
                 str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.tik,    sizeof(user_data.tik));
-                cmd_ret = cmd.calc_measurement(output_folder, verbose_flag, &user_data);
+                cmd_ret = cmd.calc_measurement(&user_data);
                 break;
             }
             case 'u': {         // VALIDATE_CERT_CHAIN
                 printf("This command is not complete, do not trust the output\n");
-                cmd_ret = cmd.validate_cert_chain(output_folder);
+                cmd_ret = cmd.validate_cert_chain();
                 break;
             }
             case 'v': {         // GENERATE_LAUNCH_BLOB
@@ -228,16 +228,16 @@ int main(int argc, char** argv)
                 }
 
                 uint32_t guest_policy = (uint8_t)strtol(argv[optind++], NULL, 16);
-                cmd_ret = cmd.generate_launch_blob(output_folder, verbose_flag, guest_policy);
+                cmd_ret = cmd.generate_launch_blob(guest_policy);
                 break;
             }
             case 'w': {         // PACKAGE_SECRET
-                cmd_ret = cmd.package_secret(output_folder, verbose_flag);
+                cmd_ret = cmd.package_secret();
                 break;
             }
             case 'T': {         // Run Tests
-                Tests test;
-                cmd_ret = (test.test_all(output_folder, verbose_flag) == 0); // 0 = fail, 1 = pass
+                Tests test(output_folder, verbose_flag);
+                cmd_ret = (test.test_all() == 0); // 0 = fail, 1 = pass
                 break;
             }
             case 0:

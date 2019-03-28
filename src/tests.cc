@@ -25,6 +25,12 @@
 #include <stdio.h>      // prboolf
 #include <stdlib.h>     // malloc
 
+Tests::Tests(std::string output_folder, int verbose_flag)
+{
+    m_output_folder = output_folder;
+    m_verbose_flag = verbose_flag;
+}
+
 bool Tests::clear_output_folder()
 {
     std::string cmd = "rm -rf " + m_output_folder + "*";
@@ -43,7 +49,7 @@ bool Tests::clear_output_folder()
 bool Tests::test_factory_reset()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     SEV_CERT dummy;
     SEVCert cert(dummy);
 
@@ -96,7 +102,7 @@ bool Tests::test_factory_reset()
 bool Tests::test_platform_status()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
 
     do {
         printf("*Starting platform_status tests\n");
@@ -117,7 +123,7 @@ bool Tests::test_platform_status()
 bool Tests::test_pek_gen()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
     std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
     SEV_CERT_CHAIN_BUF cert_chain_orig;
@@ -129,7 +135,7 @@ bool Tests::test_pek_gen()
         printf("*Starting pek_gen tests\n");
 
         // Export the original PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export(m_output_folder, m_verbose_flag) != STATUS_SUCCESS) {
+        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export original PEK/PDH certificates\n");
             break;
         }
@@ -147,7 +153,7 @@ bool Tests::test_pek_gen()
         }
 
         // Export the new PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export(m_output_folder, m_verbose_flag) != STATUS_SUCCESS) {
+        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export new PEK/PDH certificates\n");
             break;
         }
@@ -180,14 +186,14 @@ bool Tests::test_pek_gen()
 bool Tests::test_pek_csr()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     std::string pekcsr_full = m_output_folder + PEK_CSR_HEX_FILENAME;
     SEV_CERT pekcsr;
 
     do {
         printf("*Starting pek_csr tests\n");
 
-        if(cmd.pek_csr(m_output_folder, m_verbose_flag) != STATUS_SUCCESS)
+        if(cmd.pek_csr() != STATUS_SUCCESS)
             break;
 
         // Read in the CSR
@@ -213,7 +219,7 @@ bool Tests::test_pek_csr()
 bool Tests::test_pdh_gen()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
     std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
     SEV_CERT_CHAIN_BUF cert_chain_orig;
@@ -225,7 +231,7 @@ bool Tests::test_pdh_gen()
         printf("*Starting pek_gen tests\n");
 
         // Export the original PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export(m_output_folder, m_verbose_flag) != STATUS_SUCCESS) {
+        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export original PEK/PDH certificates\n");
             break;
         }
@@ -243,7 +249,7 @@ bool Tests::test_pdh_gen()
         }
 
         // Export the new PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export(m_output_folder, m_verbose_flag) != STATUS_SUCCESS) {
+        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export new PEK/PDH certificates\n");
             break;
         }
@@ -277,7 +283,7 @@ bool Tests::test_pdh_gen()
 bool Tests::test_pdh_cert_export()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
     std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
     SEV_CERT_CHAIN_BUF cert_chain;
@@ -287,7 +293,7 @@ bool Tests::test_pdh_cert_export()
         printf("*Starting pdh_cert_export tests\n");
 
         // Export the PDH cert and cert chain from the Platform
-        if(cmd.pdh_cert_export(m_output_folder, m_verbose_flag) != STATUS_SUCCESS) {
+        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export PDH certificate/cert chain\n");
             break;
         }
@@ -320,7 +326,7 @@ bool Tests::test_pdh_cert_export()
 bool Tests::test_pek_cert_import()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
     std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
     SEV_CERT_CHAIN_BUF cert_chain_orig;
@@ -340,7 +346,7 @@ bool Tests::test_pek_cert_import()
         }
 
         // Export the original PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export(m_output_folder, m_verbose_flag) != STATUS_SUCCESS) {
+        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export original PEK/PDH certificates\n");
             break;
         }
@@ -365,7 +371,7 @@ bool Tests::test_pek_cert_import()
             break;
 
         // Export the new PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export(m_output_folder, m_verbose_flag) != STATUS_SUCCESS) {
+        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export new PEK/PDH certificates\n");
             break;
         }
@@ -400,12 +406,12 @@ bool Tests::test_pek_cert_import()
 bool Tests::test_get_id()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
 
     do {
         printf("*Starting get_id tests\n");
 
-        if(cmd.get_id(m_output_folder, m_verbose_flag) != STATUS_SUCCESS)
+        if(cmd.get_id() != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -423,7 +429,7 @@ bool Tests::test_get_id()
 bool Tests::test_set_self_owned()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     SEV_CERT dummy;
     SEVCert cert(dummy);
 
@@ -476,7 +482,7 @@ bool Tests::test_set_self_owned()
 bool Tests::test_set_externally_owned()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     SEV_CERT dummy;
     SEVCert cert(dummy);
 
@@ -521,14 +527,14 @@ bool Tests::test_set_externally_owned()
 bool Tests::test_generate_cek_ask()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     std::string cek_full = m_output_folder + CEK_FILENAME;
     SEV_CERT cek;
 
     do {
         printf("*Starting generate_cek_ask tests\n");
 
-        if(cmd.generate_cek_ask(m_output_folder) != STATUS_SUCCESS)
+        if(cmd.generate_cek_ask() != STATUS_SUCCESS)
             break;
 
         // Read in the CEK
@@ -555,7 +561,7 @@ bool Tests::test_generate_cek_ask()
 bool Tests::test_get_ask_ark()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     std::string ask_ark_full = m_output_folder + ASK_ARK_FILENAME;
     AMD_CERT ask;
     AMD_CERT ark;
@@ -564,7 +570,7 @@ bool Tests::test_get_ask_ark()
     do {
         printf("*Starting get_ask_ark tests\n");
 
-        if(cmd.get_ask_ark(m_output_folder) != STATUS_SUCCESS)
+        if(cmd.get_ask_ark() != STATUS_SUCCESS)
             break;
 
         // Read in the ask_ark so we can split it into 2 separate cert files
@@ -604,12 +610,12 @@ bool Tests::test_get_ask_ark()
 bool Tests::test_export_cert_chain()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
 
     do {
         printf("*Starting export_cert_chain tests\n");
 
-        if(cmd.export_cert_chain(m_output_folder) != STATUS_SUCCESS)
+        if(cmd.export_cert_chain() != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -624,7 +630,7 @@ bool Tests::test_export_cert_chain()
 bool Tests::test_calc_measurement()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
 
     measurement_t data;
     data.meas_ctx  = 0x04;
@@ -641,7 +647,7 @@ bool Tests::test_calc_measurement()
     do {
         printf("*Starting calc_measurement tests\n");
 
-        if(cmd.calc_measurement(m_output_folder, m_verbose_flag, &data) != STATUS_SUCCESS)
+        if(cmd.calc_measurement(&data) != STATUS_SUCCESS)
             break;
 
         // Read in the actual output
@@ -664,12 +670,12 @@ bool Tests::test_calc_measurement()
 bool Tests::test_validate_cert_chain()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
 
     do {
         printf("*Starting validate_cert_chain tests\n");
 
-        if(cmd.validate_cert_chain(m_output_folder) != STATUS_SUCCESS)
+        if(cmd.validate_cert_chain() != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -681,14 +687,14 @@ bool Tests::test_validate_cert_chain()
 bool Tests::test_generate_launch_blob()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
 
     uint32_t policy = SEV_POLICY_MIN;
 
     do {
         printf("*Starting generate_launch_blob tests\n");
 
-        if(cmd.generate_launch_blob(m_output_folder, m_verbose_flag, policy) != STATUS_SUCCESS)
+        if(cmd.generate_launch_blob(policy) != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -700,7 +706,7 @@ bool Tests::test_generate_launch_blob()
 bool Tests::test_package_secret()
 {
     bool ret = false;
-    Command cmd;
+    Command cmd(m_output_folder, m_verbose_flag);
     uint32_t policy = 0;
     std::string sys_cmd = "";
     std::string output = "";
@@ -709,11 +715,11 @@ bool Tests::test_package_secret()
         printf("*Starting package_secret tests\n");
 
         // Export the PDH cert to be read in during package_secret
-        if(cmd.pdh_cert_export(m_output_folder, m_verbose_flag) != STATUS_SUCCESS)
+        if(cmd.pdh_cert_export() != STATUS_SUCCESS)
             break;
 
         // Generate the launch start blob to be read in during package_secret
-        if(cmd.generate_launch_blob(m_output_folder, m_verbose_flag, policy) != STATUS_SUCCESS)
+        if(cmd.generate_launch_blob(policy) != STATUS_SUCCESS)
             break;
 
         // Export a 'calculated measurement' that package_secret can read in for the header
@@ -725,21 +731,21 @@ bool Tests::test_package_secret()
         sys_cmd = "echo HELLO > " + m_output_folder + SECRET_FILENAME;
         if(!execute_system_command(sys_cmd, &output))
             return false;
-        if(cmd.package_secret(m_output_folder, m_verbose_flag) == STATUS_SUCCESS)   // fail
+        if(cmd.package_secret() == STATUS_SUCCESS)   // fail
             break;
 
         // Try a secrets file of 8 bytes
         sys_cmd = "echo HELLOooo > " + m_output_folder + SECRET_FILENAME;
         if(!execute_system_command(sys_cmd, &output))
             return false;
-        if(cmd.package_secret(m_output_folder, m_verbose_flag) != STATUS_SUCCESS)
+        if(cmd.package_secret() != STATUS_SUCCESS)
             break;
 
         // Try a longer secrets file (use the readable cert_chain file from pdh_cert_export)
         sys_cmd = "cp " + m_output_folder + CERT_CHAIN_READABLE_FILENAME + " " + m_output_folder + SECRET_FILENAME;
         if(!execute_system_command(sys_cmd, &output))
             return false;
-        if(cmd.package_secret(m_output_folder, m_verbose_flag) != STATUS_SUCCESS)
+        if(cmd.package_secret() != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -748,12 +754,9 @@ bool Tests::test_package_secret()
     return ret;
 }
 
-bool Tests::test_all(std::string& output_folder, int verbose_flag)
+bool Tests::test_all()
 {
     bool ret = false;
-
-    m_output_folder = output_folder;
-    m_verbose_flag = verbose_flag;
 
     do {
         clear_output_folder();

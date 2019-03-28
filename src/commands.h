@@ -78,12 +78,13 @@ private:
     SEVDevice m_sev_device;
     TEKTIK m_tk;                // Unencrypted TIK/TEK. WrapTK is this enc with KEK
     HMACSHA256 m_measurement;   // Measurement. Used in LaunchSecret header HMAC
+    std::string m_output_folder = "";
+    int m_verbose_flag = 0;
 
     int calculate_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
-    int generate_all_certs(std::string& output_folder);
-    int import_all_certs(std::string& output_folder, SEV_CERT *pdh,
-                         SEV_CERT *pek, SEV_CERT *oca, SEV_CERT *cek,
-                         AMD_CERT *ask, AMD_CERT *ark);
+    int generate_all_certs(void);
+    int import_all_certs(SEV_CERT *pdh, SEV_CERT *pek, SEV_CERT *oca,
+                         SEV_CERT *cek, AMD_CERT *ask, AMD_CERT *ark);
     bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
              size_t key_in_length, const uint8_t *label, size_t label_length,
              const uint8_t *context, size_t context_length);
@@ -108,16 +109,17 @@ private:
 
 public:
     Command() {};
+    Command(std::string output_folder, int verbose_flag);
     ~Command() {};
 
     int factory_reset(void);
     int platform_status(void);
     int pek_gen(void);
-    int pek_csr(std::string& output_folder, int verbose_flag);
+    int pek_csr(void);
     int pdh_gen(void);
-    int pdh_cert_export(std::string& output_folder, int verbose_flag);
+    int pdh_cert_export(void);
     int pek_cert_import(std::string& oca_priv_key_file);
-    int get_id(std::string& output_folder, int verbose_flag);
+    int get_id(void);
 
     // Non-ioctl (custom) commands
     int sys_info(void);
@@ -125,15 +127,13 @@ public:
     int get_platform_es(void);
     int set_self_owned(void);
     int set_externally_owned(std::string& oca_priv_key_file);
-    int generate_cek_ask(std::string& output_folder);
-    int get_ask_ark(std::string& output_folder);
-    int export_cert_chain(std::string& output_folder);
-    int calc_measurement(std::string& output_folder, int verbose_flag,
-                         measurement_t *user_data);
-    int validate_cert_chain(std::string& output_folder);
-    int generate_launch_blob(std::string& output_folder, int verbose_flag,
-                             uint32_t policy);
-    int package_secret(std::string& output_folder, uint32_t verbose_flag);
+    int generate_cek_ask(void);
+    int get_ask_ark(void);
+    int export_cert_chain(void);
+    int calc_measurement(measurement_t *user_data);
+    int validate_cert_chain(void);
+    int generate_launch_blob(uint32_t policy);
+    int package_secret(void);
 };
 
 #endif /* commands_h */

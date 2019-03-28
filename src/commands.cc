@@ -22,6 +22,12 @@
 #include <stdio.h>          // printf
 #include <stdlib.h>         // malloc
 
+Command::Command(std::string output_folder, int verbose_flag)
+{
+    m_output_folder = output_folder;
+    m_verbose_flag = verbose_flag;
+}
+
 int Command::factory_reset(void)
 {
     int cmd_ret = -1;
@@ -69,7 +75,7 @@ int Command::pek_gen(void)
     return (int)cmd_ret;
 }
 
-int Command::pek_csr(std::string& output_folder, int verbose_flag)
+int Command::pek_csr(void)
 {
     uint8_t data[sizeof(SEV_PEK_CSR_CMD_BUF)];
     int cmd_ret = -1;
@@ -84,14 +90,14 @@ int Command::pek_csr(std::string& output_folder, int verbose_flag)
     cmd_ret = m_sev_device.pek_csr(data, pek_mem, &pek_csr);
 
     if(cmd_ret == STATUS_SUCCESS) {
-        if(verbose_flag) {          // Print off the cert to stdout
+        if(m_verbose_flag) {            // Print off the cert to stdout
             // print_sev_cert_hex(&pek_csr);
             print_sev_cert_readable(&pek_csr);
         }
-        if(output_folder != "") {   // Print off the cert to a text file
+        if(m_output_folder != "") {     // Print off the cert to a text file
             std::string pek_csr_readable = "";
-            std::string pek_csr_readable_path = output_folder+PEK_CSR_READABLE_FILENAME;
-            std::string pek_csr_hex_path = output_folder+PEK_CSR_HEX_FILENAME;
+            std::string pek_csr_readable_path = m_output_folder+PEK_CSR_READABLE_FILENAME;
+            std::string pek_csr_hex_path = m_output_folder+PEK_CSR_HEX_FILENAME;
 
             print_sev_cert_readable(&pek_csr, pek_csr_readable);
             write_file(pek_csr_readable_path, (void *)pek_csr_readable.c_str(), pek_csr_readable.size());
@@ -114,7 +120,7 @@ int Command::pdh_gen(void)
     return (int)cmd_ret;
 }
 
-int Command::pdh_cert_export(std::string& output_folder, int verbose_flag)
+int Command::pdh_cert_export(void)
 {
     uint8_t data[sizeof(SEV_PDH_CERT_EXPORT_CMD_BUF)];
     int cmd_ret = -1;
@@ -128,18 +134,18 @@ int Command::pdh_cert_export(std::string& output_folder, int verbose_flag)
     cmd_ret = m_sev_device.pdh_cert_export(data, pdh_cert_mem, cert_chain_mem);
 
     if(cmd_ret == STATUS_SUCCESS) {
-        if(verbose_flag) {          // Print off the cert to stdout
+        if(m_verbose_flag) {            // Print off the cert to stdout
             // print_sev_cert_readable((SEV_CERT *)pdh_cert_mem); printf("\n");
             print_sev_cert_hex((SEV_CERT *)pdh_cert_mem); printf("\n");
             print_cert_chain_buf_readable((SEV_CERT_CHAIN_BUF *)cert_chain_mem);
         }
-        if(output_folder != "") {   // Print off the cert to a text file
+        if(m_output_folder != "") {     // Print off the cert to a text file
             std::string PDH_readable = "";
             std::string cc_readable = "";
-            std::string PDH_readable_path = output_folder+PDH_READABLE_FILENAME;
-            std::string PDH_path          = output_folder+PDH_FILENAME;
-            std::string cc_readable_path  = output_folder+CERT_CHAIN_READABLE_FILENAME;
-            std::string cc_path           = output_folder+CERT_CHAIN_HEX_FILENAME;
+            std::string PDH_readable_path = m_output_folder+PDH_READABLE_FILENAME;
+            std::string PDH_path          = m_output_folder+PDH_FILENAME;
+            std::string cc_readable_path  = m_output_folder+CERT_CHAIN_READABLE_FILENAME;
+            std::string cc_path           = m_output_folder+CERT_CHAIN_HEX_FILENAME;
 
             print_sev_cert_readable((SEV_CERT *)pdh_cert_mem, PDH_readable);
             print_cert_chain_buf_readable((SEV_CERT_CHAIN_BUF *)cert_chain_mem, cc_readable);
@@ -228,7 +234,7 @@ int Command::pek_cert_import(std::string& oca_priv_key_file)
 
 // Must always pass in 128 bytes array, because of Linux /dev/sev ioctl
 // doesn't follow the API
-int Command::get_id(std::string& output_folder, int verbose_flag)
+int Command::get_id(void)
 {
     uint8_t data[sizeof(SEV_GET_ID_CMD_BUF)];
     SEV_GET_ID_CMD_BUF *data_buf = (SEV_GET_ID_CMD_BUF *)&data;
@@ -260,14 +266,14 @@ int Command::get_id(std::string& output_folder, int verbose_flag)
             sprintf(id1_buf+strlen(id1_buf), "%02x", ((uint8_t *)(data_buf->IDPAddr))[i+default_id_length]);
         }
 
-        if(verbose_flag) {          // Print ID arrays
+        if(m_verbose_flag) {            // Print ID arrays
             printf("* GetID Socket0:\n%s", id0_buf);
             printf("\n* GetID Socket1:\n%s", id1_buf);
             printf("\n");
         }
-        if(output_folder != "") {   // Print the IDs to a text file
-            std::string id0_path = output_folder+GET_ID_S0_FILENAME;
-            std::string id1_path = output_folder+GET_ID_S1_FILENAME;
+        if(m_output_folder != "") {     // Print the IDs to a text file
+            std::string id0_path = m_output_folder+GET_ID_S0_FILENAME;
+            std::string id1_path = m_output_folder+GET_ID_S1_FILENAME;
             write_file(id0_path, (void *)id0_buf, sizeof(id0_buf)-1);   // Don't write null term
             write_file(id1_path, (void *)id1_buf, sizeof(id1_buf)-1);
         }
@@ -334,29 +340,29 @@ int Command::set_externally_owned(std::string& oca_priv_key_file)
     return (int)cmd_ret;
 }
 
-int Command::generate_cek_ask(std::string& output_folder)
+int Command::generate_cek_ask(void)
 {
     int cmd_ret = -1;
 
     std::string cert_file = CEK_FILENAME;
 
-    cmd_ret = m_sev_device.generate_cek_ask(output_folder, cert_file);
+    cmd_ret = m_sev_device.generate_cek_ask(m_output_folder, cert_file);
 
     return (int)cmd_ret;
 }
 
-int Command::get_ask_ark(std::string& output_folder)
+int Command::get_ask_ark(void)
 {
     int cmd_ret = -1;
 
     std::string cert_file = ASK_ARK_FILENAME;
 
-    cmd_ret = m_sev_device.get_ask_ark(output_folder, cert_file);
+    cmd_ret = m_sev_device.get_ask_ark(m_output_folder, cert_file);
 
     return (int)cmd_ret;
 }
 
-int Command::generate_all_certs(std::string& output_folder)
+int Command::generate_all_certs(void)
 {
     int cmd_ret = -1;
     uint8_t pdh_cert_export_data[sizeof(SEV_PDH_CERT_EXPORT_CMD_BUF)];  // pdh_cert_export
@@ -367,13 +373,13 @@ int Command::generate_all_certs(std::string& output_folder)
 
     std::string cek_file = CEK_FILENAME;
     std::string ask_ark_file = ASK_ARK_FILENAME;
-    std::string ask_ark_full = output_folder + ASK_ARK_FILENAME;
-    std::string pdh_full = output_folder + PDH_FILENAME;
-    std::string pek_full = output_folder + PEK_FILENAME;
-    std::string oca_full = output_folder + OCA_FILENAME;
-    std::string cek_full = output_folder + CEK_FILENAME;
-    std::string ask_full = output_folder + ASK_FILENAME;
-    std::string ark_full = output_folder + ARK_FILENAME;
+    std::string ask_ark_full = m_output_folder + ASK_ARK_FILENAME;
+    std::string pdh_full = m_output_folder + PDH_FILENAME;
+    std::string pek_full = m_output_folder + PEK_FILENAME;
+    std::string oca_full = m_output_folder + OCA_FILENAME;
+    std::string cek_full = m_output_folder + CEK_FILENAME;
+    std::string ask_full = m_output_folder + ASK_FILENAME;
+    std::string ark_full = m_output_folder + ARK_FILENAME;
     AMDCert tmp_amd;
     std::string ask_string = "";    // For printing. AMD certs can't just print their
     std::string ark_string = "";    // bytes because they're unions based on key sizes
@@ -385,12 +391,12 @@ int Command::generate_all_certs(std::string& output_folder)
             break;
 
         // Generate the cek from the AMD KDS server
-        cmd_ret = m_sev_device.generate_cek_ask(output_folder, cek_file);
+        cmd_ret = m_sev_device.generate_cek_ask(m_output_folder, cek_file);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
         // Get the ask_ark from AMD dev site
-        cmd_ret = m_sev_device.get_ask_ark(output_folder, ask_ark_file);
+        cmd_ret = m_sev_device.get_ask_ark(m_output_folder, ask_ark_file);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -444,24 +450,24 @@ int Command::generate_all_certs(std::string& output_folder)
     return (int)cmd_ret;
 }
 
-int Command::export_cert_chain(std::string& output_folder)
+int Command::export_cert_chain(void)
 {
     int cmd_ret = -1;
     std::string zip_name = CERTS_ZIP_FILENAME;
     std::string space = " ";
-    std::string cert_names = output_folder + PDH_FILENAME + space +
-                             output_folder + PEK_FILENAME + space +
-                             output_folder + OCA_FILENAME + space +
-                             output_folder + CEK_FILENAME + space +
-                             output_folder + ASK_FILENAME + space +
-                             output_folder + ARK_FILENAME;
+    std::string cert_names = m_output_folder + PDH_FILENAME + space +
+                             m_output_folder + PEK_FILENAME + space +
+                             m_output_folder + OCA_FILENAME + space +
+                             m_output_folder + CEK_FILENAME + space +
+                             m_output_folder + ASK_FILENAME + space +
+                             m_output_folder + ARK_FILENAME;
 
     do {
-        cmd_ret = generate_all_certs(output_folder);
+        cmd_ret = generate_all_certs();
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
-        cmd_ret = m_sev_device.zip_certs(output_folder, zip_name, cert_names);
+        cmd_ret = m_sev_device.zip_certs(m_output_folder, zip_name, cert_names);
     } while (0);
     return (int)cmd_ret;
 }
@@ -518,8 +524,7 @@ int Command::calculate_measurement(measurement_t *user_data, HMACSHA256 *final_m
     return cmd_ret;
 }
 
-int Command::calc_measurement(std::string& output_folder, int verbose_flag,
-                                         measurement_t *user_data)
+int Command::calc_measurement(measurement_t *user_data)
 {
     int cmd_ret = -1;
     HMACSHA256 final_meas;
@@ -533,7 +538,7 @@ int Command::calc_measurement(std::string& output_folder, int verbose_flag,
         }
         std::string meas_str = meas_buf;
 
-        if(verbose_flag) {          // Print ID arrays
+        if(m_verbose_flag) {          // Print ID arrays
             // Print input args for user
             printf("Input Arguments:\n");
             printf("   Context: %02x\n", user_data->meas_ctx);
@@ -556,8 +561,8 @@ int Command::calc_measurement(std::string& output_folder, int verbose_flag,
             // Print output
             printf("\n\n%s\n", meas_str.c_str());
         }
-        if(output_folder != "") {   // Print the IDs to a text file
-            std::string meas_path = output_folder+CALC_MEASUREMENT_FILENAME;
+        if(m_output_folder != "") {     // Print the IDs to a text file
+            std::string meas_path = m_output_folder+CALC_MEASUREMENT_FILENAME;
             write_file(meas_path, (void *)meas_str.c_str(), meas_str.size());
         }
     }
@@ -565,16 +570,15 @@ int Command::calc_measurement(std::string& output_folder, int verbose_flag,
     return (int)cmd_ret;
 }
 
-int Command::import_all_certs(std::string& output_folder, SEV_CERT *pdh,
-                                SEV_CERT *pek, SEV_CERT *oca, SEV_CERT *cek,
-                                AMD_CERT *ask, AMD_CERT *ark)
+int Command::import_all_certs(SEV_CERT *pdh, SEV_CERT *pek, SEV_CERT *oca,
+                              SEV_CERT *cek, AMD_CERT *ask, AMD_CERT *ark)
 {
     int cmd_ret = ERROR_INVALID_CERTIFICATE;
     AMDCert tmp_amd;
 
     do {
         // Read in the ark
-        std::string ark_full = output_folder+ARK_FILENAME;
+        std::string ark_full = m_output_folder+ARK_FILENAME;
         uint8_t ark_buf[sizeof(AMD_CERT)] = {0};
         if(read_file(ark_full, ark_buf, sizeof(AMD_CERT)) == 0)  // Variable size
             break;
@@ -586,7 +590,7 @@ int Command::import_all_certs(std::string& output_folder, SEV_CERT *pdh,
         // print_amd_cert_readable(ark);
 
         // Read in the ark
-        std::string ask_full = output_folder+ASK_FILENAME;
+        std::string ask_full = m_output_folder+ASK_FILENAME;
         uint8_t ask_buf[sizeof(AMD_CERT)] = {0};
         if(read_file(ask_full, ask_buf, sizeof(AMD_CERT)) == 0)  // Variable size
             break;
@@ -598,22 +602,22 @@ int Command::import_all_certs(std::string& output_folder, SEV_CERT *pdh,
         // print_amd_cert_readable(ask);
 
         // Read in the cek
-        std::string cek_full = output_folder+CEK_FILENAME;
+        std::string cek_full = m_output_folder+CEK_FILENAME;
         if(read_file(cek_full, cek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Read in the oca
-        std::string oca_full = output_folder+OCA_FILENAME;
+        std::string oca_full = m_output_folder+OCA_FILENAME;
         if(read_file(oca_full, oca, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Read in the pek
-        std::string pek_full = output_folder+PEK_FILENAME;
+        std::string pek_full = m_output_folder+PEK_FILENAME;
         if(read_file(pek_full, pek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Read in the pdh
-        std::string pdh_full = output_folder+PDH_FILENAME;
+        std::string pdh_full = m_output_folder+PDH_FILENAME;
         if(read_file(pdh_full, pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
@@ -623,7 +627,7 @@ int Command::import_all_certs(std::string& output_folder, SEV_CERT *pdh,
     return (int)cmd_ret;
 }
 
-int Command::validate_cert_chain(std::string& output_folder)
+int Command::validate_cert_chain(void)
 {
     int cmd_ret = -1;
     SEV_CERT pdh;
@@ -636,7 +640,7 @@ int Command::validate_cert_chain(std::string& output_folder)
     SEV_CERT ask_pubkey;
 
     do {
-        cmd_ret = import_all_certs(output_folder, &pdh, &pek, &oca, &cek, &ask, &ark);
+        cmd_ret = import_all_certs(&pdh, &pek, &oca, &cek, &ask, &ark);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -684,12 +688,11 @@ int Command::validate_cert_chain(std::string& output_folder)
     return (int)cmd_ret;
 }
 
-int Command::generate_launch_blob(std::string& output_folder, int verbose_flag,
-                                    uint32_t policy)
+int Command::generate_launch_blob(uint32_t policy)
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     SEV_SESSION_BUF session_data_buf;
-    std::string buf_file = output_folder + LAUNCH_BLOB_FILENAME;
+    std::string buf_file = m_output_folder + LAUNCH_BLOB_FILENAME;
     SEV_CERT pdh;
     EVP_PKEY *godh_key_pair = NULL;      // Guest Owner Diffie-Hellman
     SEV_CERT godh_pubkey_cert;
@@ -698,7 +701,7 @@ int Command::generate_launch_blob(std::string& output_folder, int verbose_flag,
 
     do {
         // Read in the PDH (Platform Owner Diffie-Hellman Public Key)
-        std::string pdh_full = output_folder+PDH_FILENAME;
+        std::string pdh_full = m_output_folder+PDH_FILENAME;
         if(read_file(pdh_full, &pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
@@ -720,18 +723,18 @@ int Command::generate_launch_blob(std::string& output_folder, int verbose_flag,
         memcpy(&godh_pubkey_cert, cert_obj.data(), sizeof(SEV_CERT)); // TODO, shouldn't need this?
 
         // Write the cert to file
-        std::string godh_cert_file = output_folder + GUEST_OWNER_DH_FILENAME;
+        std::string godh_cert_file = m_output_folder + GUEST_OWNER_DH_FILENAME;
         if(write_file(godh_cert_file, &godh_pubkey_cert, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Write the unencrypted TK (TIK and TEK) to a tmp file so it can be
         // read in during package_secret
-        std::string tmp_tk_file = output_folder + GUEST_TK_FILENAME;
+        std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
         write_file(tmp_tk_file, &m_tk, sizeof(m_tk));
 
         cmd_ret = build_session_buffer(&session_data_buf, policy, godh_key_pair, &pdh);
         if(cmd_ret == STATUS_SUCCESS) {
-            if(verbose_flag) {
+            if(m_verbose_flag) {
                 printf("Guest Policy (input): %08x\n", policy);
                 printf("Nonce:\n");
                 for(size_t i = 0; i < sizeof(session_data_buf.Nonce); i++) {
@@ -766,15 +769,15 @@ int Command::generate_launch_blob(std::string& output_folder, int verbose_flag,
     return (int)cmd_ret;
 }
 
-int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
+int Command::package_secret(void)
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     SEV_SESSION_BUF session_data_buf;
     SEV_HDR_BUF packaged_secret_header;
-    std::string secret_file = output_folder + SECRET_FILENAME;
-    std::string launch_blob_file = output_folder + LAUNCH_BLOB_FILENAME;
-    std::string packaged_secret_file = output_folder + PACKAGED_SECRET_FILENAME;
-    std::string packaged_secret_header_file = output_folder + PACKAGED_SECRET_HEADER_FILENAME;
+    std::string secret_file = m_output_folder + SECRET_FILENAME;
+    std::string launch_blob_file = m_output_folder + LAUNCH_BLOB_FILENAME;
+    std::string packaged_secret_file = m_output_folder + PACKAGED_SECRET_FILENAME;
+    std::string packaged_secret_header_file = m_output_folder + PACKAGED_SECRET_HEADER_FILENAME;
 
     uint32_t flags = 0;
     IV128 iv;
@@ -801,7 +804,7 @@ int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
             break;
 
         // Read in the unencrypted TK (TIK and TEK) created in build_session_buffer
-        std::string tmp_tk_file = output_folder + GUEST_TK_FILENAME;
+        std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
         if(read_file(tmp_tk_file, &m_tk, sizeof(m_tk) != sizeof(m_tk))) {
             printf("Error reading in %s\n", tmp_tk_file.c_str());
             break;
@@ -810,7 +813,7 @@ int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
         // Encrypt the secret with the TEK
         encrypt_with_tek(encrypted_mem, secret_mem, secret_size, iv);
 
-        if(verbose_flag) {
+        if(m_verbose_flag) {
             printf("Random IV\n");
             for(size_t i = 0; i < sizeof(iv); i++) {
                 printf("%02x ", iv[i]);
@@ -819,7 +822,7 @@ int Command::package_secret(std::string& output_folder, uint32_t verbose_flag)
         }
 
         // Read in the measurement, to be used as part of the launch secret header hmac
-        std::string measurement_file = output_folder + CALC_MEASUREMENT_FILENAME;
+        std::string measurement_file = m_output_folder + CALC_MEASUREMENT_FILENAME;
         if(read_file(measurement_file, &m_measurement, sizeof(m_measurement)) != sizeof(m_measurement)) {
             printf("Error reading in %s\n", measurement_file.c_str());
             break;

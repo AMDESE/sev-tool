@@ -25,7 +25,7 @@ private:
     bool clear_output_folder();
 
 public:
-    Tests() {};
+    Tests(std::string output_folder, int verbose_flag);
     ~Tests() {};
 
     bool test_factory_reset(void);
@@ -45,7 +45,7 @@ public:
     bool test_validate_cert_chain(void);
     bool test_generate_launch_blob(void);
     bool test_package_secret(void);
-    bool test_all(std::string& output_folder, int verbose_flag);
+    bool test_all();
 };
 
 #endif /* tests_h */
