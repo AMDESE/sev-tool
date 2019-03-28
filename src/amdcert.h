@@ -28,7 +28,7 @@
 #include <openssl/pem.h>
 
 #define AMD_CERT_VERSION        0x01
-#define AMD_CERT_ID_SIZE_BYTES  16      // sizeof(AMD_CERT:KeyID0 + AMD_CERT:KeyID1)
+#define AMD_CERT_ID_SIZE_BYTES  16      // sizeof(amd_cert:key_id_0 + amd_cert:key_id_1)
 #define AMD_CERT_KEY_BITS_2K    2048
 #define AMD_CERT_KEY_BITS_4K    4096
 #define AMD_CERT_KEY_BYTES_4K   (AMD_CERT_KEY_BITS_4K/8)
@@ -41,32 +41,32 @@ static const uint8_t amd_root_key_id[AMD_CERT_ID_SIZE_BYTES] = {
 
 // Public global functions
 static std::string amd_empty = "NULL";
-void print_amd_cert_readable(const AMD_CERT *cert, std::string& out_str = amd_empty);
-void print_amd_cert_hex(const AMD_CERT *cert, std::string& out_str = amd_empty);
+void print_amd_cert_readable(const amd_cert *cert, std::string& out_str = amd_empty);
+void print_amd_cert_hex(const amd_cert *cert, std::string& out_str = amd_empty);
 
 class AMDCert {
 private:
-    SEV_ERROR_CODE amd_cert_validate_sig(const AMD_CERT *cert);
-    SEV_ERROR_CODE amd_cert_validate_common(const AMD_CERT *cert);
+    SEV_ERROR_CODE amd_cert_validate_sig(const amd_cert *cert);
+    SEV_ERROR_CODE amd_cert_validate_common(const amd_cert *cert);
     bool usage_is_valid(uint32_t usage);
-    SEV_ERROR_CODE amd_cert_validate(const AMD_CERT *cert,
-                                     const AMD_CERT *parent,
+    SEV_ERROR_CODE amd_cert_validate(const amd_cert *cert,
+                                     const amd_cert *parent,
                                      uint32_t expected_usage);
-    SEV_ERROR_CODE amd_cert_public_key_hash(const AMD_CERT *cert,
-                                            HMACSHA256 *hash);
+    SEV_ERROR_CODE amd_cert_public_key_hash(const amd_cert *cert,
+                                            hmac_sha_256 *hash);
 
 public:
     AMDCert() {}
     ~AMDCert() {};
 
     bool key_size_is_valid(size_t size);
-    SEV_ERROR_CODE amd_cert_validate_ark(const AMD_CERT *ark);
-    SEV_ERROR_CODE amd_cert_validate_ask(const AMD_CERT *ask,
-                                         const AMD_CERT *ark);
-    size_t amd_cert_get_size(const AMD_CERT *cert);
-    SEV_ERROR_CODE amd_cert_export_pub_key(const AMD_CERT *cert,
-                                           SEV_CERT *pub_key_cert);
-    SEV_ERROR_CODE amd_cert_init(AMD_CERT *cert, const uint8_t *buffer);
+    SEV_ERROR_CODE amd_cert_validate_ark(const amd_cert *ark);
+    SEV_ERROR_CODE amd_cert_validate_ask(const amd_cert *ask,
+                                         const amd_cert *ark);
+    size_t amd_cert_get_size(const amd_cert *cert);
+    SEV_ERROR_CODE amd_cert_export_pub_key(const amd_cert *cert,
+                                           sev_cert *pub_key_cert);
+    SEV_ERROR_CODE amd_cert_init(amd_cert *cert, const uint8_t *buffer);
 };
 
 #endif /* amdcert_h */

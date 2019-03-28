@@ -17,7 +17,7 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 
-#include "sevapi.h"         // for HMACSHA256, Nonce128, AES128Key
+#include "sevapi.h"         // for hmac_sha_256, nonce_128, aes_128_key
 #include "sevcore.h"        // for SEVDevice
 #include <openssl/evp.h>    // for EVP_PKEY
 #include <openssl/sha.h>    // for SHA256_DIGEST_LENGTH
@@ -69,41 +69,41 @@ struct measurement_t {
     uint8_t  build_id;
     uint32_t policy;    // SEV_POLICY
     uint8_t  digest[SHA256_DIGEST_LENGTH];   // gctx_ld
-    Nonce128 mnonce;
-    AES128Key tik;
+    nonce_128 mnonce;
+    aes_128_key tik;
 };
 
 class Command {
 private:
     SEVDevice m_sev_device;
-    TEKTIK m_tk;                // Unencrypted TIK/TEK. WrapTK is this enc with KEK
-    HMACSHA256 m_measurement;   // Measurement. Used in LaunchSecret header HMAC
+    tek_tik m_tk;               // Unencrypted TIK/TEK. wrap_tk is this enc with KEK
+    hmac_sha_256 m_measurement;   // Measurement. Used in LaunchSecret header HMAC
     std::string m_output_folder = "";
     int m_verbose_flag = 0;
 
-    int calculate_measurement(measurement_t *user_data, HMACSHA256 *final_meas);
+    int calculate_measurement(measurement_t *user_data, hmac_sha_256 *final_meas);
     int generate_all_certs(void);
-    int import_all_certs(SEV_CERT *pdh, SEV_CERT *pek, SEV_CERT *oca,
-                         SEV_CERT *cek, AMD_CERT *ask, AMD_CERT *ark);
+    int import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
+                         sev_cert *cek, amd_cert *ask, amd_cert *ark);
     bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
              size_t key_in_length, const uint8_t *label, size_t label_length,
              const uint8_t *context, size_t context_length);
     uint8_t* calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
                                      size_t& shared_key_len_out);
-    bool derive_master_secret(AES128Key master_secret,
+    bool derive_master_secret(aes_128_key master_secret,
                               EVP_PKEY *godh_priv_key,
-                              const SEV_CERT *pdh_public,
-                              const uint8_t nonce[sizeof(Nonce128)]);
-    bool derive_kek(AES128Key kek, const AES128Key master_secret);
-    bool derive_kik(HMACKey128 kik, const AES128Key master_secret);
-    bool gen_hmac(HMACSHA256 *out, HMACKey128 key, uint8_t *msg, size_t msg_len);
+                              const sev_cert *pdh_public,
+                              const uint8_t nonce[sizeof(nonce_128)]);
+    bool derive_kek(aes_128_key kek, const aes_128_key master_secret);
+    bool derive_kik(hmac_key_128 kik, const aes_128_key master_secret);
+    bool gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len);
     bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
-                 const AES128Key Key, const uint8_t IV[128/8]);
-    int build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy,
-                             EVP_PKEY *godh_priv_key, SEV_CERT *pdh_pub);
+                 const aes_128_key Key, const uint8_t IV[128/8]);
+    int build_session_buffer(sev_session_buf *buf, uint32_t guest_policy,
+                             EVP_PKEY *godh_priv_key, sev_cert *pdh_pub);
     int encrypt_with_tek(uint8_t *encrypted_mem, const uint8_t *secret_mem,
-                         size_t secret_mem_size, const IV128 iv);
-    bool create_launch_secret_header(SEV_HDR_BUF *out_header, IV128 *iv,
+                         size_t secret_mem_size, const iv_128 iv);
+    bool create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
                                      uint8_t *buf, size_t buffer_len,
                                      uint32_t hdr_flags);
 

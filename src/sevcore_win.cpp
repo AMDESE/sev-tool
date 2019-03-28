@@ -82,15 +82,15 @@ int SEVDevice::pek_gen()
     return cmd_ret;
 }
 
-bool SEVDevice::validate_pek_csr(SEV_CERT *pek_csr)
+bool SEVDevice::validate_pek_csr(sev_cert *pek_csr)
 {
-    if(pek_csr->Version     == 1                     &&
-       pek_csr->PubkeyUsage == SEVUsagePEK           &&
-       pek_csr->PubkeyAlgo  == SEVSigAlgoECDSASHA256 &&
-       pek_csr->Sig1Usage   == SEVUsageInvalid       &&
-       pek_csr->Sig1Algo    == SEVSigAlgoInvalid     &&
-       pek_csr->Sig2Usage   == SEVUsageInvalid       &&
-       pek_csr->Sig2Algo    == SEVSigAlgoInvalid) {
+    if(pek_csr->version     == 1                     &&
+       pek_csr->pub_key_usage == SEV_USAGE_PEK           &&
+       pek_csr->pub_key_algo  == SEV_SIG_ALGO_ECDSA_SHA256 &&
+       pek_csr->sig_1_usage   == SEV_USAGE_INVALID       &&
+       pek_csr->sig_1_algo    == SEV_SIG_ALGO_INVALID     &&
+       pek_csr->sig_2_usage   == SEV_USAGE_INVALID       &&
+       pek_csr->sig_2_algo    == SEV_SIG_ALGO_INVALID) {
         return true;
     }
     else {
@@ -98,7 +98,7 @@ bool SEVDevice::validate_pek_csr(SEV_CERT *pek_csr)
     }
 }
 
-int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, SEV_CERT *csr)
+int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 {
     int cmd_ret = -1;
 
@@ -122,7 +122,7 @@ int SEVDevice::pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
 
 // todo. dont want to be reading from a file. use openssl to generate
 int SEVDevice::pek_cert_import(uint8_t *data,
-                               SEV_CERT *pek_csr,
+                               sev_cert *pek_csr,
                                std::string& oca_priv_key_file,
                                std::string& oca_cert_file)
 {
@@ -142,22 +142,22 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
 static std::string display_build_info()
 {
     SEVDevice sev_device;
-    uint8_t status_data[sizeof(SEV_PLATFORM_STATUS_CMD_BUF)];
-    SEV_PLATFORM_STATUS_CMD_BUF *status_data_buf = (SEV_PLATFORM_STATUS_CMD_BUF *)&status_data;
+    uint8_t status_data[sizeof(sev_platform_status_cmd_buf)];
+    sev_platform_status_cmd_buf *status_data_buf = (sev_platform_status_cmd_buf *)&status_data;
     int cmd_ret = -1;
 
     std::string api_major_ver = "API_Major: xxx";
     std::string api_minor_ver = "API_Minor: xxx";
-    std::string build_id_ver  = "BuildID: xxx";
+    std::string build_id_ver  = "build_id: xxx";
 
     cmd_ret = sev_device.platform_status(status_data);
     if (cmd_ret != 0)
         return "";
 
     char major_buf[4], minor_buf[4], build_id_buf[4];       // +1 for Null char
-    sprintf(major_buf, "%d", status_data_buf->ApiMajor);
-    sprintf(minor_buf, "%d", status_data_buf->ApiMinor);
-    sprintf(build_id_buf, "%d", status_data_buf->BuildID);
+    sprintf(major_buf, "%d", status_data_buf->api_major);
+    sprintf(minor_buf, "%d", status_data_buf->api_minor);
+    sprintf(build_id_buf, "%d", status_data_buf->build_id);
     api_major_ver.replace(11, 3, major_buf);
     api_minor_ver.replace(11, 3, minor_buf);
     build_id_ver.replace(9, 3, build_id_buf);

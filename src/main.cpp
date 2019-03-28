@@ -51,8 +51,8 @@ char help_array[] =  "The following commands are supported:\n" \
                     "          uint8_t  build_id\n" \
                     "          uint32_t policy\n" \
                     "          uint32_t digest\n" \
-                    "          uint8_t mnonce[128/8]\n" \
-                    "          uint8_t gctx_tik[128/8]\n" \
+                    "          uint8_t  m_nonce[128/8]\n" \
+                    "          uint8_t  gctx_tik[128/8]\n" \
                     "  validate_cert_chain\n" \
                     "  generate_launch_blob\n" \
                     "      Input params:\n" \

@@ -128,15 +128,15 @@ int SEVDevice::pek_gen()
     return (int)cmd_ret;
 }
 
-bool SEVDevice::validate_pek_csr(SEV_CERT *pek_csr)
+bool SEVDevice::validate_pek_csr(sev_cert *pek_csr)
 {
-    if(pek_csr->Version     == 1                     &&
-       pek_csr->PubkeyUsage == SEVUsagePEK           &&
-       pek_csr->PubkeyAlgo  == SEVSigAlgoECDSASHA256 &&
-       pek_csr->Sig1Usage   == SEVUsageInvalid       &&
-       pek_csr->Sig1Algo    == SEVSigAlgoInvalid     &&
-       pek_csr->Sig2Usage   == SEVUsageInvalid       &&
-       pek_csr->Sig2Algo    == SEVSigAlgoInvalid) {
+    if(pek_csr->version       == 1                         &&
+       pek_csr->pub_key_usage == SEV_USAGE_PEK             &&
+       pek_csr->pub_key_algo  == SEV_SIG_ALGO_ECDSA_SHA256 &&
+       pek_csr->sig_1_usage   == SEV_USAGE_INVALID         &&
+       pek_csr->sig_1_algo    == SEV_SIG_ALGO_INVALID      &&
+       pek_csr->sig_2_usage   == SEV_USAGE_INVALID         &&
+       pek_csr->sig_2_algo    == SEV_SIG_ALGO_INVALID) {
         return true;
     }
     else {
@@ -144,7 +144,7 @@ bool SEVDevice::validate_pek_csr(SEV_CERT *pek_csr)
     }
 }
 
-int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, SEV_CERT *csr)
+int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
@@ -174,7 +174,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, SEV_CERT *csr)
             break;
 
         // Verify the CSR complies to API specification
-        memcpy(csr, (SEV_CERT*)data_buf->address, sizeof(SEV_CERT));
+        memcpy(csr, (sev_cert*)data_buf->address, sizeof(sev_cert));
         if(!validate_pek_csr(csr))
             break;
 
@@ -209,9 +209,9 @@ int SEVDevice::pdh_cert_export(uint8_t *data,
 
     do {
         data_buf->pdh_cert_address = (uint64_t)pdh_cert_mem;
-        data_buf->pdh_cert_len = sizeof(SEV_CERT);
+        data_buf->pdh_cert_len = sizeof(sev_cert);
         data_buf->cert_chain_address = (uint64_t)cert_chain_mem;
-        data_buf->cert_chain_len = sizeof(SEV_CERT_CHAIN_BUF);
+        data_buf->cert_chain_len = sizeof(sev_cert_chain_buf);
 
         // Send the command
         ioctl_ret = sev_ioctl(SEV_PDH_CERT_EXPORT, data_buf, &cmd_ret);
@@ -224,7 +224,7 @@ int SEVDevice::pdh_cert_export(uint8_t *data,
 }
 
 int SEVDevice::pek_cert_import(uint8_t *data,
-                               SEV_CERT *pek_csr,
+                               sev_cert *pek_csr,
                                std::string& oca_priv_key_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
@@ -233,7 +233,7 @@ int SEVDevice::pek_cert_import(uint8_t *data,
     sev_user_data_status status_data;  // Platform Status
 
     EVP_PKEY *oca_priv_key = NULL;
-    void *oca_cert = malloc(sizeof(SEV_CERT));
+    void *oca_cert = malloc(sizeof(sev_cert));
     if(!oca_cert)
         return SEV_RET_HWSEV_RET_PLATFORM;
 
@@ -250,24 +250,24 @@ int SEVDevice::pek_cert_import(uint8_t *data,
         if(cmd_ret != 0)
             break;
 
-        // Import the OCA pem file and turn it into an SEV_CERT
-        SEVCert cert_obj(*(SEV_CERT *)oca_cert);
+        // Import the OCA pem file and turn it into an sev_cert
+        SEVCert cert_obj(*(sev_cert *)oca_cert);
         if(!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key))
             break;
         if(!cert_obj.create_oca_cert(&oca_priv_key, status_data.api_major, status_data.api_minor))
             break;
-        memcpy(oca_cert, cert_obj.data(), sizeof(SEV_CERT)); // TODO, shouldn't need this?
-        // print_sev_cert_readable((SEV_CERT *)oca_cert);
+        memcpy(oca_cert, cert_obj.data(), sizeof(sev_cert)); // TODO, shouldn't need this?
+        // print_sev_cert_readable((sev_cert *)oca_cert);
 
         // Sign the PEK CSR with the OCA private key
         SEVCert CSRCert(*pek_csr);
-        CSRCert.sign_with_key(SEV_CERT_MAX_VERSION, SEVUsagePEK, SEVSigAlgoECDSASHA256,
-                              &oca_priv_key, SEVUsageOCA, SEVSigAlgoECDSASHA256);
+        CSRCert.sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_PEK, SEV_SIG_ALGO_ECDSA_SHA256,
+                              &oca_priv_key, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256);
 
         data_buf->pek_cert_address = (uint64_t)CSRCert.data();
-        data_buf->pek_cert_len = sizeof(SEV_CERT);
+        data_buf->pek_cert_len = sizeof(sev_cert);
         data_buf->oca_cert_address = (uint64_t)oca_cert;
-        data_buf->oca_cert_len = sizeof(SEV_CERT);
+        data_buf->oca_cert_len = sizeof(sev_cert);
 
         // Send the command
         ioctl_ret = sev_ioctl(SEV_PEK_CERT_IMPORT, data_buf, &cmd_ret);
@@ -321,8 +321,8 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
 static std::string display_build_info()
 {
     SEVDevice sev_device;
-    uint8_t status_data[sizeof(SEV_PLATFORM_STATUS_CMD_BUF)];
-    SEV_PLATFORM_STATUS_CMD_BUF *status_data_buf = (SEV_PLATFORM_STATUS_CMD_BUF *)&status_data;
+    uint8_t status_data[sizeof(sev_platform_status_cmd_buf)];
+    sev_platform_status_cmd_buf *status_data_buf = (sev_platform_status_cmd_buf *)&status_data;
     int cmd_ret = -1;
 
     std::string api_major_ver = "API_Major: xxx";
@@ -334,9 +334,9 @@ static std::string display_build_info()
         return "";
 
     char major_buf[4], minor_buf[4], build_id_buf[4];   // +1 for Null char
-    sprintf(major_buf, "%d", status_data_buf->ApiMajor);
-    sprintf(minor_buf, "%d", status_data_buf->ApiMinor);
-    sprintf(build_id_buf, "%d", status_data_buf->BuildID);
+    sprintf(major_buf, "%d", status_data_buf->api_major);
+    sprintf(minor_buf, "%d", status_data_buf->api_minor);
+    sprintf(build_id_buf, "%d", status_data_buf->build_id);
     api_major_ver.replace(11, 3, major_buf);
     api_minor_ver.replace(11, 3, minor_buf);
     build_id_ver.replace(9, 3, build_id_buf);
@@ -454,7 +454,7 @@ int SEVDevice::set_externally_owned(std::string& oca_priv_key_file)
     sev_user_data_status platform_status_data;
 
     int cmd_ret = SEV_RET_UNSUPPORTED;
-    void *PEKMem = malloc(sizeof(SEV_CERT));
+    void *PEKMem = malloc(sizeof(sev_cert));
 
     if(!PEKMem)
         return SEV_RET_HWSEV_RET_PLATFORM;
@@ -469,7 +469,7 @@ int SEVDevice::set_externally_owned(std::string& oca_priv_key_file)
         if (get_platform_owner(&platform_status_data) != PLATFORM_STATUS_OWNER_EXTERNAL) {
             // Get the CSR
             sev_user_data_pek_csr pek_csr_data;                  // pek_csr
-            SEV_CERT PEKcsr;
+            sev_cert PEKcsr;
             cmd_ret = pek_csr((uint8_t *)&pek_csr_data, PEKMem, &PEKcsr);
             if(cmd_ret != SEV_RET_SUCCESS)
                 break;

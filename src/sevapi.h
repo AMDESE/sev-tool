@@ -1,18 +1,18 @@
-//-----------------------------------------------------------------------------
-// Copyright 2018 by AMD Inc.  All rights reserved.
-//
-// This document contains proprietary, confidential information that
-// may be used, copied and/or disclosed only as authorized by a
-// valid licensing agreement with AMD Inc. This copyright
-// notice must be retained on all authorized copies.
-//
-// This code is provided "as is".  AMD Inc. makes, and
-// the end user receives, no warranties or conditions, express,
-// implied, statutory or otherwise, and AMD Inc.
-// specifically disclaims any implied warranties of merchantability,
-// non-infringement, or fitness for a particular purpose.
-//
-//-----------------------------------------------------------------------------
+/**************************************************************************
+ * Copyright 2018 Advanced Micro Devices, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **************************************************************************/
 
 #ifndef SEVAPI_H
 #define SEVAPI_H
@@ -20,6 +20,11 @@
 // This file puts in to C/C++ form the definitions from the SEV FW spec.
 // It should remain usable purely from C
 // All SEV API indices are based off of SEV API v0.17
+
+#if __cplusplus
+typedef bool _Bool;
+#endif
+
 
 #include <stdint.h>
 
@@ -180,12 +185,12 @@ typedef enum __attribute__((mode(QI))) SEV_ERROR_CODE
 // ------------------------------------------------------------ //
 
 // Chapter 2 - Summary of Keys
-typedef uint8_t AES128Key[128/8];
-typedef uint8_t HMACKey128[128/8];
-typedef uint8_t HMACSHA256[256/8];
-typedef uint8_t HMACSHA512[512/8];
-typedef uint8_t Nonce128[128/8];
-typedef uint8_t IV128[128/8];
+typedef uint8_t aes_128_key[128/8];
+typedef uint8_t hmac_key_128[128/8];
+typedef uint8_t hmac_sha_256[256/8];
+typedef uint8_t hmac_sha_512[512/8];
+typedef uint8_t nonce_128[128/8];
+typedef uint8_t iv_128[128/8];
 
 // -------------------------------------------------------------------------- //
 // -- Definition of API-defined Public Key Infrastructure (PKI) structures -- //
@@ -201,64 +206,64 @@ typedef uint8_t IV128[128/8];
 /**
  * SEV RSA Public key information.
  *
- * @ModulusSize - Size of modulus in bits.
- * @PubExp      - The public exponent of the public key.
- * @Modulus     - The modulus of the public key.
+ * @modulus_size - Size of modulus in bits.
+ * @pub_exp      - The public exponent of the public key.
+ * @modulus      - The modulus of the public key.
  */
-typedef struct __attribute__ ((__packed__)) SEV_RSA_PUBKEY
+typedef struct __attribute__ ((__packed__)) sev_rsa_pub_key_t
 {
-    uint32_t    ModulusSize;
-    uint8_t     PubExp[SEV_RSA_PUB_KEY_MAX_BITS/8];
-    uint8_t     Modulus[SEV_RSA_PUB_KEY_MAX_BITS/8];
-} SEV_RSA_PUBKEY;
+    uint32_t    modulus_size;
+    uint8_t     pub_exp[SEV_RSA_PUB_KEY_MAX_BITS/8];
+    uint8_t     modulus[SEV_RSA_PUB_KEY_MAX_BITS/8];
+} sev_rsa_pub_key;
 
 /**
  * SEV Elliptical Curve algorithm details.
  *
- * @SEVECInvalid - Invalid cipher size selected.
- * @SEVECP256    - 256 bit elliptical curve cipher.
- * @SEVECP384    - 384 bit elliptical curve cipher.
+ * @SEV_EC_INVALID - Invalid cipher size selected.
+ * @SEV_EC_P256    - 256 bit elliptical curve cipher.
+ * @SEV_EC_P384    - 384 bit elliptical curve cipher.
  */
 typedef enum __attribute__((mode(QI))) SEV_EC
 {
-    SEVECInvalid = 0,
-    SEVECP256    = 1,
-    SEVECP384    = 2,
+    SEV_EC_INVALID = 0,
+    SEV_EC_P256    = 1,
+    SEV_EC_P384    = 2,
 } SEV_EC;
 
 // Appendix C.3.2: Public Key Formats - ECDSA Public Key
 /**
  * SEV Elliptical Curve DSA algorithm details.
  *
- * @Curve - The SEV Elliptical curve ID.
- * @QX    - x component of the public point Q.
- * @QY    - y component of the public point Q.
- * @RMBZ  - RESERVED. Must be zero!
+ * @curve - The SEV Elliptical curve ID.
+ * @qx    - x component of the public point Q.
+ * @qy    - y component of the public point Q.
+ * @rmbz  - RESERVED. Must be zero!
  */
-typedef struct __attribute__ ((__packed__)) SEV_ECDSA_PUBKEY
+typedef struct __attribute__ ((__packed__)) sev_ecdsa_pub_key_t
 {
-    uint32_t    Curve;      // SEV_EC as a uint32_t
-    uint8_t     QX[SEV_ECDSA_PUB_KEY_MAX_BITS/8];
-    uint8_t     QY[SEV_ECDSA_PUB_KEY_MAX_BITS/8];
-    uint8_t     RMBZ[SEV_PUB_KEY_SIZE-2*SEV_ECDSA_PUB_KEY_MAX_BITS/8-sizeof(uint32_t)];
-} SEV_ECDSA_PUBKEY;
+    uint32_t    curve;      // SEV_EC as a uint32_t
+    uint8_t     qx[SEV_ECDSA_PUB_KEY_MAX_BITS/8];
+    uint8_t     qy[SEV_ECDSA_PUB_KEY_MAX_BITS/8];
+    uint8_t     rmbz[SEV_PUB_KEY_SIZE-2*SEV_ECDSA_PUB_KEY_MAX_BITS/8-sizeof(uint32_t)];
+} sev_ecdsa_pub_key;
 
 // Appendix C.3.3: Public Key Formats - ECDH Public Key
 /**
  * SEV Elliptical Curve Diffie Hellman Public Key details.
  *
- * @Curve - The SEV Elliptical curve ID.
- * @QX    - x component of the public point Q.
- * @QY    - y component of the public point Q.
- * @RMBZ  - RESERVED. Must be zero!
+ * @curve - The SEV Elliptical curve ID.
+ * @qx    - x component of the public point Q.
+ * @qy    - y component of the public point Q.
+ * @rmbz  - RESERVED. Must be zero!
  */
-typedef struct __attribute__ ((__packed__)) SEV_ECDH_PUBKEY
+typedef struct __attribute__ ((__packed__)) sev_ecdh_pub_key_t
 {
-    uint32_t    Curve;      // SEV_EC as a uint32_t
-    uint8_t     QX[SEV_ECDH_PUB_KEY_MAX_BITS/8];
-    uint8_t     QY[SEV_ECDH_PUB_KEY_MAX_BITS/8];
-    uint8_t     RMBZ[SEV_PUB_KEY_SIZE-2*SEV_ECDH_PUB_KEY_MAX_BITS/8-sizeof(uint32_t)];
-} SEV_ECDH_PUBKEY;
+    uint32_t    curve;      // SEV_EC as a uint32_t
+    uint8_t     qx[SEV_ECDH_PUB_KEY_MAX_BITS/8];
+    uint8_t     qy[SEV_ECDH_PUB_KEY_MAX_BITS/8];
+    uint8_t     rmbz[SEV_PUB_KEY_SIZE-2*SEV_ECDH_PUB_KEY_MAX_BITS/8-sizeof(uint32_t)];
+} sev_ecdh_pub_key;
 
 // Appendix C.4: Public Key Formats
 /**
@@ -266,10 +271,10 @@ typedef struct __attribute__ ((__packed__)) SEV_ECDH_PUBKEY
  */
 typedef union
 {
-    SEV_RSA_PUBKEY      RSA;
-    SEV_ECDSA_PUBKEY    ECDSA;
-    SEV_ECDH_PUBKEY     ECDH;
-} SEV_PUBKEY;
+    sev_rsa_pub_key     rsa;
+    sev_ecdsa_pub_key   ecdsa;
+    sev_ecdh_pub_key    ecdh;
+} sev_pubkey;
 
 // Appendix C.4: Signature Formats
 /**
@@ -285,34 +290,34 @@ typedef union
  *
  * @S - Signature bits.
  */
-typedef struct __attribute__ ((__packed__)) SEV_RSA_SIG
+typedef struct __attribute__ ((__packed__)) sev_rsa_sig_t
 {
-    uint8_t     S[SEV_RSA_SIG_MAX_BITS/8];
-} SEV_RSA_SIG;
+    uint8_t     s[SEV_RSA_SIG_MAX_BITS/8];
+} sev_rsa_sig;
 
 // Appendix C.4.2: ECDSA Signature
 /**
  * SEV Elliptical Curve Signature data.
  *
- * @R    - R component of the signature.
- * @S    - S component of the signature.
- * @RMBZ - RESERVED. Must be zero!
+ * @r    - R component of the signature.
+ * @s    - S component of the signature.
+ * @rmbz - RESERVED. Must be zero!
  */
-typedef struct __attribute__ ((__packed__)) SEV_ECDSA_SIG
+typedef struct __attribute__ ((__packed__)) sev_ecdsa_sig_t
 {
-    uint8_t     R[SEV_ECDSA_SIG_COMP_MAX_BITS/8];
-    uint8_t     S[SEV_ECDSA_SIG_COMP_MAX_BITS/8];
-    uint8_t     RMBZ[SEV_SIG_SIZE-2*SEV_ECDSA_SIG_COMP_MAX_BITS/8];
-} SEV_ECDSA_SIG;
+    uint8_t     r[SEV_ECDSA_SIG_COMP_MAX_BITS/8];
+    uint8_t     s[SEV_ECDSA_SIG_COMP_MAX_BITS/8];
+    uint8_t     rmbz[SEV_SIG_SIZE-2*SEV_ECDSA_SIG_COMP_MAX_BITS/8];
+} sev_ecdsa_sig;
 
 /**
  * SEV Signature may be RSA or ECDSA.
  */
 typedef union
 {
-    SEV_RSA_SIG     RSA;
-    SEV_ECDSA_SIG   ECDSA;
-} SEV_SIG;
+    sev_rsa_sig     rsa;
+    sev_ecdsa_sig   ecdsa;
+} sev_sig;
 
 // Appendix C.1: USAGE Enumeration
 /**
@@ -320,13 +325,13 @@ typedef union
  */
 typedef enum __attribute__((mode(HI))) SEV_USAGE
 {
-    SEVUsageARK     = 0x0,
-    SEVUsageASK     = 0x13,
-    SEVUsageInvalid = 0x1000,
-    SEVUsageOCA     = 0x1001,
-    SEVUsagePEK     = 0x1002,
-    SEVUsagePDH     = 0x1003,
-    SEVUsageCEK     = 0x1004,
+    SEV_USAGE_ARK     = 0x0,
+    SEV_USAGE_ASK     = 0x13,
+    SEV_USAGE_INVALID = 0x1000,
+    SEV_USAGE_OCA     = 0x1001,
+    SEV_USAGE_PEK     = 0x1002,
+    SEV_USAGE_PDH     = 0x1003,
+    SEV_USAGE_CEK     = 0x1004,
 } SEV_USAGE;
 
 // Appendix C.1: ALGO Enumeration
@@ -335,13 +340,13 @@ typedef enum __attribute__((mode(HI))) SEV_USAGE
  */
 typedef enum __attribute__((mode(HI))) SEV_SIG_ALGO
 {
-    SEVSigAlgoInvalid       = 0x0,
-    SEVSigAlgoRSASHA256     = 0x1,
-    SEVSigAlgoECDSASHA256   = 0x2,
-    SEVSigAlgoECDHSHA256    = 0x3,
-    SEVSigAlgoRSASHA384     = 0x101,
-    SEVSigAlgoECDSASHA384   = 0x102,
-    SEVSigAlgoECDHSHA384    = 0x103,
+    SEV_SIG_ALGO_INVALID       = 0x0,
+    SEV_SIG_ALGO_RSA_SHA256    = 0x1,
+    SEV_SIG_ALGO_ECDSA_SHA256  = 0x2,
+    SEV_SIG_ALGO_ECDH_SHA256   = 0x3,
+    SEV_SIG_ALGO_RSA_SHA384    = 0x101,
+    SEV_SIG_ALGO_ECDSA_SHA384  = 0x102,
+    SEV_SIG_ALGO_ECDH_SHA384   = 0x103,
 } SEV_SIG_ALGO;
 
 #define SEV_CERT_MAX_VERSION    1       // Max supported version
@@ -351,87 +356,87 @@ typedef enum __attribute__((mode(HI))) SEV_SIG_ALGO
 /**
  * SEV Certificate format.
  *
- * @Version     - Certificate version, set to 01h.
- * @ApiMajor    - If PEK, set to API major version, otherwise zero.
- * @ApiMinor    - If PEK, set to API minor version, otherwise zero.
- * @Reserved0   - RESERVED, Must be zero!
- * @Reserved1   - RESERVED, Must be zero!
- * @PubkeyUsage - Public key usage              (SEV_SIG_USAGE).
- * @PubkeyAlgo  - Public key algorithm          (SEV_SIG_ALGO).
- * @Pubkey      - Public Key.
- * @Sig1Usage   - Key usage of SIG1 signing key (SEV_SIG_USAGE).
- * @Sig1Algo    - First signature algorithm     (SEV_SIG_ALGO).
- * @Sig1        - First signature.
- * @Sig2Usage   - Key usage of SIG2 signing key (SEV_SIG_USAGE).
- * @Sig2Algo    - Second signature algorithm    (SEV_SIG_ALGO).
- * @Sig2        - Second signature
+ * @version       - Certificate version, set to 01h.
+ * @api_major     - If PEK, set to API major version, otherwise zero.
+ * @api_minor     - If PEK, set to API minor version, otherwise zero.
+ * @reserved_0    - RESERVED, Must be zero!
+ * @reserved_1    - RESERVED, Must be zero!
+ * @pub_key_usage - Public key usage              (SEV_SIG_USAGE).
+ * @pub_key_algo  - Public key algorithm          (SEV_SIG_ALGO).
+ * @pub_key       - Public Key.
+ * @sig_1_usage   - Key usage of SIG1 signing key (SEV_SIG_USAGE).
+ * @sig_1_algo    - First signature algorithm     (SEV_SIG_ALGO).
+ * @sig_1         - First signature.
+ * @sig_2_usage   - Key usage of SIG2 signing key (SEV_SIG_USAGE).
+ * @sig_2_algo    - Second signature algorithm    (SEV_SIG_ALGO).
+ * @sig_2         - Second signature
  */
-typedef struct __attribute__ ((__packed__)) SEV_CERT
+typedef struct __attribute__ ((__packed__)) sev_cert_t
 {
-    uint32_t    Version;        // Certificate Version. Should be 1.
-    uint8_t     ApiMajor;       // Version of API generating the
-    uint8_t     ApiMinor;       // certificate. Unused during validation.
-    uint8_t     Reserved0;
-    uint8_t     Reserved1;
-    uint32_t    PubkeyUsage;    // SEV_USAGE
-    uint32_t    PubkeyAlgo;     // SEV_SIG_ALGO
-    SEV_PUBKEY  Pubkey;
-    uint32_t    Sig1Usage;      // SEV_USAGE
-    uint32_t    Sig1Algo;       // SEV_SIG_ALGO
-    SEV_SIG     Sig1;
-    uint32_t    Sig2Usage;      // SEV_USAGE
-    uint32_t    Sig2Algo;       // SEV_SIG_ALGO
-    SEV_SIG     Sig2;
-} SEV_CERT;
+    uint32_t     version;           // Certificate Version. Should be 1.
+    uint8_t      api_major;         // Version of API generating the
+    uint8_t      api_minor;         // certificate. Unused during validation.
+    uint8_t      reserved_0;
+    uint8_t      reserved_1;
+    uint32_t     pub_key_usage;     // SEV_USAGE
+    uint32_t     pub_key_algo;      // SEV_SIG_ALGO
+    sev_pubkey   pub_key;
+    uint32_t     sig_1_usage;       // SEV_USAGE
+    uint32_t     sig_1_algo;        // SEV_SIG_ALGO
+    sev_sig      sig_1;
+    uint32_t     sig_2_usage;       // SEV_USAGE
+    uint32_t     sig_2_algo;        // SEV_SIG_ALGO
+    sev_sig      sig_2;
+} sev_cert;
 
 // Macros used for comparing individual certificates from chain
-#define PEKinCertChain(x) (&((SEV_CERT_CHAIN_BUF *)x)->PEKCert)
-#define OCAinCertChain(x) (&((SEV_CERT_CHAIN_BUF *)x)->OCACert)
-#define CEKinCertChain(x) (&((SEV_CERT_CHAIN_BUF *)x)->CEKCert)
+#define PEK_IN_CERT_CHAIN(x) (&((sev_cert_chain_buf *)x)->pek_cert)
+#define OCA_IN_CERT_CHAIN(x) (&((sev_cert_chain_buf *)x)->oca_cert)
+#define CEK_IN_CERT_CHAIN(x) (&((sev_cert_chain_buf *)x)->cek_cert)
 
 
 // Appendix B.1: Certificate Format
 typedef union
 {
-    uint8_t     Short[2048/8];
-    uint8_t     Long[4096/8];
-} AMD_CERT_PUBEXP;
+    uint8_t     short_len[2048/8];
+    uint8_t     long_len[4096/8];
+} amd_cert_pub_exp;
 
 typedef union
 {
-    uint8_t     Short[2048/8];
-    uint8_t     Long[4096/8];
-} AMD_CERT_MOD;
+    uint8_t     short_len[2048/8];
+    uint8_t     long_len[4096/8];
+} amd_cert_mod;
 
 typedef union
 {
-    uint8_t     Short[2048/8];
-    uint8_t     Long[4096/8];
-} AMD_CERT_SIG;
+    uint8_t     short_len[2048/8];
+    uint8_t     long_len[4096/8];
+} amd_cert_sig;
 
 typedef enum __attribute__((mode(QI))) AMD_SIG_USAGE
 {
-    AMDUsageARK     = 0x00,
-    AMDUsageASK     = 0x13,
+    AMD_USAGE_ARK  = 0x00,
+    AMD_USAGE_ASK  = 0x13,
 } AMD_SIG_USAGE;
 
 // Appendix B.1: AMD Signing Key Certificate Format
-typedef struct __attribute__ ((__packed__)) AMD_CERT
+typedef struct __attribute__ ((__packed__)) amd_cert_t
 {
-    uint32_t    Version;        // Certificate Version. Should be 1.
-    uint64_t    KeyID0;         // The unique ID for this key
-    uint64_t    KeyID1;
-    uint64_t    CertifyingID0;  // The unique ID for the key that signed this cert.
-    uint64_t    CertifyingID1;  // If this cert is self-signed, then equals KEY_ID field.
-    uint32_t    KeyUsage;       // AMD_SIG_USAGE
-    uint64_t    Reserved0;
-    uint64_t    Reserved1;
-    uint32_t    PubExpSize;     // Size of public exponent in bits. Must be 2048/4096.
-    uint32_t    ModulusSize;    // Size of modulus in bits. Must be 2048/4096.
-    AMD_CERT_PUBEXP PubExp;     // Public exponent of this key. Size is PubExpSize.
-    AMD_CERT_MOD    Modulus;    // Public modulus of this key. Size is ModulusSize.
-    AMD_CERT_SIG    Sig;        // Public signature of this key. Size is ModulusSize.
-} AMD_CERT;
+    uint32_t         version;           // Certificate Version. Should be 1.
+    uint64_t         key_id_0;          // The unique ID for this key
+    uint64_t         key_id_1;
+    uint64_t         certifying_id_0;   // The unique ID for the key that signed this cert.
+    uint64_t         certifying_id_1;   // If this cert is self-signed, then equals KEY_ID field.
+    uint32_t         key_usage;         // AMD_SIG_USAGE
+    uint64_t         reserved_0;
+    uint64_t         reserved_1;
+    uint32_t         pub_exp_size;      // Size of public exponent in bits. Must be 2048/4096.
+    uint32_t         modulus_size;      // Size of modulus in bits. Must be 2048/4096.
+    amd_cert_pub_exp pub_exp;           // Public exponent of this key. Size is pub_exp_size.
+    amd_cert_mod     modulus;           // Public modulus of this key. Size is modulus_size.
+    amd_cert_sig     sig;               // Public signature of this key. Size is modulus_size.
+} amd_cert;
 
 
 // -------------------------------------------------------------------------- //
@@ -511,78 +516,78 @@ enum SEV_PLATFORM_STATUS_OWNER
 
 /**
  * Transport encryption and integrity keys
- * (See SEV_SESSION_BUF)
+ * (See sev_session_buf)
  *
  * @TEK - Transport Encryption Key.
  * @TIK - Transport Integrity Key.
  */
-typedef struct __attribute__ ((__packed__)) TEKTIK
+typedef struct __attribute__ ((__packed__)) tek_tik_t
 {
-    AES128Key   TEK;
-    AES128Key   TIK;
-} TEKTIK;
+    aes_128_key   tek;
+    aes_128_key   tik;
+} tek_tik;
 
 /**
  * LAUNCH_START/SEND_START/RECEIVE_START Session Data Buffer
  *
- * @Nonce     - An arbitrary 128 bit number.
- * @WrapTK    - The SEV transport encryption and integrity keys.
- * @WrapIV    - 128 bit initializer vector.
- * @WrapMAC   - Session hash message authentication code.
- * @PolicyMAC - Policy hash message authentication code.
+ * @nonce      - An arbitrary 128 bit number.
+ * @wrap_tk    - The SEV transport encryption and integrity keys.
+ * @wrap_iv    - 128 bit initializer vector.
+ * @wrap_mac   - Session hash message authentication code.
+ * @policy_mac - Policy hash message authentication code.
  */
-typedef struct __attribute__ ((__packed__)) SEV_SESSION_BUF
+typedef struct __attribute__ ((__packed__)) sev_session_buf_t
 {
-    Nonce128    Nonce;
-    TEKTIK      WrapTK;
-    IV128       WrapIV;
-    HMACSHA256  WrapMAC;
-    HMACSHA256  PolicyMAC;
-} SEV_SESSION_BUF;
+    nonce_128       nonce;
+    tek_tik         wrap_tk;
+    iv_128          wrap_iv;
+    hmac_sha_256    wrap_mac;
+    hmac_sha_256    policy_mac;
+} sev_session_buf;
 
 /**
  * LAUNCH_MEASURE Measurement buffer.
  *
- * @Measurement - 256 bit hash message authentication code.
- * @MNonce      - An arbitrary 128 bit number.
+ * @measurement - 256 bit hash message authentication code.
+ * @m_nonce     - An arbitrary 128 bit number.
  */
-typedef struct __attribute__ ((__packed__)) SEV_MEASURE_BUF
+typedef struct __attribute__ ((__packed__)) sev_measure_buf_t
 {
-    HMACSHA256  Measurement;
-    Nonce128    MNonce;
-} SEV_MEASURE_BUF;
+    hmac_sha_256    measurement;
+    nonce_128       m_nonce;
+} sev_measure_buf;
 
 /**
  * LAUNCH_SECRET, SEND_UPDATE_DATA/VMSA, RECEIVE_UPDATE_DATA/VMSA
  * HDR Buffer
  */
-typedef struct __attribute__ ((__packed__)) SEV_HDR_BUF
+typedef struct __attribute__ ((__packed__)) sev_hdr_buf_t
 {
-    uint32_t    Flags;
-    IV128       IV;
-    HMACSHA256  MAC;
-} SEV_HDR_BUF;
+    uint32_t        flags;
+    iv_128          iv;
+    hmac_sha_256    mac;
+} sev_hdr_buf;
 
 /**
  * PDH_CERT_EXPORT/SEND_START Platform Certificate(s) Chain Buffer
  *
- * @PEKCert - Platform Endorsement Key certificate.
- * @OCACert - Owner Certificate Authority certificate.
- * @CEKCert - Chip Endorsement Key certificate.
+ * @pek_cert - Platform Endorsement Key certificate.
+ * @oca_cert - Owner Certificate Authority certificate.
+ * @cek_cert - Chip Endorsement Key certificate.
  */
-typedef struct __attribute__ ((__packed__)) SEV_CERT_CHAIN_BUF
+typedef struct __attribute__ ((__packed__)) sev_cert_chain_buf_t
 {
-    SEV_CERT    PEKCert;
-    SEV_CERT    OCACert;
-    SEV_CERT    CEKCert;
-} SEV_CERT_CHAIN_BUF;
+    sev_cert    pek_cert;
+    sev_cert    oca_cert;
+    sev_cert    cek_cert;
+} sev_cert_chain_buf;
 
 // SEND_START AMD Certificates Buffer
-typedef struct __attribute__ ((__packed__)) AMD_CERT_CHAIN_BUF
+typedef struct __attribute__ ((__packed__)) amd_cert_chain_buf_t
 {
-    AMD_CERT    ASKCert;
-    AMD_CERT    ARKCert;
-} AMD_CERT_CHAIN_BUF;
+    amd_cert    ask_cert;
+    amd_cert    ark_cert;
+} amd_cert_chain_buf;
 
 // -------------------------------------------------------------------------- //
 // --- Definition of the command buffers for each of the SEV API commands --- //
@@ -592,320 +597,320 @@ typedef struct __attribute__ ((__packed__)) AMD_CERT_CHAIN_BUF
 /**
  * SEV initialization command buffer
  *
- * @Options     - An SEV_OPTIONS enum value
- * @Reserved    - Reserved. Must be 0.
- * @TMRPhysAddr - System physical address to memory region donated by
+ * @options     - An SEV_OPTIONS enum value
+ * @reserved    - Reserved. Must be 0.
+ * @tmr_phys_addr - System physical address to memory region donated by
  *                Hypervisor for SEV-ES operations. Ignored if SEV-ES
  *                is disabled.
- * @TMRLength   - Length of the memory. Ignored if SEV-ES disabled.
+ * @tmr_length   - Length of the memory. Ignored if SEV-ES disabled.
  */
-typedef struct __attribute__ ((__packed__)) SEV_INIT_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_init_cmd_buf_t
 {
-    uint32_t    Options;        // enum SEV_OPTIONS
-    uint32_t    Reserved;
-    uint64_t    TMRPhysAddr;    // 1MB alligned. Ignored if CONFIG_ES is 0
-    uint32_t    TMRLength;      // Ignored if CONFIG_ES is 0
-} SEV_INIT_CMD_BUF;
+    uint32_t    options;        // enum SEV_OPTIONS
+    uint32_t    reserved;
+    uint64_t    tmr_phys_addr;  // 1MB alligned. Ignored if CONFIG_ES is 0
+    uint32_t    tmr_length;     // Ignored if CONFIG_ES is 0
+} sev_init_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_SHUTDOWN_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_shutdown_cmd_buf_t
 {
-} SEV_SHUTDOWN_CMD_BUF;
+} sev_shutdown_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_PLATFORM_RESET_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_platform_reset_cmd_buf_t
 {
-} SEV_PLATFORM_RESET_CMD_BUF;
+} sev_platform_reset_cmd_buf;
 
 /**
  * SEV Platform Status command buffer.
  *
- * @ApiMajor             - Major API version
- * @ApiMinor             - Minor API version
- * @CurrentPlatformState - Current platform state (SEV_PLATFORM_STATE)
- * @Owner                - Defines the owner: 0=Self-owned; 1=Externally owned
- * @Config               - SEV-ES is initialized for the platform when set.
- *                         Disabled for all guests when not set.
- * @Reserved             - Reserved. Set to zero.
- * @BuildID              - Firmware Build ID for this API version.
- * @GuestCount           - Number of valid guests maintained by the firmware.
+ * @api_major              - Major API version
+ * @api_minor              - Minor API version
+ * @current_platform_state - Current platform state (SEV_PLATFORM_STATE)
+ * @owner                  - Defines the owner: 0=Self-owned; 1=Externally owned
+ * @config                 - SEV-ES is initialized for the platform when set.
+ *                           Disabled for all guests when not set.
+ * @reserved               - Reserved. Set to zero.
+ * @build_id               - Firmware Build ID for this API version.
+ * @guest_count            - Number of valid guests maintained by the firmware.
  */
-typedef struct __attribute__ ((__packed__)) SEV_PLATFORM_STATUS_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_platform_status_cmd_buf_t
 {
-    uint8_t     ApiMajor;
-    uint8_t     ApiMinor;
-    uint8_t     CurrentPlatformState;   // SEV_PLATFORM_STATE
-    uint8_t     Owner;
-    uint16_t    Config;        // enum SEV_CONFIG
-    uint8_t     Reserved;
-    uint8_t     BuildID;
-    uint32_t    GuestCount;
-} SEV_PLATFORM_STATUS_CMD_BUF;
+    uint8_t     api_major;
+    uint8_t     api_minor;
+    uint8_t     current_platform_state; // SEV_PLATFORM_STATE
+    uint8_t     owner;
+    uint16_t    config;                 // enum SEV_CONFIG
+    uint8_t     reserved;
+    uint8_t     build_id;
+    uint32_t    guest_count;
+} sev_platform_status_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_PEK_GEN_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_pek_gen_cmd_buf_t
 {
-} SEV_PEK_GEN_CMD_BUF;
+} sev_pek_gen_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_PEK_CSR_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_pek_csr_cmd_buf_t
 {
-    uint64_t    CSRPAddr;
-    uint32_t    CSRLength;
-} SEV_PEK_CSR_CMD_BUF;
+    uint64_t    csr_p_addr;
+    uint32_t    csr_length;
+} sev_pek_csr_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_PEK_CERT_IMPORT_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_pek_cert_import_cmd_buf_t
 {
-    uint64_t    PEKCertPAddr;
-    uint32_t    PEKCertLength;
-    uint32_t    Reserved;
-    uint64_t    OCACertPAddr;
-    uint32_t    OCACertLength;
-} SEV_PEK_CERT_IMPORT_CMD_BUF;
+    uint64_t    pek_cert_p_addr;
+    uint32_t    pek_cert_length;
+    uint32_t    reserved;
+    uint64_t    oca_cert_p_addr;
+    uint32_t    oca_cert_length;
+} sev_pek_cert_import_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_PDH_GEN_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_pdh_gen_cmd_buf_t
 {
-} SEV_PDH_GEN_CMD_BUF;
+} sev_pdh_gen_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_PDH_CERT_EXPORT_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_pdh_cert_export_cmd_buf_t
 {
-    uint64_t    PDHCertPAddr;   // SEV_CERT
-    uint32_t    PDHCertLength;
-    uint32_t    Reserved;
-    uint64_t    CertsPAddr;     // SEV_CERT_CHAIN_BUF
-    uint32_t    CertsLength;
-} SEV_PDH_CERT_EXPORT_CMD_BUF;
+    uint64_t    pdh_cert_p_addr;    // sev_cert
+    uint32_t    pdh_cert_length;
+    uint32_t    reserved;
+    uint64_t    certs_p_addr;       // sev_cert_chain_buf
+    uint32_t    certs_length;
+} sev_pdh_cert_export_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_DOWNLOAD_FIRMWARE_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_download_firmware_cmd_buf_t
 {
-    uint64_t    FWPAddr;
-    uint32_t    FWLength;
-} SEV_DOWNLOAD_FIRMWARE_CMD_BUF;
+    uint64_t    fw_p_addr;
+    uint32_t    fw_length;
+} sev_download_firmware_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_GET_ID_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_get_id_cmd_buf_t
 {
-    uint64_t    IDPAddr;
-    uint32_t    IDLength;
-} SEV_GET_ID_CMD_BUF;
+    uint64_t    id_p_addr;
+    uint32_t    id_length;
+} sev_get_id_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_INIT_EX_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_init_ex_cmd_buf_t
 {
-    uint32_t    Length;         // Must be 0x24
-    uint32_t    Options;        // enum SEV_OPTIONS
-    uint64_t    TMRPhysAddr;    // 1MB alligned. Ignored if CONFIG_ES is 0
-    uint32_t    TMRLength;      // Ignored if CONFIG_ES is 0
-    uint32_t    Reserved;
-    uint64_t    NVPhysAddr;
-    uint32_t    NVLength;       // Must be 32KB
-} SEV_INIT_EX_CMD_BUF;
+    uint32_t    length;             // Must be 0x24
+    uint32_t    options;            // enum SEV_OPTIONS
+    uint64_t    tmr_phys_addr;      // 1MB alligned. Ignored if CONFIG_ES is 0
+    uint32_t    tmr_length;         // Ignored if CONFIG_ES is 0
+    uint32_t    reserved;
+    uint64_t    nv_phys_addr;
+    uint32_t    nv_length;          // Must be 32KB
+} sev_init_ex_cmd_buf;
 
 // Chapter 6: Guest Management API
-typedef struct __attribute__ ((__packed__)) SEV_LAUNCH_START_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_launch_start_cmd_buf_t
 {
-    uint32_t    Handle;
-    SEV_POLICY  Policy;         // SEV_POLICY
-    uint64_t    GDHCertPAddr;   // SEV_CERT
-    uint32_t    GDHCertLen;
-    uint32_t    Reserved;
-    uint64_t    SessionPAddr;   // SEV_SESSION_BUF
-    uint32_t    SessionLen;
-} SEV_LAUNCH_START_CMD_BUF;
+    uint32_t    handle;
+    SEV_POLICY  policy;             // SEV_POLICY
+    uint64_t    gdh_cert_p_addr;    // sev_cert
+    uint32_t    gdh_cert_len;
+    uint32_t    reserved;
+    uint64_t    session_p_addr;     // sev_session_buf
+    uint32_t    session_l_en;
+} sev_launch_start_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_LAUNCH_UPDATE_DATA_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_launch_update_data_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Reserved;
-    uint64_t    DataPAddr;
-    uint32_t    DataLen;
-} SEV_LAUNCH_UPDATE_DATA_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    reserved;
+    uint64_t    data_p_addr;
+    uint32_t    data_len;
+} sev_launch_update_data_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_LAUNCH_UPDATE_VMSA_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_launch_update_vmsa_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Reserved;
-    uint64_t    VMSAPAddr;
-    uint32_t    VMSALen;
-} SEV_LAUNCH_UPDATE_VMSA_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    reserved;
+    uint64_t    vmsa_p_addr;
+    uint32_t    vmsa_len;
+} sev_launch_update_vmsa_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_LAUNCH_MEASURE_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_launch_measure_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Reserved;
-    uint64_t    MeasurePAddr;
-    uint32_t    MeasureLen;
-} SEV_LAUNCH_MEASURE_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    reserved;
+    uint64_t    measure_p_addr;
+    uint32_t    measure_len;
+} sev_launch_measure_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_LAUNCH_SECRET_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_launch_secret_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Reserved0;
-    uint64_t    HdrPAddr;       // SEV_HDR_BUF
-    uint32_t    HdrLen;
-    uint32_t    Reserved1;
-    uint64_t    GuestPAddr;
-    uint32_t    GuestLen;
-    uint32_t    Reserved2;
-    uint64_t    TransPAddr;
-    uint32_t    TransLen;
-} SEV_LAUNCH_SECRET_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    reserved_0;
+    uint64_t    hdr_p_addr;         // sev_hdr_buf
+    uint32_t    hdr_len;
+    uint32_t    reserved_1;
+    uint64_t    guest_p_addr;
+    uint32_t    guest_len;
+    uint32_t    reserved_2;
+    uint64_t    trans_p_addr;
+    uint32_t    trans_len;
+} sev_launch_secret_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_LAUNCH_FINISH_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_launch_finish_cmd_buf_t
 {
-    uint32_t    Handle;
-} SEV_LAUNCH_FINISH_CMD_BUF;
+    uint32_t    handle;
+} sev_launch_finish_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_SEND_START_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_send_start_cmd_buf_t
 {
-    uint32_t    Handle;
-    SEV_POLICY  Policy;
-    uint64_t    PDHCertPAddr;   // SEV_CERT
-    uint32_t    PDHCertLen;
-    uint32_t    Reserved0;
-    uint64_t    PlatCertPAddr;  // SEV_CERT_CHAIN_BUF
-    uint32_t    PlatCertLen;
-    uint32_t    Reserved1;
-    uint64_t    AMDCertPAddr;
-    uint32_t    AMDCertLen;
-    uint32_t    Reserved2;
-    uint64_t    SessionPAddr;   // SEV_SESSION_BUF
-    uint32_t    SessionLen;
-} SEV_SEND_START_CMD_BUF;
+    uint32_t    handle;
+    SEV_POLICY  policy;
+    uint64_t    pdh_cert_p_addr;    // sev_cert
+    uint32_t    pdh_cert_len;
+    uint32_t    reserved_0;
+    uint64_t    plat_cert_p_addr;   // sev_cert_chain_buf
+    uint32_t    plat_cert_len;
+    uint32_t    reserved_1;
+    uint64_t    amd_cert_p_addr;
+    uint32_t    amd_cert_len;
+    uint32_t    reserved_2;
+    uint64_t    session_p_addr;     // sev_session_buf
+    uint32_t    session_len;
+} sev_send_start_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_SEND_UPDATE_DATA_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_send_update_data_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Reserved0;
-    uint64_t    HdrPAddr;       // SEV_HDR_BUF
-    uint32_t    HdrLen;
-    uint32_t    Reserved1;
-    uint64_t    GuestPAddr;
-    uint32_t    GuestLen;
-    uint32_t    Reserved2;
-    uint64_t    TransPAddr;
-    uint32_t    TransLen;
-} SEV_SEND_UPDATE_DATA_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    reserved_0;
+    uint64_t    hdr_p_addr;         // sev_hdr_buf
+    uint32_t    hdr_len;
+    uint32_t    reserved_1;
+    uint64_t    guest_p_addr;
+    uint32_t    guest_len;
+    uint32_t    reserved_2;
+    uint64_t    trans_p_addr;
+    uint32_t    trans_len;
+} sev_send_update_data_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_SEND_UPDATE_VMSA_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_send_update_vmsa_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Reserved0;
-    uint64_t    HdrPAddr;       // SEV_HDR_BUF
-    uint32_t    HdrLen;
-    uint32_t    Reserved1;
-    uint64_t    GuestPAddr;
-    uint32_t    GuestLen;
-    uint32_t    Reserved2;
-    uint64_t    TransPAddr;
-    uint32_t    TransLen;
-} SEV_SEND_UPDATE_VMSA_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    reserved_0;
+    uint64_t    hdr_p_addr;         // sev_hdr_buf
+    uint32_t    hdr_len;
+    uint32_t    reserved_1;
+    uint64_t    guest_p_addr;
+    uint32_t    guest_len;
+    uint32_t    reserved_2;
+    uint64_t    trans_p_addr;
+    uint32_t    trans_len;
+} sev_send_update_vmsa_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_SEND_FINISH_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_send_finish_cmd_buf_t
 {
-    uint32_t    Handle;
-} SEV_SEND_FINISH_CMD_BUF;
+    uint32_t    handle;
+} sev_send_finish_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_RECEIVE_START_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_receive_start_cmd_buf_t
 {
-    uint32_t    Handle;
-    SEV_POLICY  Policy;
-    uint64_t    PDHCertPAddr;   // SEV_CERT
-    uint32_t    PDHCertLen;
-    uint32_t    Reserved;
-    uint64_t    SessionPAddr;   // SEV_SESSION_BUF
-    uint32_t    SessionLen;
-} SEV_RECEIVE_START_CMD_BUF;
+    uint32_t    handle;
+    SEV_POLICY  policy;
+    uint64_t    pdh_cert_p_addr;    // sev_cert
+    uint32_t    pdh_cert_len;
+    uint32_t    reserved;
+    uint64_t    session_p_addr;     // sev_session_buf
+    uint32_t    session_len;
+} sev_receive_start_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_RECEIVE_UPDATE_DATA_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_receive_update_data_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Reserved0;
-    uint64_t    HdrPAddr;       // SEV_HDR_BUF
-    uint32_t    HdrLen;
-    uint32_t    Reserved1;
-    uint64_t    GuestPAddr;
-    uint32_t    GuestLen;
-    uint32_t    Reserved2;
-    uint64_t    TransPAddr;
-    uint32_t    TransLen;
-} SEV_RECEIVE_UPDATE_DATA_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    reserved_0;
+    uint64_t    hdr_p_addr;         // sev_hdr_buf
+    uint32_t    hdr_len;
+    uint32_t    reserved_1;
+    uint64_t    guest_p_addr;
+    uint32_t    guest_len;
+    uint32_t    reserved_2;
+    uint64_t    trans_p_addr;
+    uint32_t    trans_len;
+} sev_receive_update_data_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_RECEIVE_UPDATE_VMSA_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_receive_update_vmsa_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Reserved0;
-    uint64_t    HdrPAddr;       // SEV_HDR_BUF
-    uint32_t    HdrLen;
-    uint32_t    Reserved1;
-    uint64_t    GuestPAddr;
-    uint32_t    GuestLen;
-    uint32_t    Reserved2;
-    uint64_t    TransPAddr;
-    uint32_t    TransLen;
-} SEV_RECEIVE_UPDATE_VMSA_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    reserved_0;
+    uint64_t    hdr_p_addr;         // sev_hdr_buf
+    uint32_t    hdr_len;
+    uint32_t    reserved_1;
+    uint64_t    guest_p_addr;
+    uint32_t    guest_len;
+    uint32_t    reserved_2;
+    uint64_t    trans_p_addr;
+    uint32_t    trans_len;
+} sev_receive_update_vmsa_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_RECEIVE_FINISH_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_receive_finish_cmd_buf_t
 {
-    uint32_t    Handle;
-} SEV_RECEIVE_FINISH_CMD_BUF;
+    uint32_t    handle;
+} sev_receive_finish_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_GUEST_STATUS_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_guest_status_cmd_buf_t
 {
-    uint32_t    Handle;
-    SEV_POLICY  Policy;         // SEV_POLICY
-    uint32_t    ASID;
-    uint8_t     State;          // SEV_GUEST_STATE
-} SEV_GUEST_STATUS_CMD_BUF;
+    uint32_t    handle;
+    SEV_POLICY  policy;         // SEV_POLICY
+    uint32_t    asid;
+    uint8_t     state;          // SEV_GUEST_STATE
+} sev_guest_status_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_ACTIVATE_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_activate_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    ASID;
-} SEV_ACTIVATE_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    asid;
+} sev_activate_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_ACTIVATE_EX_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_activate_ex_cmd_buf_t
 {
-    uint32_t    EXLen;
-    uint32_t    Handle;
-    uint32_t    ASID;
-    uint32_t    NumIDs;
-    uint64_t    IDsPaddr;
-} SEV_ACTIVATE_EX_CMD_BUF;
+    uint32_t    ex_len;
+    uint32_t    handle;
+    uint32_t    asid;
+    uint32_t    num_ids;
+    uint64_t    ids_p_addr;
+} sev_activate_ex_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_DEACTIVATE_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_deactivate_cmd_buf_t
 {
-    uint32_t    Handle;
-} SEV_DEACTIVATE_CMD_BUF;
+    uint32_t    handle;
+} sev_deactivate_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_DF_FLUSH_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_df_flush_cmd_buf_t
 {
-} SEV_DF_FLUSH_CMD_BUF;
+} sev_df_flush_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_DECOMMISSION_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_decommission_cmd_buf_t
 {
-    uint32_t    Handle;
-} SEV_DECOMMISSION_CMD_BUF;
+    uint32_t    handle;
+} sev_decommission_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_COPY_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_copy_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Length;
-    uint64_t    SrcPAddr;
-    uint64_t    DstPAddr;
-} SEV_COPY_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    length;
+    uint64_t    src_p_addr;
+    uint64_t    dst_p_addr;
+} sev_copy_cmd_buf;
 
 // Chapter: Debugging API
-typedef struct __attribute__ ((__packed__)) SEV_DBG_DECRYPT_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_dbg_decrypt_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Reserved0;
-    uint64_t    SrcPAddr;
-    uint64_t    DstPAddr;
-    uint32_t    Length;
-} SEV_DBG_DECRYPT_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    reserved_0;
+    uint64_t    src_p_addr;
+    uint64_t    dst_p_addr;
+    uint32_t    length;
+} sev_dbg_decrypt_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) SEV_DBG_ENCRYPT_CMD_BUF
+typedef struct __attribute__ ((__packed__)) sev_dbg_encrypt_cmd_buf_t
 {
-    uint32_t    Handle;
-    uint32_t    Reserved0;
-    uint64_t    SrcPAddr;
-    uint64_t    DstPAddr;
-    uint32_t    Length;
-} SEV_DBG_ENCRYPT_CMD_BUF;
+    uint32_t    handle;
+    uint32_t    reserved_0;
+    uint64_t    src_p_addr;
+    uint64_t    dst_p_addr;
+    uint32_t    length;
+} sev_dbg_encrypt_cmd_buf;
 
 #endif /* sevapi_h */

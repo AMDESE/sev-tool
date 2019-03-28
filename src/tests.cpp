@@ -50,7 +50,7 @@ bool Tests::test_factory_reset()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
-    SEV_CERT dummy;
+    sev_cert dummy;
     SEVCert cert(dummy);
 
     do {
@@ -126,10 +126,10 @@ bool Tests::test_pek_gen()
     Command cmd(m_output_folder, m_verbose_flag);
     std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
     std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
-    SEV_CERT_CHAIN_BUF cert_chain_orig;
-    SEV_CERT_CHAIN_BUF cert_chain_new;
-    SEV_CERT pdh_orig;
-    SEV_CERT pdh_new;
+    sev_cert_chain_buf cert_chain_orig;
+    sev_cert_chain_buf cert_chain_new;
+    sev_cert pdh_orig;
+    sev_cert pdh_new;
 
     do {
         printf("*Starting pek_gen tests\n");
@@ -141,9 +141,9 @@ bool Tests::test_pek_gen()
         }
 
         // Read in the original PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Call pek_gen to generate a new PEK, which also generates a new PDH
@@ -159,17 +159,17 @@ bool Tests::test_pek_gen()
         }
 
         // Read in the new PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Make sure the original and new certs are different
-        if(memcmp(PEKinCertChain(&cert_chain_new), PEKinCertChain(&cert_chain_orig), sizeof(SEV_CERT)) == 0) {
+        if(memcmp(PEK_IN_CERT_CHAIN(&cert_chain_new), PEK_IN_CERT_CHAIN(&cert_chain_orig), sizeof(sev_cert)) == 0) {
             printf("Error: PEK cert did not change after pek_gen\n");
             break;
         }
-        if(memcmp(&pdh_new, &pdh_orig, sizeof(SEV_CERT)) == 0) {
+        if(memcmp(&pdh_new, &pdh_orig, sizeof(sev_cert)) == 0) {
             printf("Error: PDH cert did not change after pek_gen\n");
             break;
         }
@@ -188,7 +188,7 @@ bool Tests::test_pek_csr()
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
     std::string pekcsr_full = m_output_folder + PEK_CSR_HEX_FILENAME;
-    SEV_CERT pekcsr;
+    sev_cert pekcsr;
 
     do {
         printf("*Starting pek_csr tests\n");
@@ -197,11 +197,11 @@ bool Tests::test_pek_csr()
             break;
 
         // Read in the CSR
-        if(sev::read_file(pekcsr_full, &pekcsr, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pekcsr_full, &pekcsr, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Check the usage of the CSR
-        if(pekcsr.PubkeyUsage != SEVUsagePEK) {
+        if(pekcsr.pub_key_usage != SEV_USAGE_PEK) {
             printf("Error: PEKCsr certificate Usage did not match expected value\n");
             break;
         }
@@ -222,10 +222,10 @@ bool Tests::test_pdh_gen()
     Command cmd(m_output_folder, m_verbose_flag);
     std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
     std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
-    SEV_CERT_CHAIN_BUF cert_chain_orig;
-    SEV_CERT_CHAIN_BUF cert_chain_new;
-    SEV_CERT pdh_orig;
-    SEV_CERT pdh_new;
+    sev_cert_chain_buf cert_chain_orig;
+    sev_cert_chain_buf cert_chain_new;
+    sev_cert pdh_orig;
+    sev_cert pdh_new;
 
     do {
         printf("*Starting pek_gen tests\n");
@@ -237,9 +237,9 @@ bool Tests::test_pdh_gen()
         }
 
         // Read in the original PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Call pek_gen to generate a new PEK, which also generates a new PDH
@@ -255,17 +255,17 @@ bool Tests::test_pdh_gen()
         }
 
         // Read in the new PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Make sure the PEK certs are the same and PDH certs are different
-        if(memcmp(PEKinCertChain(&cert_chain_new), PEKinCertChain(&cert_chain_orig), sizeof(SEV_CERT)) != 0) {
+        if(memcmp(PEK_IN_CERT_CHAIN(&cert_chain_new), PEK_IN_CERT_CHAIN(&cert_chain_orig), sizeof(sev_cert)) != 0) {
             printf("Error: PEK cert changed after pek_gen\n");
             break;
         }
-        if(memcmp(&pdh_new, &pdh_orig, sizeof(SEV_CERT)) == 0) {
+        if(memcmp(&pdh_new, &pdh_orig, sizeof(sev_cert)) == 0) {
             printf("Error: PDH cert did not change after pek_gen\n");
             break;
         }
@@ -286,8 +286,8 @@ bool Tests::test_pdh_cert_export()
     Command cmd(m_output_folder, m_verbose_flag);
     std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
     std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
-    SEV_CERT_CHAIN_BUF cert_chain;
-    SEV_CERT pdh;
+    sev_cert_chain_buf cert_chain;
+    sev_cert pdh;
 
     do {
         printf("*Starting pdh_cert_export tests\n");
@@ -299,16 +299,16 @@ bool Tests::test_pdh_cert_export()
         }
 
         // Read in the PDH and cert chain
-        if(sev::read_file(cert_chain_full, &cert_chain, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Check the usage of all certs
-        if(pdh.PubkeyUsage != SEVUsagePDH ||
-           ((SEV_CERT *)PEKinCertChain(&cert_chain))->PubkeyUsage != SEVUsagePEK ||
-           ((SEV_CERT *)OCAinCertChain(&cert_chain))->PubkeyUsage != SEVUsageOCA ||
-           ((SEV_CERT *)CEKinCertChain(&cert_chain))->PubkeyUsage != SEVUsageCEK) {
+        if(pdh.pub_key_usage != SEV_USAGE_PDH ||
+           ((sev_cert *)PEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_PEK ||
+           ((sev_cert *)OCA_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_OCA ||
+           ((sev_cert *)CEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_CEK) {
             printf("Error: Certificate Usage did not match expected value\n");
             break;
         }
@@ -329,11 +329,11 @@ bool Tests::test_pek_cert_import()
     Command cmd(m_output_folder, m_verbose_flag);
     std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
     std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
-    SEV_CERT_CHAIN_BUF cert_chain_orig;
-    SEV_CERT_CHAIN_BUF cert_chain_new;
-    SEV_CERT pdh_orig;
-    SEV_CERT pdh_new;
-    SEV_CERT dummy;
+    sev_cert_chain_buf cert_chain_orig;
+    sev_cert_chain_buf cert_chain_new;
+    sev_cert pdh_orig;
+    sev_cert pdh_new;
+    sev_cert dummy;
     SEVCert cert(dummy);
 
     do {
@@ -352,9 +352,9 @@ bool Tests::test_pek_cert_import()
         }
 
         // Read in the original PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Generate a new random ECDH keypair
@@ -377,17 +377,17 @@ bool Tests::test_pek_cert_import()
         }
 
         // Read in the new PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Make sure the original and new certs are different
-        if(memcmp(PEKinCertChain(&cert_chain_new), PEKinCertChain(&cert_chain_orig), sizeof(SEV_CERT)) == 0) {
+        if(memcmp(PEK_IN_CERT_CHAIN(&cert_chain_new), PEK_IN_CERT_CHAIN(&cert_chain_orig), sizeof(sev_cert)) == 0) {
             printf("Error: PEK cert did not change after pek_gen\n");
             break;
         }
-        if(memcmp(&pdh_new, &pdh_orig, sizeof(SEV_CERT)) == 0) {
+        if(memcmp(&pdh_new, &pdh_orig, sizeof(sev_cert)) == 0) {
             printf("Error: PDH cert did not change after pek_gen\n");
             break;
         }
@@ -430,7 +430,7 @@ bool Tests::test_set_self_owned()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
-    SEV_CERT dummy;
+    sev_cert dummy;
     SEVCert cert(dummy);
 
     do {
@@ -483,7 +483,7 @@ bool Tests::test_set_externally_owned()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
-    SEV_CERT dummy;
+    sev_cert dummy;
     SEVCert cert(dummy);
 
     do {
@@ -529,7 +529,7 @@ bool Tests::test_generate_cek_ask()
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
     std::string cek_full = m_output_folder + CEK_FILENAME;
-    SEV_CERT cek;
+    sev_cert cek;
 
     do {
         printf("*Starting generate_cek_ask tests\n");
@@ -538,11 +538,11 @@ bool Tests::test_generate_cek_ask()
             break;
 
         // Read in the CEK
-        if(sev::read_file(cek_full, &cek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(cek_full, &cek, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Check the usage of the CEK
-        if(cek.PubkeyUsage != SEVUsageCEK) {
+        if(cek.pub_key_usage != SEV_USAGE_CEK) {
             printf("Error: CEK certificate Usage did not match expected value\n");
             break;
         }
@@ -563,8 +563,8 @@ bool Tests::test_get_ask_ark()
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
     std::string ask_ark_full = m_output_folder + ASK_ARK_FILENAME;
-    AMD_CERT ask;
-    AMD_CERT ark;
+    amd_cert ask;
+    amd_cert ark;
     AMDCert tmp_amd;
 
     do {
@@ -574,7 +574,7 @@ bool Tests::test_get_ask_ark()
             break;
 
         // Read in the ask_ark so we can split it into 2 separate cert files
-        uint8_t ask_ark_buf[sizeof(AMD_CERT)*2] = {0};
+        uint8_t ask_ark_buf[sizeof(amd_cert)*2] = {0};
         if(sev::read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0) {
             printf("Error: Unable to read in ASK_ARK certificate\n");
             break;
@@ -596,7 +596,7 @@ bool Tests::test_get_ask_ark()
         // print_amd_cert_readable(&ark);
 
         // Check the usage of the ASK and ARK
-        if(ask.KeyUsage != AMDUsageASK || ark.KeyUsage != AMDUsageARK ) {
+        if(ask.key_usage != AMD_USAGE_ASK || ark.key_usage != AMD_USAGE_ARK ) {
             printf("Error: Certificate Usage did not match expected value\n");
             break;
         }
@@ -651,14 +651,14 @@ bool Tests::test_calc_measurement()
             break;
 
         // Read in the actual output
-        uint8_t actual_output[2*sizeof(HMACSHA256)];  // 2 chars per byte +1 for null term
+        uint8_t actual_output[2*sizeof(hmac_sha_256)];  // 2 chars per byte +1 for null term
         std::string meas_out_full = m_output_folder + CALC_MEASUREMENT_FILENAME;
         if(sev::read_file(meas_out_full, actual_output, sizeof(actual_output)) != sizeof(actual_output))
             break;
 
         // Make sure the actual output is equal to the expected
         printf("Expected: %s\nActual  : %s\n", expected_output.c_str(), actual_output);
-        if(memcmp(expected_output.c_str(), actual_output, sizeof(HMACSHA256)) != 0)
+        if(memcmp(expected_output.c_str(), actual_output, sizeof(hmac_sha_256)) != 0)
             break;
 
         ret = true;

@@ -23,12 +23,12 @@
 
 // Public global functions
 static std::string sev_empty = "NULL";
-void print_sev_cert_readable(const SEV_CERT *cert,
+void print_sev_cert_readable(const sev_cert *cert,
                              std::string& out_str = sev_empty);
-void print_sev_cert_hex(const SEV_CERT *cert);
-void print_cert_chain_buf_readable(const SEV_CERT_CHAIN_BUF *p,
+void print_sev_cert_hex(const sev_cert *cert);
+void print_cert_chain_buf_readable(const sev_cert_chain_buf *p,
                                    std::string& out_str = sev_empty);
-void print_cert_chain_buf_hex(const SEV_CERT_CHAIN_BUF *p);
+void print_cert_chain_buf_hex(const sev_cert_chain_buf *p);
 void read_priv_key_pem_into_rsakey(const std::string& file_name,
                                    RSA **rsa_priv_key);
 void read_priv_key_pem_into_eckey(const std::string& file_name,
@@ -40,28 +40,28 @@ bool write_priv_key_pem(const std::string& file_name, EVP_PKEY *evp_key_pair);
 
 class SEVCert {
 private:
-    bool calc_hash_digest(const SEV_CERT *cert,
+    bool calc_hash_digest(const sev_cert *cert,
                           uint32_t pub_key_algo,
                           uint32_t pub_key_offset,
-                          HMACSHA256 *sha_digest_256,
-                          HMACSHA512 *sha_digest_384);
+                          hmac_sha_256 *sha_digest_256,
+                          hmac_sha_512 *sha_digest_384);
     SEV_ERROR_CODE validate_usage(uint32_t Usage);
-    SEV_ERROR_CODE validate_rsa_pub_key(const SEV_CERT *cert,
+    SEV_ERROR_CODE validate_rsa_pub_key(const sev_cert *cert,
                                         const EVP_PKEY *PublicKey);
-    SEV_ERROR_CODE validate_public_key(const SEV_CERT *cert,
+    SEV_ERROR_CODE validate_public_key(const sev_cert *cert,
                                        const EVP_PKEY *PublicKey);
-    SEV_ERROR_CODE validate_signature(const SEV_CERT *child_cert,
-                                      const SEV_CERT *parent_cert,
+    SEV_ERROR_CODE validate_signature(const sev_cert *child_cert,
+                                      const sev_cert *parent_cert,
                                       EVP_PKEY *parent_signing_key);
-    SEV_ERROR_CODE validate_body(const SEV_CERT *cert);
+    SEV_ERROR_CODE validate_body(const sev_cert *cert);
 
-    SEV_CERT m_child_cert;
+    sev_cert m_child_cert;
 
 public:
-    SEVCert(SEV_CERT& cert) { m_child_cert = cert; }
+    SEVCert(sev_cert& cert) { m_child_cert = cert; }
     ~SEVCert() {};
 
-    const SEV_CERT *data() { return &m_child_cert; }
+    const sev_cert *data() { return &m_child_cert; }
 
     bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair);
     bool create_godh_cert(EVP_PKEY **godh_key_pair,
@@ -73,12 +73,12 @@ public:
     bool sign_with_key(uint32_t Version, uint32_t pub_key_usage,
                        uint32_t pub_key_algorithm, EVP_PKEY **priv_key,
                        uint32_t sig1_usage, uint32_t sig1_algo);
-    SEV_ERROR_CODE compile_public_key_from_certificate(const SEV_CERT *cert,
+    SEV_ERROR_CODE compile_public_key_from_certificate(const sev_cert *cert,
                                                        EVP_PKEY *evp_pub_key);
-    SEV_ERROR_CODE decompile_public_key_into_certificate(SEV_CERT *cert,
+    SEV_ERROR_CODE decompile_public_key_into_certificate(sev_cert *cert,
                                                          EVP_PKEY *evp_pubkey);
-    SEV_ERROR_CODE verify_sev_cert(const SEV_CERT *parent_cert1,
-                                   const SEV_CERT *parent_cert2 = NULL);
+    SEV_ERROR_CODE verify_sev_cert(const sev_cert *parent_cert1,
+                                   const sev_cert *parent_cert2 = NULL);
 };
 
 #endif /* sevcert_h */
