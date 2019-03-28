@@ -43,7 +43,7 @@
 /**
  * SEV commands (each entry stored in a byte).
  */
-typedef enum SEV_API_COMMANDS
+typedef enum __attribute__((mode(QI))) SEV_API_COMMANDS
 {
     NO_COMMAND          = 0x0,
     INIT                = 0x1,
@@ -99,7 +99,7 @@ typedef enum SEV_API_COMMANDS
  * @WORKING - SHUTDOWN, PLATFORM_STATUS, PDH_GEN, PDH_CERT_EXPORT, DF_FLUSH,
  *            GET_ID
  */
-typedef enum SEV_PLATFORM_STATE
+typedef enum __attribute__((mode(QI))) SEV_PLATFORM_STATE
 {
     PLATFORM_UNINIT     = 0,
     PLATFORM_INIT       = 1,
@@ -133,7 +133,7 @@ typedef enum SEV_PLATFORM_STATE
  * @RUPDATE - RECEIVE_UDPATE_DATA, RECEIVE_UDPATE_VMSA, RECEIVE_FINISH,
  *            ACTIVATE, DEACTIVATE, DECOMMISSION, GUEST_STATUS
  */
-typedef enum SEV_GUEST_STATE
+typedef enum __attribute__((mode(QI))) SEV_GUEST_STATE
 {
     GUEST_UNINIT     = 0,
     GUEST_LUPDATE    = 1,
@@ -147,7 +147,7 @@ typedef enum SEV_GUEST_STATE
 /**
  * SEV Error Codes (each entry stored in a byte).
  */
-typedef enum SEV_ERROR_CODE
+typedef enum __attribute__((mode(QI))) SEV_ERROR_CODE
 {
     STATUS_SUCCESS                  = 0x00,
     ERROR_INVALID_PLATFORM_STATE    = 0x01,
@@ -219,7 +219,8 @@ typedef struct __attribute__ ((__packed__)) SEV_RSA_PUBKEY
  * @SEVECP256    - 256 bit elliptical curve cipher.
  * @SEVECP384    - 384 bit elliptical curve cipher.
  */
-typedef enum SEV_EC {
+typedef enum __attribute__((mode(QI))) SEV_EC
+{
     SEVECInvalid = 0,
     SEVECP256    = 1,
     SEVECP384    = 2,
@@ -317,7 +318,8 @@ typedef union
 /**
  * SEV Usage codes.
  */
-typedef enum SEV_USAGE {
+typedef enum __attribute__((mode(HI))) SEV_USAGE
+{
     SEVUsageARK     = 0x0,
     SEVUsageASK     = 0x13,
     SEVUsageInvalid = 0x1000,
@@ -331,7 +333,8 @@ typedef enum SEV_USAGE {
 /**
  * SEV Algorithm cipher codes.
  */
-typedef enum SEV_SIG_ALGO {
+typedef enum __attribute__((mode(HI))) SEV_SIG_ALGO
+{
     SEVSigAlgoInvalid       = 0x0,
     SEVSigAlgoRSASHA256     = 0x1,
     SEVSigAlgoECDSASHA256   = 0x2,
@@ -406,7 +409,8 @@ typedef union
     uint8_t     Long[4096/8];
 } AMD_CERT_SIG;
 
-typedef enum AMD_SIG_USAGE {
+typedef enum __attribute__((mode(QI))) AMD_SIG_USAGE
+{
     AMDUsageARK     = 0x00,
     AMDUsageASK     = 0x13,
 } AMD_SIG_USAGE;
@@ -434,13 +438,15 @@ typedef struct __attribute__ ((__packed__)) AMD_CERT
 // Definition of buffers referred to by the command buffers of SEV API commands
 // -------------------------------------------------------------------------- //
 // Values passed into INIT command Options field
-enum SEV_OPTIONS : uint32_t  {
+enum __attribute__((mode(SI))) SEV_OPTIONS
+{
     // Bit 0 is the SEV-ES bit
     SEV_OPTION_SEV_ES = 1 << 0,
 };
 
 // Values returned from PLATFORM_STATUS Config.ES field
-enum SEV_CONFIG : uint32_t  {
+enum __attribute__((mode(SI))) SEV_CONFIG
+{
     // Bit 0 is the SEV-ES bit
     SEV_CONFIG_NON_ES = 0 << 0,
     SEV_CONFIG_ES     = 1 << 0,
@@ -467,7 +473,8 @@ enum SEV_CONFIG : uint32_t  {
  * @raw       - The raw unsigned 32 bit value stored in memory at the
  *              specified location.
  */
-enum SEV_POLICY : uint32_t {
+enum SEV_POLICY : uint32_t
+{
     SEV_POLICY_NODBG     = 1 << 0,      // 1 disables DBG commands
     SEV_POLICY_NOKS      = 1 << 1,      // 1 disables key sharing
     SEV_POLICY_ES        = 1 << 2,      // 1 designates and SEV-ES guest
@@ -495,7 +502,8 @@ enum SEV_POLICY : uint32_t {
  * PLATFORM_STATUS Command Sub-Buffer
  * Status of the owner of the platform (each entry stored in one byte).
  */
-enum SEV_PLATFORM_STATUS_OWNER {
+enum SEV_PLATFORM_STATUS_OWNER
+{
     // Bit 0 is the owner, self or external..
     PLATFORM_STATUS_OWNER_SELF     = 0 << 0,
     PLATFORM_STATUS_OWNER_EXTERNAL = 1 << 0,
