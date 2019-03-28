@@ -196,7 +196,8 @@ int SEVDevice::pdh_gen()
 }
 
 int SEVDevice::pdh_cert_export(uint8_t *data,
-                               void *PDHCertMem, void *CertChainMem)
+                               void *PDHCertMem,
+                               void *CertChainMem)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
@@ -349,9 +350,9 @@ void SEVDevice::get_family_model(uint32_t *family, uint32_t *model)
     std::string model_str = "";
 
     cmd = "lscpu | grep -E \"CPU family:\" | awk {'print $3'}";
-    ExecuteSystemCommand(cmd, &fam_str);
+    execute_system_command(cmd, &fam_str);
     cmd = "lscpu | grep -E \"Model:\" | awk {'print $2'}";
-    ExecuteSystemCommand(cmd, &model_str);
+    execute_system_command(cmd, &model_str);
 
     *family = std::stoi(fam_str, NULL, 10);
     *model = std::stoi(model_str, NULL, 10);
@@ -368,23 +369,23 @@ int SEVDevice::sysinfo()
     printf("-------------------------System Info-------------------------");
     // Exec bash commands to get info on user's platform and append to the output string
     cmd = "echo -n 'Hostname: '; hostname";
-    ExecuteSystemCommand(cmd, &output);
+    execute_system_command(cmd, &output);
     cmd = "echo -n 'BIOS Version: '; dmidecode -s bios-version";
-    ExecuteSystemCommand(cmd, &output);
+    execute_system_command(cmd, &output);
     cmd = "echo -n 'BIOS Release Date: '; dmidecode -s bios-release-date";
-    ExecuteSystemCommand(cmd, &output);
+    execute_system_command(cmd, &output);
     cmd = "echo -n 'SMT/Multi-Threading Status Per Socket: \n'; lscpu | grep -E \"^CPU\\(s\\):|Thread\\(s\\) per core|Core\\(s\\) per socket|Socket\\(s\\)\"";
-    ExecuteSystemCommand(cmd, &output);
+    execute_system_command(cmd, &output);
     cmd = "echo -n 'Processor Frequency (all sockets): \n'; dmidecode -s processor-frequency";
-    ExecuteSystemCommand(cmd, &output);
+    execute_system_command(cmd, &output);
     cmd = "echo -n 'Operating System: '; cat /etc/os-release | grep \"PRETTY_NAME=\" | sed 's/.*=//'";        // cat /etc/issue
-    ExecuteSystemCommand(cmd, &output);
+    execute_system_command(cmd, &output);
     cmd = "echo -n 'Kernel Version: '; uname -r";
-    ExecuteSystemCommand(cmd, &output);
+    execute_system_command(cmd, &output);
     cmd = "echo -n 'Git Commit #: '; cat \"../.git/refs/heads/master\"";
-    ExecuteSystemCommand(cmd, &output);
+    execute_system_command(cmd, &output);
 
-    // Print results of all ExecuteSystemCommand calls
+    // Print results of all execute_system_command calls
     printf("\n%s", output.c_str());
 
     std::string BuildInfo = DisplayBuildInfo();
@@ -498,7 +499,8 @@ int SEVDevice::set_externally_owned(std::string& oca_priv_key_file)
 }
 
 // TODO. Try to use curl as a git submodule
-int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_file)
+int SEVDevice::generate_cek_ask(std::string& output_folder,
+                                std::string& cert_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
@@ -535,14 +537,14 @@ int SEVDevice::generate_cek_ask(std::string& output_folder, std::string& cert_fi
         bool cert_found = false;
         int retries = 0;
         while(!cert_found || retries < 10) {
-            if(!ExecuteSystemCommand(cmd, &output)) {
+            if(!execute_system_command(cmd, &output)) {
                 printf("Error: pipe not opened for system command\n");
                 cmd_ret = SEV_RET_UNSUPPORTED;
                 break;
             }
 
             // Check if the file got downloaded
-            if(ReadFile(cert_w_path, tmp_buf, sizeof(tmp_buf)) != 0) {
+            if(read_file(cert_w_path, tmp_buf, sizeof(tmp_buf)) != 0) {
                 cert_found = true;
                 break;
             }
@@ -601,7 +603,7 @@ int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
         }
 
         // Download the certificate from the AMD server
-        if(!ExecuteSystemCommand(cmd, &output)) {
+        if(!execute_system_command(cmd, &output)) {
             printf("Error: pipe not opened for system command\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
@@ -609,7 +611,7 @@ int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
 
         // Check if the file got downloaded
         char tmp_buf[100] = {0};  // Just try to read some amount of chars
-        if(ReadFile(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
+        if(read_file(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
             printf("Error: command to get ask_ark cert failed\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
@@ -636,7 +638,7 @@ int SEVDevice::zip_certs(std::string& output_folder, std::string& zip_name, std:
     std::string error = "zip error";
 
     cmd = "zip " + output_folder + zip_name + " " + files_to_zip;
-    ExecuteSystemCommand(cmd, &output);
+    execute_system_command(cmd, &output);
 
     if(output.find(error) != std::string::npos) {
         printf("Error when zipping up files!");

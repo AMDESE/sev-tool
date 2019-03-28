@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <cstring>      // memcpy
 
-bool ExecuteSystemCommand(const std::string cmd, std::string *log)
+bool execute_system_command(const std::string cmd, std::string *log)
 {
     FILE *pipe = popen(cmd.c_str(), "r");
     if (!pipe) {
@@ -46,18 +46,19 @@ bool ExecuteSystemCommand(const std::string cmd, std::string *log)
  * Read up to len bytes from the beginning of a file
  * Returns number of bytes read, or 0 if the file couldn't be opened.
  */
-size_t ReadFile(const std::string& filename, void *buffer, size_t len)
+size_t read_file(const std::string& file_name, void *buffer, size_t len)
 {
-    std::ifstream file(filename, std::ios::binary);
+    std::ifstream file(file_name, std::ios::binary);
     if (len > INT_MAX) {
-        printf("ReadFile Error: Input length too long\n");
+        printf("read_file Error: Input length too long\n");
         return 0;
     }
     std::streamsize slen = (std::streamsize)len;
 
     if (!file.is_open()) {
-        printf("Readfile Error: Could not open file. Ensure directory exists\n" \
-                    "  Filename: %s\n", filename.c_str());
+        printf("read_file Error: Could not open file. "
+               "Ensure directory and file exists\n"
+               "  file_name: %s\n", file_name.c_str());
         return 0;
     }
 
@@ -73,21 +74,22 @@ size_t ReadFile(const std::string& filename, void *buffer, size_t len)
  * Returns number of bytes written, or 0 if the file couldn't be opened.
  * ostream CANNOT create a folder, so it has to exist already, to succeed
  */
-size_t WriteFile(const std::string& filename, const void *buffer, size_t len)
+size_t write_file(const std::string& file_name, const void *buffer, size_t len)
 {
-    std::ofstream file(filename, std::ofstream::out);
+    std::ofstream file(file_name, std::ofstream::out);
     if (len > INT_MAX) {
-        printf("WriteFile Error: Input length too long\n");
+        printf("write_file Error: Input length too long\n");
         return 0;
     }
     std::streamsize slen = (std::streamsize)len;
 
     if (!file.is_open()) {
-        printf("WriteFile Error: Could not open/create file. Ensure directory exists\n" \
-                    "  Filename: %s\n", filename.c_str());
+        printf("write_file Error: Could not open/create file. " \
+               "Ensure directory exists\n" \
+               "  Filename: %s\n", file_name.c_str());
         return 0;
     }
-    printf("Writing to file: %s\n", filename.c_str());
+    printf("Writing to file: %s\n", file_name.c_str());
 
     file.write((char *)buffer, slen);
     size_t count = (size_t)file.tellp();
@@ -97,13 +99,13 @@ size_t WriteFile(const std::string& filename, const void *buffer, size_t len)
 }
 
 // Returns the file size in number of bytes
-size_t GetFileSize(const std::string& filename)
+size_t get_file_size(const std::string& file_name)
 {
-    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    std::ifstream file(file_name, std::ios::binary | std::ios::ate);
 
     if (!file.is_open()) {
         printf("Readfile Error: Could not open file. Ensure directory exists\n" \
-                    "  Filename: %s\n", filename.c_str());
+               "  Filename: %s\n", file_name.c_str());
         return 0;
     }
 
@@ -113,25 +115,25 @@ size_t GetFileSize(const std::string& filename)
     return count;
 }
 
-void GenRandomBytes( void *bytes, size_t numBytes )
+void gen_random_bytes(void *bytes, size_t num_bytes)
 {
     uint8_t *addr = (uint8_t *)bytes;
-    while (numBytes--) {
+    while (num_bytes--) {
         *addr++ = (uint8_t)(rand() & 0xff);
     }
 }
 
-bool VerifyAccess( uint8_t *buf, size_t len )
+bool verify_access(uint8_t *buf, size_t len)
 {
     uint8_t *master = new uint8_t[len];
-    GenRandomBytes(master, len);
+    gen_random_bytes(master, len);
     memcpy(buf, master, len);
     bool ret = memcmp(buf, master, len) == 0;
     delete[] master;
     return ret;
 }
 
-bool StrToArray(std::string in_string, uint8_t *array, uint32_t array_size)
+bool str_to_array(std::string in_string, uint8_t *array, uint32_t array_size)
 {
     std::string substring = "";
 
@@ -153,7 +155,7 @@ bool StrToArray(std::string in_string, uint8_t *array, uint32_t array_size)
     return true;
 }
 
-void AsciiHexBytesToBinary(void *out, const char *in_bytes, size_t len)
+void ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len)
 {
     std::string temp;
 
@@ -165,22 +167,22 @@ void AsciiHexBytesToBinary(void *out, const char *in_bytes, size_t len)
 
 }
 
-bool ReverseBytes(uint8_t *bytes, size_t size)
+bool reverse_bytes(uint8_t *bytes, size_t size)
 {
-	uint8_t *start = bytes;
-	uint8_t *end = bytes + size - 1;
+    uint8_t *start = bytes;
+    uint8_t *end = bytes + size - 1;
 
-	if (!bytes)
+    if (!bytes)
         return false;
 
-	while (start < end)
-	{
-		uint8_t byte = *start;
-		*start = *end;
-		*end = byte;
-		start++;
-		end--;
-	}
+    while (start < end)
+    {
+        uint8_t byte = *start;
+        *start = *end;
+        *end = byte;
+        start++;
+        end--;
+    }
 
-	return true;
+    return true;
 }

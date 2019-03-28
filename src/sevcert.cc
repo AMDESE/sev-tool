@@ -41,7 +41,7 @@ void print_sev_cert_readable(const SEV_CERT *cert, std::string& out_str)
     sprintf(out+strlen(out), "%-15s%02x\n", "api_major:", cert->ApiMajor);          // uint8_t
     sprintf(out+strlen(out), "%-15s%02x\n", "api_minor:", cert->ApiMinor);          // uint8_t
     sprintf(out+strlen(out), "%-15s%08x\n", "pub_key_usage:", cert->PubkeyUsage);   // uint32_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "pubkey_algo:", cert->PubkeyAlgo);      // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "pub_key_algo:", cert->PubkeyAlgo);     // uint32_t
     sprintf(out+strlen(out), "%-15s\n", "Pubkey:");                                 // SEV_PUBKEY
     for(size_t i = 0; i < (size_t)(sizeof(SEV_PUBKEY)); i++) {  //bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->Pubkey)[i] );
@@ -72,7 +72,7 @@ void print_sev_cert_readable(const SEV_CERT *cert, std::string& out_str)
 
 /**
  * Description: Prints the contents of an SEV_CERT as hex bytes to the screen
- * Notes:       To print this to a file, just use WriteFile() directly
+ * Notes:       To print this to a file, just use write_file() directly
  * Parameters:  [cert] is the source cert which to be printed
  */
 void print_sev_cert_hex(const SEV_CERT *cert)
@@ -224,9 +224,9 @@ bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_p
 /**
  * Description: Writes the public key of an EVP_PKEY to a PEM file
  * Parameters:  [file_name] the full path of the file to write
- *              [evp_keypair] the key which ti pull the public key from
+ *              [evp_key_pair] the key which ti pull the public key from
  */
-bool write_pubkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
+bool write_pub_key_pem(const std::string& file_name, EVP_PKEY *evp_key_pair)
 {
     FILE *pFile = NULL;
     pFile = fopen(file_name.c_str(), "wt");
@@ -234,7 +234,7 @@ bool write_pubkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
         return false;
 
     // printf("Writing to file: %s\n", file_name.c_str());
-    if(PEM_write_PUBKEY(pFile, evp_keypair) != 1) {
+    if(PEM_write_PUBKEY(pFile, evp_key_pair) != 1) {
         printf("Error writing pubkey to file: %s\n", file_name.c_str());
         return false;
     }
@@ -246,9 +246,9 @@ bool write_pubkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
  * Description: Writes the private key of an EVP_PKEY to a PEM file with no
  *              encryption
  * Parameters:  [file_name] the full path of the file to write
- *              [evp_keypair] the key which ti pull the public key from
+ *              [evp_key_pair] the key which ti pull the public key from
  */
-bool write_privkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
+bool write_priv_key_pem(const std::string& file_name, EVP_PKEY *evp_key_pair)
 {
     FILE *pFile = NULL;
     pFile = fopen(file_name.c_str(), "wt");
@@ -256,7 +256,7 @@ bool write_privkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
         return false;
 
     // printf("Writing to file: %s\n", file_name.c_str());
-    if(PEM_write_PrivateKey(pFile, evp_keypair, NULL, NULL, 0, NULL, 0) != 1) {
+    if(PEM_write_PrivateKey(pFile, evp_key_pair, NULL, NULL, 0, NULL, 0) != 1) {
         printf("Error writing privkey to file: %s\n", file_name.c_str());
         return false;
     }
@@ -265,43 +265,44 @@ bool write_privkey_pem(const std::string& file_name, EVP_PKEY *evp_keypair)
 }
 
 /**
- * Description:   Generates a new P-384 keypair
- * Typical Usage: Used to create a new Guest Owner DH (Elliptic Curve Diffie Hellman (ECDH))
- *                P-384 keypair
- * Parameters:    [EVP_Keypair] the output EVP_PKEY to which the keypair gets set
- *                 Note: this key must be initialized (with EVP_PKEY_new())
- *                       before passing in
+ * Description:   Generates a new P-384 key pair
+ * Typical Usage: Used to create a new Guest Owner DH
+ *                (Elliptic Curve Diffie Hellman (ECDH)) P-384 key pair
+ * Parameters:    [evp_key_pair] the output EVP_PKEY to which the key pair gets
+ *                set
+ * Note:          This key must be initialized (with EVP_PKEY_new())
+ *                before passing in
  */
-bool SEVCert::generate_ecdh_keypair(EVP_PKEY **evp_keypair)
+bool SEVCert::generate_ecdh_key_pair(EVP_PKEY **evp_key_pair)
 {
-    if(!evp_keypair)
+    if(!evp_key_pair)
         return false;
 
     bool ret = false;
-    EC_KEY *ec_keypair = NULL;
+    EC_KEY *ec_key_pair = NULL;
 
     do {
         // New up the Guest Owner's private EVP_PKEY
-        if (!(*evp_keypair = EVP_PKEY_new()))
+        if (!(*evp_key_pair = EVP_PKEY_new()))
             break;
 
         // New up the EC_KEY with the EC_GROUP
         int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
-        ec_keypair = EC_KEY_new_by_curve_name(nid);
+        ec_key_pair = EC_KEY_new_by_curve_name(nid);
 
         // Create the new public/private EC key pair. EC_key must have a group
         // associated with it before calling this function
-        if(EC_KEY_generate_key(ec_keypair) != 1)
+        if(EC_KEY_generate_key(ec_key_pair) != 1)
             break;
 
         // Convert EC key to EVP_PKEY
-        // This function links evp_keypair to ec_keypair, so when evp_keypair is
-        //  freed, ec_keypair is freed. We don't want the user to have to manage 2
+        // This function links evp_key_pair to ec_key_pair, so when evp_key_pair is
+        //  freed, ec_key_pair is freed. We don't want the user to have to manage 2
         //  keys, so just return EVP_PKEY and make sure user free's it
-        if(EVP_PKEY_assign_EC_KEY(*evp_keypair, ec_keypair) != 1)
+        if(EVP_PKEY_assign_EC_KEY(*evp_key_pair, ec_key_pair) != 1)
             break;
 
-        if (!evp_keypair)
+        if (!evp_key_pair)
             break;
 
         ret = true;
@@ -319,11 +320,11 @@ bool SEVCert::generate_ecdh_keypair(EVP_PKEY **evp_keypair)
  *                [api_minor] the api_minor returned from a PlatformStatus command
  *                  as input to this function, to help populate the cert
  */
-bool SEVCert::create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major, uint8_t api_minor)
+bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major, uint8_t api_minor)
 {
     bool cmd_ret = false;
 
-    if(!godh_keypair)
+    if(!godh_key_pair)
         return false;
 
     do {
@@ -340,7 +341,7 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major, uint8
         m_child_cert.Sig2Algo = SEVSigAlgoInvalid;
 
         // Set the pubkey portion of the cert
-        if(decompile_public_key_into_certificate(&m_child_cert, *godh_keypair) != STATUS_SUCCESS)
+        if(decompile_public_key_into_certificate(&m_child_cert, *godh_key_pair) != STATUS_SUCCESS)
             break;
 
         // Set the rest of the params and sign the signature with the newly
@@ -348,7 +349,7 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major, uint8
         // Technically this step is not necessary, as the firmware doesn't
         // validate the GODH signature
         if(!sign_with_key(SEV_CERT_MAX_VERSION, SEVUsagePDH, SEVSigAlgoECDHSHA256,
-                        godh_keypair, SEVUsagePEK, SEVSigAlgoECDSASHA256))
+                        godh_key_pair, SEVUsagePEK, SEVSigAlgoECDSASHA256))
             break;
 
         cmd_ret = true;
@@ -366,11 +367,11 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_keypair, uint8_t api_major, uint8
  *                [api_minor] the api_minor returned from a PlatformStatus command
  *                  as input to this function, to help populate the cert
  */
-bool SEVCert::create_oca_cert(EVP_PKEY **oca_keypair, uint8_t api_major, uint8_t api_minor)
+bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major, uint8_t api_minor)
 {
     bool cmd_ret = false;
 
-    if(!oca_keypair)
+    if(!oca_key_pair)
         return false;
 
     do {
@@ -387,7 +388,7 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_keypair, uint8_t api_major, uint8_t
         m_child_cert.Sig2Algo = SEVSigAlgoInvalid;
 
         // Set the pubkey portion of the cert
-        if(decompile_public_key_into_certificate(&m_child_cert, *oca_keypair) != STATUS_SUCCESS)
+        if(decompile_public_key_into_certificate(&m_child_cert, *oca_key_pair) != STATUS_SUCCESS)
             break;
 
         // Set the rest of the params and sign the signature with the newly
@@ -395,7 +396,7 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_keypair, uint8_t api_major, uint8_t
         // Technically this step is not necessary, as the firmware doesn't
         // validate the GODH signature
         if(!sign_with_key(SEV_CERT_MAX_VERSION, SEVUsageOCA, SEVSigAlgoECDSASHA256,
-                        oca_keypair, SEVUsageOCA, SEVSigAlgoECDSASHA256))
+                        oca_key_pair, SEVUsageOCA, SEVSigAlgoECDSASHA256))
             break;
 
         cmd_ret = true;
@@ -414,7 +415,7 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_keypair, uint8_t api_major, uint8_t
  *              [sha_digest_256] the output digest, if using SHA256
  *              [sha_digest_384] the output digest, if using SHA384
  */
-bool SEVCert::calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint32_t pub_key_offset,
+bool SEVCert::calc_hash_digest(const SEV_CERT *cert, uint32_t pub_key_algo, uint32_t pub_key_offset,
                              HMACSHA256 *sha_digest_256, HMACSHA512 *sha_digest_384)
 {
     bool ret = false;
@@ -424,8 +425,8 @@ bool SEVCert::calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint3
     // SHA256/SHA384 hash the Cert from Version through Pubkey parameters
     // Calculate the digest of the input message   rsa.c -> rsa_pss_verify_msg()
     do {
-        if( (pubkey_algo == SEVSigAlgoRSASHA256) ||
-            (pubkey_algo == SEVSigAlgoECDSASHA256)) {
+        if( (pub_key_algo == SEVSigAlgoRSASHA256) ||
+            (pub_key_algo == SEVSigAlgoECDSASHA256)) {
             if (SHA256_Init(&ctx_256) != 1)
                 break;
             if (SHA256_Update(&ctx_256, cert, pub_key_offset) != 1)
@@ -433,8 +434,8 @@ bool SEVCert::calc_hash_digest(const SEV_CERT *cert, uint32_t pubkey_algo, uint3
             if (SHA256_Final((uint8_t *)sha_digest_256, &ctx_256) != 1)  // size = 32
                 break;
         }
-        else if( (pubkey_algo == SEVSigAlgoRSASHA384) ||
-                 (pubkey_algo == SEVSigAlgoECDSASHA384)) {
+        else if( (pub_key_algo == SEVSigAlgoRSASHA384) ||
+                 (pub_key_algo == SEVSigAlgoECDSASHA384)) {
             if (SHA384_Init(&ctx_384) != 1)
                 break;
             if (SHA384_Update(&ctx_384, cert, pub_key_offset) != 1)
@@ -617,14 +618,14 @@ SEV_ERROR_CODE SEVCert::validate_usage(uint32_t Usage)
  *
  * This function is untested because we don't have any RSA SEV_CERTs to test
  */
-SEV_ERROR_CODE SEVCert::validate_rsa_pubkey(const SEV_CERT *cert, const EVP_PKEY *PublicKey)
+SEV_ERROR_CODE SEVCert::validate_rsa_pub_key(const SEV_CERT *cert, const EVP_PKEY *PublicKey)
 {
     if (!cert || !PublicKey)
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
 
-    if (cert->Pubkey.RSA.ModulusSize <= SEV_RSA_PUBKEY_MAX_BITS)	// bits
+    if (cert->Pubkey.RSA.ModulusSize <= SEV_RSA_PUB_KEY_MAX_BITS)    // bits
         cmd_ret = STATUS_SUCCESS;
 
     return cmd_ret;
@@ -650,7 +651,7 @@ SEV_ERROR_CODE SEVCert::validate_public_key(const SEV_CERT *cert, const EVP_PKEY
 
         if( (cert->PubkeyAlgo == SEVSigAlgoRSASHA256) ||
             (cert->PubkeyAlgo == SEVSigAlgoRSASHA384) ) {
-            if(validate_rsa_pubkey(cert, PublicKey) != STATUS_SUCCESS)
+            if(validate_rsa_pub_key(cert, PublicKey) != STATUS_SUCCESS)
                 break;
         }
         else if( (cert->PubkeyAlgo == SEVSigAlgoECDSASHA256) ||

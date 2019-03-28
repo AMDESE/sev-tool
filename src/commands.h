@@ -14,8 +14,8 @@
  * limitations under the License.
  * ************************************************************************/
 
-#ifndef commands_h
-#define commands_h
+#ifndef COMMANDS_H
+#define COMMANDS_H
 
 #include "sevapi.h"         // for HMACSHA256, Nonce128, AES128Key
 #include "sevcore.h"        // for SEVDevice

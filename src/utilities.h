@@ -14,15 +14,15 @@
  * limitations under the License.
  * ************************************************************************/
 
-#ifndef utilities_h
-#define utilities_h
+#ifndef UTILITIES_H
+#define UTILITIES_H
 
 #include <string>
 
 static inline void native_cpuid(unsigned int *eax, unsigned int *ebx,
                                 unsigned int *ecx, unsigned int *edx)
 {
-    /* ecx is often an input as well as an output. */
+    // ecx is often an input as well as an output.
     asm volatile("cpuid"
         : "=a" (*eax),
           "=b" (*ebx),
@@ -39,48 +39,56 @@ static inline unsigned int cpuid_ebx(unsigned int op)
     return ebx;
 }
 
-// Executes a bash command and returns results as a string
-bool ExecuteSystemCommand(const std::string cmd, std::string *log);
+/**
+ * Executes a bash command and returns results as a string
+ */
+bool execute_system_command(const std::string cmd, std::string *log);
 
-/*
+/**
  * Read an entire file in to a buffer, or as much as will fit. Return length
  * of file or of buffer, whichever is smaller.
  */
-size_t ReadFile(const std::string& filename, void *buffer, size_t len);
+size_t read_file(const std::string& file_name, void *buffer, size_t len);
 
-/*
+/**
  * Truncate and write (not append) a file from the beginning
  * Returns number of bytes written
  */
-size_t WriteFile(const std::string& filename, const void *buffer, size_t len);
+size_t write_file(const std::string& file_name, const void *buffer, size_t len);
 
-/*
+/**
  * Returns the file size in number of bytes
  */
-size_t GetFileSize(const std::string& filename);
+size_t get_file_size(const std::string& file_name);
 
-// Generate some random bytes
-void GenRandomBytes( void *bytes, size_t numBytes );
+/**
+ * Generate some random bytes
+ */
+void gen_random_bytes(void *bytes, size_t num_bytes);
 
-// Verify read/write access to an area of memory. Used to confirm TMR release.
-bool VerifyAccess( uint8_t *buf, size_t len );
+/**
+ * Verify read/write access to an area of memory. Used to confirm TMR release.
+ */
+bool verify_access(uint8_t *buf, size_t len);
 
-/*
+/**
  * Converts a string of ascii-encoded hex bytes into a Hex array
  * Ex. To generate the string, do printf("%02x", myArray) will generate
  *     "0123456ACF" and this function will put it back into an array
  * This function is expecting the input string to be an even number of elements
  *      not including the null terminator
  */
-bool StrToArray(std::string in_string, uint8_t *array, uint32_t array_size);
+bool str_to_array(std::string in_string, uint8_t *array, uint32_t array_size);
 
-/*
+/**
  * If you have a buffer (or read in input file) that's in AsciiHexBytes,
  * such as the getid output files, this will read it back into a buffer
  */
-void AsciiHexBytesToBinary(void *out, const char *in_bytes, size_t len);
+void ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len);
 
-// Reverses bytes in a section of memory. Used in validating a cert signature
-bool ReverseBytes(uint8_t *bytes, size_t size);
+/**
+ * Reverses bytes in a section of memory. Used in validating a cert signature
+ */
+bool reverse_bytes(uint8_t *bytes, size_t size);
 
 #endif /* utilities_h */

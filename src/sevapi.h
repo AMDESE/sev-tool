@@ -14,8 +14,8 @@
 //
 //-----------------------------------------------------------------------------
 
-#ifndef sevapi_h
-#define sevapi_h
+#ifndef SEVAPI_H
+#define SEVAPI_H
 
 // This file puts in to C/C++ form the definitions from the SEV FW spec.
 // It should remain usable purely from C
@@ -192,10 +192,10 @@ typedef uint8_t IV128[128/8];
 // -------------------------------------------------------------------------- //
 
 // Appendix C.3: SEV Certificates
-#define SEV_RSA_PUBKEY_MAX_BITS     4096
-#define SEV_ECDSA_PUBKEY_MAX_BITS   576
-#define SEV_ECDH_PUBKEY_MAX_BITS    576
-#define SEV_PUBKEY_SIZE             (SEV_RSA_PUBKEY_MAX_BITS/8)
+#define SEV_RSA_PUB_KEY_MAX_BITS    4096
+#define SEV_ECDSA_PUB_KEY_MAX_BITS  576
+#define SEV_ECDH_PUB_KEY_MAX_BITS   576
+#define SEV_PUB_KEY_SIZE            (SEV_RSA_PUB_KEY_MAX_BITS/8)
 
 // Appendix C.3.1 Public Key Formats - RSA Public Key
 /**
@@ -208,8 +208,8 @@ typedef uint8_t IV128[128/8];
 typedef struct __attribute__ ((__packed__)) SEV_RSA_PUBKEY
 {
     uint32_t    ModulusSize;
-    uint8_t     PubExp[SEV_RSA_PUBKEY_MAX_BITS/8];
-    uint8_t     Modulus[SEV_RSA_PUBKEY_MAX_BITS/8];
+    uint8_t     PubExp[SEV_RSA_PUB_KEY_MAX_BITS/8];
+    uint8_t     Modulus[SEV_RSA_PUB_KEY_MAX_BITS/8];
 } SEV_RSA_PUBKEY;
 
 /**
@@ -238,9 +238,9 @@ typedef enum __attribute__((mode(QI))) SEV_EC
 typedef struct __attribute__ ((__packed__)) SEV_ECDSA_PUBKEY
 {
     uint32_t    Curve;      // SEV_EC as a uint32_t
-    uint8_t     QX[SEV_ECDSA_PUBKEY_MAX_BITS/8];
-    uint8_t     QY[SEV_ECDSA_PUBKEY_MAX_BITS/8];
-    uint8_t     RMBZ[SEV_PUBKEY_SIZE-2*SEV_ECDSA_PUBKEY_MAX_BITS/8-sizeof(uint32_t)];
+    uint8_t     QX[SEV_ECDSA_PUB_KEY_MAX_BITS/8];
+    uint8_t     QY[SEV_ECDSA_PUB_KEY_MAX_BITS/8];
+    uint8_t     RMBZ[SEV_PUB_KEY_SIZE-2*SEV_ECDSA_PUB_KEY_MAX_BITS/8-sizeof(uint32_t)];
 } SEV_ECDSA_PUBKEY;
 
 // Appendix C.3.3: Public Key Formats - ECDH Public Key
@@ -255,9 +255,9 @@ typedef struct __attribute__ ((__packed__)) SEV_ECDSA_PUBKEY
 typedef struct __attribute__ ((__packed__)) SEV_ECDH_PUBKEY
 {
     uint32_t    Curve;      // SEV_EC as a uint32_t
-    uint8_t     QX[SEV_ECDH_PUBKEY_MAX_BITS/8];
-    uint8_t     QY[SEV_ECDH_PUBKEY_MAX_BITS/8];
-    uint8_t     RMBZ[SEV_PUBKEY_SIZE-2*SEV_ECDH_PUBKEY_MAX_BITS/8-sizeof(uint32_t)];
+    uint8_t     QX[SEV_ECDH_PUB_KEY_MAX_BITS/8];
+    uint8_t     QY[SEV_ECDH_PUB_KEY_MAX_BITS/8];
+    uint8_t     RMBZ[SEV_PUB_KEY_SIZE-2*SEV_ECDH_PUB_KEY_MAX_BITS/8-sizeof(uint32_t)];
 } SEV_ECDH_PUBKEY;
 
 // Appendix C.4: Public Key Formats

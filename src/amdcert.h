@@ -14,8 +14,8 @@
  * limitations under the License.
  * ************************************************************************/
 
-#ifndef amdcert_h
-#define amdcert_h
+#ifndef AMDCERT_H
+#define AMDCERT_H
 
 #include "sevapi.h"
 #include <string>
@@ -49,7 +49,8 @@ private:
     SEV_ERROR_CODE amd_cert_validate(const AMD_CERT *cert,
                                      const AMD_CERT *parent,
                                      uint32_t expected_usage);
-    SEV_ERROR_CODE amd_cert_public_key_hash(const AMD_CERT *cert, HMACSHA256 *hash);
+    SEV_ERROR_CODE amd_cert_public_key_hash(const AMD_CERT *cert,
+                                            HMACSHA256 *hash);
 
 public:
     AMDCert() {}
@@ -57,9 +58,11 @@ public:
 
     bool key_size_is_valid(size_t size);
     SEV_ERROR_CODE amd_cert_validate_ark(const AMD_CERT *ark);
-    SEV_ERROR_CODE amd_cert_validate_ask(const AMD_CERT *ask, const AMD_CERT *ark);
+    SEV_ERROR_CODE amd_cert_validate_ask(const AMD_CERT *ask,
+                                         const AMD_CERT *ark);
     size_t amd_cert_get_size(const AMD_CERT *cert);
-    SEV_ERROR_CODE amd_cert_export_pubkey(const AMD_CERT *cert, SEV_CERT *pubkey_cert);
+    SEV_ERROR_CODE amd_cert_export_pub_key(const AMD_CERT *cert,
+                                           SEV_CERT *pub_key_cert);
     SEV_ERROR_CODE amd_cert_init(AMD_CERT *cert, const uint8_t *buffer);
 };
 

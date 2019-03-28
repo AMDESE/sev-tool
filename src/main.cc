@@ -16,13 +16,12 @@
 
 #include "commands.h"  // has measurement_t
 #include "tests.h"     // for test_all
-#include "utilities.h" // for StrToArray
-#include <cstring>     // memcpy
+#include "utilities.h" // for str_to_array
 #include <getopt.h>    // for getopt_long
 #include <stdio.h>
 #include <string>
 
-char helpArray[] =  "The following commands are supported:\n" \
+char help_array[] =  "The following commands are supported:\n" \
                     " sevtool -[global opts] --[command] [command opts]\n" \
                     "(Please see the readme file for more detailed information)\n" \
                     "Platform Owner commands:\n" \
@@ -116,7 +115,7 @@ int main(int argc, char** argv)
         switch (c) {
             case 'h':           // Help
             case 'H': {
-                printf("%s\n", helpArray);
+                printf("%s\n", help_array);
                 cmd_ret = 0;
                 break;
             }
@@ -210,9 +209,9 @@ int main(int argc, char** argv)
                 user_data.api_minor = (uint8_t)strtol(argv[optind++], NULL, 16);
                 user_data.build_id  = (uint8_t)strtol(argv[optind++], NULL, 16);
                 user_data.policy    = (uint32_t)strtol(argv[optind++], NULL, 16);
-                StrToArray(std::string(argv[optind++]), (uint8_t *)&user_data.digest, sizeof(user_data.digest));
-                StrToArray(std::string(argv[optind++]), (uint8_t *)&user_data.mnonce, sizeof(user_data.mnonce));
-                StrToArray(std::string(argv[optind++]), (uint8_t *)&user_data.tik,    sizeof(user_data.tik));
+                str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.digest, sizeof(user_data.digest));
+                str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.mnonce, sizeof(user_data.mnonce));
+                str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.tik,    sizeof(user_data.tik));
                 cmd_ret = cmd.calc_measurement(output_folder, verbose_flag, &user_data);
                 break;
             }
@@ -253,12 +252,15 @@ int main(int argc, char** argv)
         }
     }
 
-    if(cmd_ret == 0)
+    if(cmd_ret == 0) {
         printf("\nCommand Successful\n");
-    else if(cmd_ret == 0xFFFF)
+    }
+    else if(cmd_ret == 0xFFFF) {
         printf("\nCommand not supported/recognized. Possibly bad formatting\n");
-    else
+    }
+    else {
         printf("\nCommand Unsuccessful: 0x%02x\n", cmd_ret);
+    }
 
     return 0;
 }

@@ -174,7 +174,7 @@ int SEVDevice::sysinfo()
     printf("-------------------------System Info-------------------------");
     printf("Coming soon...\n");
 
-    // Print results of all ExecuteSystemCommand calls
+    // Print results of all execute_system_command calls
     printf("\n%s", output.c_str());
 
     std::string BuildInfo = DisplayBuildInfo();
@@ -199,7 +199,7 @@ int SEVDevice::set_self_owned()
 }
 
 int SEVDevice::set_externally_owned(std::string& oca_priv_key_file,
-                                               std::string& oca_cert_file)
+                                    std::string& oca_cert_file)
 {
     int cmd_ret = -1;
 

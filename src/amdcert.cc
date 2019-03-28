@@ -34,7 +34,7 @@ static const uint8_t amd_root_key_id[AMD_CERT_ID_SIZE_BYTES] = {
  */
 void print_amd_cert_readable(const AMD_CERT *cert, std::string& out_str)
 {
-    char out[sizeof(AMD_CERT)*3+500];   // 2 chars per byte + 1 spaces + ~500 extra chars for text
+    char out[sizeof(AMD_CERT)*3+500];   // 2 chars per byte + 1 space + ~500 extra chars for text
 
     sprintf(out, "%-15s%08x\n", "Version:", cert->Version);                          // uint32_t
     sprintf(out+strlen(out), "%-15s%016lx\n", "KeyID0:", cert->KeyID0);               // uint64_t
@@ -163,7 +163,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const AMD_CERT *cert)
         // Swap the bytes of the signature
         memcpy(signature, &cert->Sig, cert->ModulusSize/8);
 
-        if(!ReverseBytes(signature, cert->ModulusSize/8))
+        if(!reverse_bytes(signature, cert->ModulusSize/8))
             break;
 
         // Verify the signature
@@ -301,7 +301,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const AMD_CERT *ark)
         // Validate the certificate. Check for self-signed ARK
         cmd_ret = amd_cert_validate(ark, ark, AMDUsageARK);         // Rome
         if (cmd_ret != STATUS_SUCCESS) {
-		    // Not a self-signed ARK. Check the ARK without a signature
+            // Not a self-signed ARK. Check the ARK without a signature
             cmd_ret = amd_cert_validate(ark, NULL, AMDUsageARK);    // Naples
             if (cmd_ret != STATUS_SUCCESS)
                 break;
@@ -345,32 +345,32 @@ size_t AMDCert::amd_cert_get_size(const AMD_CERT *cert)
  *   an AMD_CERT, so need to pull the pubkey out of the AMD_CERT and
  *   place it into a tmp SEV_CERT to help validate the cek
  */
-SEV_ERROR_CODE AMDCert::amd_cert_export_pubkey(const AMD_CERT *cert,
-                                               SEV_CERT *pubkey_cert)
+SEV_ERROR_CODE AMDCert::amd_cert_export_pub_key(const AMD_CERT *cert,
+                                               SEV_CERT *pub_key_cert)
 {
     SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;
 
     do {
-        if (!cert || !pubkey_cert) {
+        if (!cert || !pub_key_cert) {
             cmd_ret = ERROR_INVALID_PARAM;
             break;
         }
 
-        memset(pubkey_cert, 0, sizeof(*pubkey_cert));
+        memset(pub_key_cert, 0, sizeof(*pub_key_cert));
 
         // Todo. This has the potential for issues if we keep the key size
         //       4k and change the SHA type on the next gen
         if(cert->ModulusSize == AMD_CERT_KEY_BITS_2K) {      // Naples
-            pubkey_cert->PubkeyAlgo = SEVSigAlgoRSASHA256;
+            pub_key_cert->PubkeyAlgo = SEVSigAlgoRSASHA256;
         }
         else if(cert->ModulusSize == AMD_CERT_KEY_BITS_4K) { // Rome
-            pubkey_cert->PubkeyAlgo = SEVSigAlgoRSASHA384;
+            pub_key_cert->PubkeyAlgo = SEVSigAlgoRSASHA384;
         }
 
-        pubkey_cert->PubkeyUsage = cert->KeyUsage;
-        pubkey_cert->Pubkey.RSA.ModulusSize = cert->ModulusSize;
-        memcpy(pubkey_cert->Pubkey.RSA.PubExp, &cert->PubExp, cert->PubExpSize/8);
-        memcpy(pubkey_cert->Pubkey.RSA.Modulus, &cert->Modulus, cert->ModulusSize/8);
+        pub_key_cert->PubkeyUsage = cert->KeyUsage;
+        pub_key_cert->Pubkey.RSA.ModulusSize = cert->ModulusSize;
+        memcpy(pub_key_cert->Pubkey.RSA.PubExp, &cert->PubExp, cert->PubExpSize/8);
+        memcpy(pub_key_cert->Pubkey.RSA.Modulus, &cert->Modulus, cert->ModulusSize/8);
     } while (0);
 
     return cmd_ret;
