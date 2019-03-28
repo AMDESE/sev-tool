@@ -83,18 +83,11 @@ int SEVDevice::factory_reset()
 {
     uint32_t data;      // Can't pass null
     int cmd_ret = SEV_RET_UNSUPPORTED;
-    int ioctl_ret = -1;
 
     // Set struct to 0
     memset(&data, 0, sizeof(data));
 
-    do {
-        // Send the command
-        ioctl_ret = sev_ioctl(SEV_FACTORY_RESET, &data, &cmd_ret);
-        if(ioctl_ret != 0)
-            break;
-
-    } while (0);
+    sev_ioctl(SEV_FACTORY_RESET, &data, &cmd_ret);
 
     return (int)cmd_ret;
 }
@@ -112,18 +105,11 @@ int SEVDevice::get_platform_es(void* data)
 int SEVDevice::platform_status(uint8_t *data)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
-    int ioctl_ret = -1;
 
     // Set struct to 0
     memset(data, 0, sizeof(sev_user_data_status));
 
-    do {
-        // Send the command
-        ioctl_ret = sev_ioctl(SEV_PLATFORM_STATUS, data, &cmd_ret);
-        if(ioctl_ret != 0)
-            break;
-
-    } while (0);
+    sev_ioctl(SEV_PLATFORM_STATUS, data, &cmd_ret);
 
     return (int)cmd_ret;
 }
@@ -132,18 +118,11 @@ int SEVDevice::pek_gen()
 {
     uint32_t data;      // Can't pass null
     int cmd_ret = SEV_RET_UNSUPPORTED;
-    int ioctl_ret = -1;
 
     // Set struct to 0
     memset(&data, 0, sizeof(data));
 
-    do {
-        // Send the command
-        ioctl_ret = sev_ioctl(SEV_PEK_GEN, &data, &cmd_ret);
-        if(ioctl_ret != 0)
-            break;
-
-    } while (0);
+    sev_ioctl(SEV_PEK_GEN, &data, &cmd_ret);
 
     return (int)cmd_ret;
 }
@@ -207,18 +186,11 @@ int SEVDevice::pdh_gen()
 {
     uint32_t data;      // Can't pass null
     int cmd_ret = SEV_RET_UNSUPPORTED;
-    int ioctl_ret = -1;
 
     // Set struct to 0
     memset(&data, 0, sizeof(data));
 
-    do {
-        // Send the command
-        ioctl_ret = sev_ioctl(SEV_PDH_GEN, &data, &cmd_ret);
-        if(ioctl_ret != 0)
-            break;
-
-    } while (0);
+    sev_ioctl(SEV_PDH_GEN, &data, &cmd_ret);
 
     return (int)cmd_ret;
 }
