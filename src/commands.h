@@ -44,7 +44,7 @@
 #define CERT_CHAIN_READABLE_FILENAME    "cert_chain_readable.txt"// pdh_cert_export
 #define GET_ID_S0_FILENAME              "getid_s0_out.txt"      // get_id
 #define GET_ID_S1_FILENAME              "getid_s1_out.txt"      // get_id
-#define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.bin" // calc_measurement
+#define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.txt" // calc_measurement
 #define LAUNCH_BLOB_FILENAME            "launch_blob.bin"       // generate_launch_blob
 #define GUEST_OWNER_DH_FILENAME         "godh.cert"             // generate_launch_blob
 #define GUEST_TK_FILENAME               "tmp_tk.bin"            // generate_launch_blob
