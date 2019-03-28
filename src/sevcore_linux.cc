@@ -535,8 +535,9 @@ int SEVDevice::generate_cek_ask(std::string& output_folder,
         std::string cert_w_path = output_folder + id0_buf;
         char tmp_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
         bool cert_found = false;
+        int sec_to_sleep = 4;
         int retries = 0;
-        while(!cert_found || retries < 10) {
+        while(!cert_found || retries < (int)((10/sec_to_sleep)+1)) {
             if(!execute_system_command(cmd, &output)) {
                 printf("Error: pipe not opened for system command\n");
                 cmd_ret = SEV_RET_UNSUPPORTED;
@@ -548,7 +549,7 @@ int SEVDevice::generate_cek_ask(std::string& output_folder,
                 cert_found = true;
                 break;
             }
-            sleep(4);
+            sleep(sec_to_sleep);
             printf("Trying again\n");
             retries++;
         }
