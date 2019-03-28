@@ -22,13 +22,6 @@
 #include <fstream>
 #include <stdio.h>
 
-#define AMD_CERT_KEY_BYTES_4K   (AMD_CERT_KEY_BITS_4K/8)
-
-static const uint8_t amd_root_key_id[AMD_CERT_ID_SIZE_BYTES] = {
-        0x1b, 0xb9, 0x87, 0xc3, 0x59, 0x49, 0x46, 0x06,
-        0xb1, 0x74, 0x94, 0x56, 0x01, 0xc9, 0xea, 0x5b,
-};
-
 /**
  * If out_str is passed in, fill up the string, else prints to std::out
  */
