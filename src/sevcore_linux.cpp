@@ -128,15 +128,15 @@ int SEVDevice::pek_gen()
     return (int)cmd_ret;
 }
 
-bool SEVDevice::validate_pek_csr(SEV_CERT *PEKcsr)
+bool SEVDevice::validate_pek_csr(SEV_CERT *pek_csr)
 {
-    if(PEKcsr->Version     == 1                     &&
-       PEKcsr->PubkeyUsage == SEVUsagePEK           &&
-       PEKcsr->PubkeyAlgo  == SEVSigAlgoECDSASHA256 &&
-       PEKcsr->Sig1Usage   == SEVUsageInvalid       &&
-       PEKcsr->Sig1Algo    == SEVSigAlgoInvalid     &&
-       PEKcsr->Sig2Usage   == SEVUsageInvalid       &&
-       PEKcsr->Sig2Algo    == SEVSigAlgoInvalid) {
+    if(pek_csr->Version     == 1                     &&
+       pek_csr->PubkeyUsage == SEVUsagePEK           &&
+       pek_csr->PubkeyAlgo  == SEVSigAlgoECDSASHA256 &&
+       pek_csr->Sig1Usage   == SEVUsageInvalid       &&
+       pek_csr->Sig1Algo    == SEVSigAlgoInvalid     &&
+       pek_csr->Sig2Usage   == SEVUsageInvalid       &&
+       pek_csr->Sig2Algo    == SEVSigAlgoInvalid) {
         return true;
     }
     else {
@@ -144,7 +144,7 @@ bool SEVDevice::validate_pek_csr(SEV_CERT *PEKcsr)
     }
 }
 
-int SEVDevice::pek_csr(uint8_t *data, void *PEKMem, SEV_CERT *PEKcsr)
+int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, SEV_CERT *csr)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
@@ -155,7 +155,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *PEKMem, SEV_CERT *PEKcsr)
 
     do {
         // Populate PEKCSR buffer with CSRLength = 0
-        data_buf->address = (uint64_t)PEKMem;
+        data_buf->address = (uint64_t)pek_mem;
         data_buf->length = 0;
 
         // Send the command. This is to get the MinSize length. If you
@@ -174,8 +174,8 @@ int SEVDevice::pek_csr(uint8_t *data, void *PEKMem, SEV_CERT *PEKcsr)
             break;
 
         // Verify the CSR complies to API specification
-        memcpy(PEKcsr, (SEV_CERT*)data_buf->address, sizeof(SEV_CERT));
-        if(!validate_pek_csr(PEKcsr))
+        memcpy(csr, (SEV_CERT*)data_buf->address, sizeof(SEV_CERT));
+        if(!validate_pek_csr(csr))
             break;
 
     } while (0);
@@ -197,8 +197,8 @@ int SEVDevice::pdh_gen()
 }
 
 int SEVDevice::pdh_cert_export(uint8_t *data,
-                               void *PDHCertMem,
-                               void *CertChainMem)
+                               void *pdh_cert_mem,
+                               void *cert_chain_mem)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
@@ -208,9 +208,9 @@ int SEVDevice::pdh_cert_export(uint8_t *data,
     memset(data_buf, 0, sizeof(sev_user_data_pdh_cert_export));
 
     do {
-        data_buf->pdh_cert_address = (uint64_t)PDHCertMem;
+        data_buf->pdh_cert_address = (uint64_t)pdh_cert_mem;
         data_buf->pdh_cert_len = sizeof(SEV_CERT);
-        data_buf->cert_chain_address = (uint64_t)CertChainMem;
+        data_buf->cert_chain_address = (uint64_t)cert_chain_mem;
         data_buf->cert_chain_len = sizeof(SEV_CERT_CHAIN_BUF);
 
         // Send the command
@@ -224,7 +224,7 @@ int SEVDevice::pdh_cert_export(uint8_t *data,
 }
 
 int SEVDevice::pek_cert_import(uint8_t *data,
-                               SEV_CERT *PEKcsr,
+                               SEV_CERT *pek_csr,
                                std::string& oca_priv_key_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
@@ -242,7 +242,7 @@ int SEVDevice::pek_cert_import(uint8_t *data,
 
     do {
         // Verify the CSR complies to API specification
-        if(!validate_pek_csr(PEKcsr))
+        if(!validate_pek_csr(pek_csr))
             break;
 
         // Do a platform_status to get api_major and api_minor to create oca cert
@@ -260,7 +260,7 @@ int SEVDevice::pek_cert_import(uint8_t *data,
         // print_sev_cert_readable((SEV_CERT *)oca_cert);
 
         // Sign the PEK CSR with the OCA private key
-        SEVCert CSRCert(*PEKcsr);
+        SEVCert CSRCert(*pek_csr);
         CSRCert.sign_with_key(SEV_CERT_MAX_VERSION, SEVUsagePEK, SEVSigAlgoECDSASHA256,
                               &oca_priv_key, SEVUsageOCA, SEVSigAlgoECDSASHA256);
 
@@ -283,7 +283,7 @@ int SEVDevice::pek_cert_import(uint8_t *data,
 }
 
 // Must always pass in 128 bytes array, because of how linux /dev/sev ioctl works
-int SEVDevice::get_id(void *data, void *IDMem, uint32_t id_length)
+int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
@@ -305,20 +305,20 @@ int SEVDevice::get_id(void *data, void *IDMem, uint32_t id_length)
             break;
 
         // Copy the resulting IDs into the real buffer allocated for them
-        memcpy(IDMem, &id_buf, id_length);
+        memcpy(id_mem, &id_buf, id_length);
     } while (0);
 
     // The other functions in this file can do a direct mapping of the Linux
     //   struct to the SEV API struct in sevapi.h, however, for this function,
     //   this Linux struct doesn't match (at all) the API
     // Hard coded hack mapping to sevapi.h. Don't want to include sevapi.h in this file
-    ((uint64_t *)data)[0] = (uint64_t)IDMem;      // Set address of IDMem as 64 bit PAddr from sevapi.h
+    ((uint64_t *)data)[0] = (uint64_t)id_mem;      // Set address of id_mem as 64 bit PAddr from sevapi.h
     ((uint32_t *)data)[2] = id_length;  // 3rd 32-bit chunk in the cmd_buf
 
     return (int)cmd_ret;
 }
 
-static std::string DisplayBuildInfo()
+static std::string display_build_info()
 {
     SEVDevice sev_device;
     uint8_t status_data[sizeof(SEV_PLATFORM_STATUS_CMD_BUF)];
@@ -333,13 +333,13 @@ static std::string DisplayBuildInfo()
     if (cmd_ret != 0)
         return "";
 
-    char MajorBuf[4], MinorBuf[4], BuildIDBuf[4];          // +1 for Null char
-    sprintf(MajorBuf, "%d", status_data_buf->ApiMajor);
-    sprintf(MinorBuf, "%d", status_data_buf->ApiMinor);
-    sprintf(BuildIDBuf, "%d", status_data_buf->BuildID);
-    api_major_ver.replace(11, 3, MajorBuf);
-    api_minor_ver.replace(11, 3, MinorBuf);
-    build_id_ver.replace(9, 3, BuildIDBuf);
+    char major_buf[4], minor_buf[4], build_id_buf[4];   // +1 for Null char
+    sprintf(major_buf, "%d", status_data_buf->ApiMajor);
+    sprintf(minor_buf, "%d", status_data_buf->ApiMinor);
+    sprintf(build_id_buf, "%d", status_data_buf->BuildID);
+    api_major_ver.replace(11, 3, major_buf);
+    api_minor_ver.replace(11, 3, minor_buf);
+    build_id_ver.replace(9, 3, build_id_buf);
 
     return api_major_ver + ", " + api_minor_ver + ", " + build_id_ver;
 }
@@ -351,9 +351,9 @@ void SEVDevice::get_family_model(uint32_t *family, uint32_t *model)
     std::string model_str = "";
 
     cmd = "lscpu | grep -E \"CPU family:\" | awk {'print $3'}";
-    execute_system_command(cmd, &fam_str);
+    sev::execute_system_command(cmd, &fam_str);
     cmd = "lscpu | grep -E \"Model:\" | awk {'print $2'}";
-    execute_system_command(cmd, &model_str);
+    sev::execute_system_command(cmd, &model_str);
 
     *family = std::stoi(fam_str, NULL, 10);
     *model = std::stoi(model_str, NULL, 10);
@@ -370,27 +370,27 @@ int SEVDevice::sys_info()
     printf("-------------------------System Info-------------------------");
     // Exec bash commands to get info on user's platform and append to the output string
     cmd = "echo -n 'Hostname: '; hostname";
-    execute_system_command(cmd, &output);
+    sev::execute_system_command(cmd, &output);
     cmd = "echo -n 'BIOS Version: '; dmidecode -s bios-version";
-    execute_system_command(cmd, &output);
+    sev::execute_system_command(cmd, &output);
     cmd = "echo -n 'BIOS Release Date: '; dmidecode -s bios-release-date";
-    execute_system_command(cmd, &output);
+    sev::execute_system_command(cmd, &output);
     cmd = "echo -n 'SMT/Multi-Threading Status Per Socket: \n'; lscpu | grep -E \"^CPU\\(s\\):|Thread\\(s\\) per core|Core\\(s\\) per socket|Socket\\(s\\)\"";
-    execute_system_command(cmd, &output);
+    sev::execute_system_command(cmd, &output);
     cmd = "echo -n 'Processor Frequency (all sockets): \n'; dmidecode -s processor-frequency";
-    execute_system_command(cmd, &output);
+    sev::execute_system_command(cmd, &output);
     cmd = "echo -n 'Operating System: '; cat /etc/os-release | grep \"PRETTY_NAME=\" | sed 's/.*=//'";        // cat /etc/issue
-    execute_system_command(cmd, &output);
+    sev::execute_system_command(cmd, &output);
     cmd = "echo -n 'Kernel Version: '; uname -r";
-    execute_system_command(cmd, &output);
+    sev::execute_system_command(cmd, &output);
     cmd = "echo -n 'Git Commit #: '; cat \"../.git/refs/heads/master\"";
-    execute_system_command(cmd, &output);
+    sev::execute_system_command(cmd, &output);
 
     // Print results of all execute_system_command calls
     printf("\n%s", output.c_str());
 
-    std::string BuildInfo = DisplayBuildInfo();
-    printf("Firmware Version: %s\n", BuildInfo.c_str());
+    std::string build_info = display_build_info();
+    printf("Firmware Version: %s\n", build_info.c_str());
 
     get_family_model(&family, &model);
     printf("Platform Family %02x, Model %02x\n", family, model);
@@ -442,11 +442,12 @@ int SEVDevice::set_self_owned()
     return (int)cmd_ret;
 }
 
-/*
- * Note: You can not change the Platform Owner if Guests are running. That means
- *       the Platform cannot be in the WORKING state here. The ccp Kernel Driver
- *       will do its best to set the Platform state to whatever is required to
- *       run each command, but that does not include shutting down Guests to do so.
+/**
+ * Note: You can not change the Platform Owner if Guests are running.
+ *       That means the Platform cannot be in the WORKING state here.
+ *       The ccp Kernel Driver will do its best to set the Platform state
+ *       to whatever is required to run each command, but that does not
+ *       include shutting down Guests to do so.
  */
 int SEVDevice::set_externally_owned(std::string& oca_priv_key_file)
 {
@@ -499,7 +500,6 @@ int SEVDevice::set_externally_owned(std::string& oca_priv_key_file)
     return (int)cmd_ret;
 }
 
-// TODO. Try to use curl as a git submodule
 int SEVDevice::generate_cek_ask(std::string& output_folder,
                                 std::string& cert_file)
 {
@@ -539,14 +539,14 @@ int SEVDevice::generate_cek_ask(std::string& output_folder,
         int sec_to_sleep = 4;
         int retries = 0;
         while(!cert_found || retries < (int)((10/sec_to_sleep)+1)) {
-            if(!execute_system_command(cmd, &output)) {
+            if(!sev::execute_system_command(cmd, &output)) {
                 printf("Error: pipe not opened for system command\n");
                 cmd_ret = SEV_RET_UNSUPPORTED;
                 break;
             }
 
             // Check if the file got downloaded
-            if(read_file(cert_w_path, tmp_buf, sizeof(tmp_buf)) != 0) {
+            if(sev::read_file(cert_w_path, tmp_buf, sizeof(tmp_buf)) != 0) {
                 cert_found = true;
                 break;
             }
@@ -572,7 +572,6 @@ int SEVDevice::generate_cek_ask(std::string& output_folder,
     return cmd_ret;
 }
 
-// TODO. Try to use curl as a git submodule
 int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
@@ -605,7 +604,7 @@ int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
         }
 
         // Download the certificate from the AMD server
-        if(!execute_system_command(cmd, &output)) {
+        if(!sev::execute_system_command(cmd, &output)) {
             printf("Error: pipe not opened for system command\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
@@ -613,7 +612,7 @@ int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
 
         // Check if the file got downloaded
         char tmp_buf[100] = {0};  // Just try to read some amount of chars
-        if(read_file(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
+        if(sev::read_file(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
             printf("Error: command to get ask_ark cert failed\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
@@ -632,7 +631,8 @@ int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
     return cmd_ret;
 }
 
-int SEVDevice::zip_certs(std::string& output_folder, std::string& zip_name, std::string& files_to_zip)
+int SEVDevice::zip_certs(std::string& output_folder, std::string& zip_name,
+                         std::string& files_to_zip)
 {
     int cmd_ret = SEV_RET_SUCCESS;
     std::string cmd = "";
@@ -640,7 +640,7 @@ int SEVDevice::zip_certs(std::string& output_folder, std::string& zip_name, std:
     std::string error = "zip error";
 
     cmd = "zip " + output_folder + zip_name + " " + files_to_zip;
-    execute_system_command(cmd, &output);
+    sev::execute_system_command(cmd, &output);
 
     if(output.find(error) != std::string::npos) {
         printf("Error when zipping up files!");

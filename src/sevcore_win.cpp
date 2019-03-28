@@ -82,15 +82,15 @@ int SEVDevice::pek_gen()
     return cmd_ret;
 }
 
-bool SEVDevice::validate_pek_csr(SEV_CERT *PEKcsr)
+bool SEVDevice::validate_pek_csr(SEV_CERT *pek_csr)
 {
-    if(PEKcsr->Version     == 1                     &&
-       PEKcsr->PubkeyUsage == SEVUsagePEK           &&
-       PEKcsr->PubkeyAlgo  == SEVSigAlgoECDSASHA256 &&
-       PEKcsr->Sig1Usage   == SEVUsageInvalid       &&
-       PEKcsr->Sig1Algo    == SEVSigAlgoInvalid     &&
-       PEKcsr->Sig2Usage   == SEVUsageInvalid       &&
-       PEKcsr->Sig2Algo    == SEVSigAlgoInvalid) {
+    if(pek_csr->Version     == 1                     &&
+       pek_csr->PubkeyUsage == SEVUsagePEK           &&
+       pek_csr->PubkeyAlgo  == SEVSigAlgoECDSASHA256 &&
+       pek_csr->Sig1Usage   == SEVUsageInvalid       &&
+       pek_csr->Sig1Algo    == SEVSigAlgoInvalid     &&
+       pek_csr->Sig2Usage   == SEVUsageInvalid       &&
+       pek_csr->Sig2Algo    == SEVSigAlgoInvalid) {
         return true;
     }
     else {
@@ -98,7 +98,7 @@ bool SEVDevice::validate_pek_csr(SEV_CERT *PEKcsr)
     }
 }
 
-int SEVDevice::pek_csr(uint8_t *data, void *PEKMem, SEV_CERT *PEKcsr)
+int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, SEV_CERT *csr)
 {
     int cmd_ret = -1;
 
@@ -112,8 +112,8 @@ int SEVDevice::pdh_gen()
     return cmd_ret;
 }
 
-int SEVDevice::pdh_cert_export(uint8_t *data,
-                               void *PDHCertMem, void *CertChainMem)
+int SEVDevice::pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
+                               void *cert_chain_mem)
 {
     int cmd_ret = -1;
 
@@ -122,9 +122,9 @@ int SEVDevice::pdh_cert_export(uint8_t *data,
 
 // todo. dont want to be reading from a file. use openssl to generate
 int SEVDevice::pek_cert_import(uint8_t *data,
-                                          SEV_CERT *PEKcsr,
-                                          std::string& oca_priv_key_file,
-                                          std::string& oca_cert_file)
+                               SEV_CERT *pek_csr,
+                               std::string& oca_priv_key_file,
+                               std::string& oca_cert_file)
 {
     int cmd_ret = -1;
 
@@ -132,14 +132,14 @@ int SEVDevice::pek_cert_import(uint8_t *data,
 }
 
 // Must always pass in 128 bytes array, because of how linux /dev/sev ioctl works
-int SEVDevice::get_id(void *data, void *IDMem, uint32_t id_length)
+int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
 {
     int cmd_ret = -1;
 
     return cmd_ret;
 }
 
-static std::string DisplayBuildInfo()
+static std::string display_build_info()
 {
     SEVDevice sev_device;
     uint8_t status_data[sizeof(SEV_PLATFORM_STATUS_CMD_BUF)];
@@ -154,13 +154,13 @@ static std::string DisplayBuildInfo()
     if (cmd_ret != 0)
         return "";
 
-    char MajorBuf[4], MinorBuf[4], BuildIDBuf[4];          // +1 for Null char
-    sprintf(MajorBuf, "%d", status_data_buf->ApiMajor);
-    sprintf(MinorBuf, "%d", status_data_buf->ApiMinor);
-    sprintf(BuildIDBuf, "%d", status_data_buf->BuildID);
-    api_major_ver.replace(11, 3, MajorBuf);
-    api_minor_ver.replace(11, 3, MinorBuf);
-    build_id_ver.replace(9, 3, BuildIDBuf);
+    char major_buf[4], minor_buf[4], build_id_buf[4];       // +1 for Null char
+    sprintf(major_buf, "%d", status_data_buf->ApiMajor);
+    sprintf(minor_buf, "%d", status_data_buf->ApiMinor);
+    sprintf(build_id_buf, "%d", status_data_buf->BuildID);
+    api_major_ver.replace(11, 3, major_buf);
+    api_minor_ver.replace(11, 3, minor_buf);
+    build_id_ver.replace(9, 3, build_id_buf);
 
     return api_major_ver + ", " + api_minor_ver + ", " + build_id_ver;
 }
@@ -177,8 +177,8 @@ int SEVDevice::sys_info()
     // Print results of all execute_system_command calls
     printf("\n%s", output.c_str());
 
-    std::string BuildInfo = DisplayBuildInfo();
-    printf("Firmware Version: %s\n", BuildInfo.c_str());
+    std::string build_info = display_build_info();
+    printf("Firmware Version: %s\n", build_info.c_str());
 
     printf("-------------------------------------------------------------\n\n");
 

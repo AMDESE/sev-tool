@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <cstring>      // memcpy
 
-bool execute_system_command(const std::string cmd, std::string *log)
+bool sev::execute_system_command(const std::string cmd, std::string *log)
 {
     FILE *pipe = popen(cmd.c_str(), "r");
     if (!pipe) {
@@ -42,11 +42,11 @@ bool execute_system_command(const std::string cmd, std::string *log)
     return true;
 }
 
-/*
+/**
  * Read up to len bytes from the beginning of a file
  * Returns number of bytes read, or 0 if the file couldn't be opened.
  */
-size_t read_file(const std::string& file_name, void *buffer, size_t len)
+size_t sev::read_file(const std::string& file_name, void *buffer, size_t len)
 {
     std::ifstream file(file_name, std::ios::binary);
     if (len > INT_MAX) {
@@ -69,12 +69,12 @@ size_t read_file(const std::string& file_name, void *buffer, size_t len)
     return count;
 }
 
-/*
+/**
  * Writes len bytes from the beginning of a file. Does NOT append
  * Returns number of bytes written, or 0 if the file couldn't be opened.
  * ostream CANNOT create a folder, so it has to exist already, to succeed
  */
-size_t write_file(const std::string& file_name, const void *buffer, size_t len)
+size_t sev::write_file(const std::string& file_name, const void *buffer, size_t len)
 {
     std::ofstream file(file_name, std::ofstream::out);
     if (len > INT_MAX) {
@@ -98,8 +98,10 @@ size_t write_file(const std::string& file_name, const void *buffer, size_t len)
     return count;
 }
 
-// Returns the file size in number of bytes
-size_t get_file_size(const std::string& file_name)
+/**
+ * Returns the file size in number of bytes
+ */
+size_t sev::get_file_size(const std::string& file_name)
 {
     std::ifstream file(file_name, std::ios::binary | std::ios::ate);
 
@@ -115,7 +117,7 @@ size_t get_file_size(const std::string& file_name)
     return count;
 }
 
-void gen_random_bytes(void *bytes, size_t num_bytes)
+void sev::gen_random_bytes(void *bytes, size_t num_bytes)
 {
     uint8_t *addr = (uint8_t *)bytes;
     while (num_bytes--) {
@@ -123,7 +125,7 @@ void gen_random_bytes(void *bytes, size_t num_bytes)
     }
 }
 
-bool verify_access(uint8_t *buf, size_t len)
+bool sev::verify_access(uint8_t *buf, size_t len)
 {
     uint8_t *master = new uint8_t[len];
     gen_random_bytes(master, len);
@@ -133,7 +135,7 @@ bool verify_access(uint8_t *buf, size_t len)
     return ret;
 }
 
-bool str_to_array(std::string in_string, uint8_t *array, uint32_t array_size)
+bool sev::str_to_array(std::string in_string, uint8_t *array, uint32_t array_size)
 {
     std::string substring = "";
 
@@ -155,7 +157,7 @@ bool str_to_array(std::string in_string, uint8_t *array, uint32_t array_size)
     return true;
 }
 
-void ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len)
+void sev::ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len)
 {
     std::string temp;
 
@@ -164,10 +166,9 @@ void ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len)
         temp = {in_bytes[i*2], in_bytes[(i*2)+1], '\0'};
         ((uint8_t *)out)[i] = (uint8_t)stoi(temp, NULL, 16);
     }
-
 }
 
-bool reverse_bytes(uint8_t *bytes, size_t size)
+bool sev::reverse_bytes(uint8_t *bytes, size_t size)
 {
     uint8_t *start = bytes;
     uint8_t *end = bytes + size - 1;

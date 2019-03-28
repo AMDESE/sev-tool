@@ -66,7 +66,7 @@ private:
     inline int GetFD(void) { return mFd; }
     int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
-    bool validate_pek_csr(SEV_CERT *PEKcsr);
+    bool validate_pek_csr(SEV_CERT *pek_csr);
     void get_family_model(uint32_t *family, uint32_t *model);
 
 public:
@@ -80,14 +80,12 @@ public:
     int factory_reset(void);
     int platform_status(uint8_t *data);
     int pek_gen(void);
-    int pek_csr(uint8_t *data, void *PEKMem, SEV_CERT *csr);
+    int pek_csr(uint8_t *data, void *pek_mem, SEV_CERT *csr);
     int pdh_gen(void);
-    int pdh_cert_export(uint8_t *data,
-                        void *PDHCertMem, void *CertChainMem);
-    int pek_cert_import(uint8_t *data,
-                        SEV_CERT *csr,
+    int pdh_cert_export(uint8_t *data, void *pdh_cert_mem, void *cert_chain_mem);
+    int pek_cert_import(uint8_t *data, SEV_CERT *pek_csr,
                         std::string& oca_priv_key_file);
-    int get_id(void *data, void *IDMem, uint32_t id_length = 0);
+    int get_id(void *data, void *id_mem, uint32_t id_length = 0);
 
     int sys_info();
     int set_self_owned(void);

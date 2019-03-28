@@ -35,7 +35,7 @@ bool Tests::clear_output_folder()
 {
     std::string cmd = "rm -rf " + m_output_folder + "*";
     std::string output = "";
-    if(!execute_system_command(cmd, &output))
+    if(!sev::execute_system_command(cmd, &output))
         return false;
     return true;
 }
@@ -141,9 +141,9 @@ bool Tests::test_pek_gen()
         }
 
         // Read in the original PEK/PDH certs
-        if(read_file(cert_chain_full, &cert_chain_orig, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
             break;
-        if(read_file(pdh_cert_full, &pdh_orig, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Call pek_gen to generate a new PEK, which also generates a new PDH
@@ -159,9 +159,9 @@ bool Tests::test_pek_gen()
         }
 
         // Read in the new PEK/PDH certs
-        if(read_file(cert_chain_full, &cert_chain_new, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
             break;
-        if(read_file(pdh_cert_full, &pdh_new, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Make sure the original and new certs are different
@@ -197,7 +197,7 @@ bool Tests::test_pek_csr()
             break;
 
         // Read in the CSR
-        if(read_file(pekcsr_full, &pekcsr, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pekcsr_full, &pekcsr, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Check the usage of the CSR
@@ -237,9 +237,9 @@ bool Tests::test_pdh_gen()
         }
 
         // Read in the original PEK/PDH certs
-        if(read_file(cert_chain_full, &cert_chain_orig, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
             break;
-        if(read_file(pdh_cert_full, &pdh_orig, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Call pek_gen to generate a new PEK, which also generates a new PDH
@@ -255,9 +255,9 @@ bool Tests::test_pdh_gen()
         }
 
         // Read in the new PEK/PDH certs
-        if(read_file(cert_chain_full, &cert_chain_new, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
             break;
-        if(read_file(pdh_cert_full, &pdh_new, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Make sure the PEK certs are the same and PDH certs are different
@@ -299,9 +299,9 @@ bool Tests::test_pdh_cert_export()
         }
 
         // Read in the PDH and cert chain
-        if(read_file(cert_chain_full, &cert_chain, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
             break;
-        if(read_file(pdh_cert_full, &pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Check the usage of all certs
@@ -352,9 +352,9 @@ bool Tests::test_pek_cert_import()
         }
 
         // Read in the original PEK/PDH certs
-        if(read_file(cert_chain_full, &cert_chain_orig, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
             break;
-        if(read_file(pdh_cert_full, &pdh_orig, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Generate a new random ECDH keypair
@@ -377,9 +377,9 @@ bool Tests::test_pek_cert_import()
         }
 
         // Read in the new PEK/PDH certs
-        if(read_file(cert_chain_full, &cert_chain_new, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
+        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(SEV_CERT_CHAIN_BUF)) != sizeof(SEV_CERT_CHAIN_BUF))
             break;
-        if(read_file(pdh_cert_full, &pdh_new, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Make sure the original and new certs are different
@@ -538,7 +538,7 @@ bool Tests::test_generate_cek_ask()
             break;
 
         // Read in the CEK
-        if(read_file(cek_full, &cek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(cek_full, &cek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Check the usage of the CEK
@@ -575,7 +575,7 @@ bool Tests::test_get_ask_ark()
 
         // Read in the ask_ark so we can split it into 2 separate cert files
         uint8_t ask_ark_buf[sizeof(AMD_CERT)*2] = {0};
-        if(read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0) {
+        if(sev::read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0) {
             printf("Error: Unable to read in ASK_ARK certificate\n");
             break;
         }
@@ -638,9 +638,9 @@ bool Tests::test_calc_measurement()
     data.api_minor = 0x12;
     data.build_id  = 0x0f;
     data.policy    = 0x00;
-    str_to_array("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", (uint8_t *)&data.digest, sizeof(data.digest));
-    str_to_array("4fbe0bedbad6c86ae8f68971d103e554", (uint8_t *)&data.mnonce, sizeof(data.mnonce));
-    str_to_array("66320db73158a35a255d051758e95ed4", (uint8_t *)&data.tik, sizeof(data.tik));
+    sev::str_to_array("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", (uint8_t *)&data.digest, sizeof(data.digest));
+    sev::str_to_array("4fbe0bedbad6c86ae8f68971d103e554", (uint8_t *)&data.mnonce, sizeof(data.mnonce));
+    sev::str_to_array("66320db73158a35a255d051758e95ed4", (uint8_t *)&data.tik, sizeof(data.tik));
 
     std::string expected_output = "6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea";
 
@@ -653,7 +653,7 @@ bool Tests::test_calc_measurement()
         // Read in the actual output
         uint8_t actual_output[2*sizeof(HMACSHA256)];  // 2 chars per byte +1 for null term
         std::string meas_out_full = m_output_folder + CALC_MEASUREMENT_FILENAME;
-        if(read_file(meas_out_full, actual_output, sizeof(actual_output)) != sizeof(actual_output))
+        if(sev::read_file(meas_out_full, actual_output, sizeof(actual_output)) != sizeof(actual_output))
             break;
 
         // Make sure the actual output is equal to the expected
@@ -724,26 +724,26 @@ bool Tests::test_package_secret()
 
         // Export a 'calculated measurement' that package_secret can read in for the header
         sys_cmd = "echo 6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea > " + m_output_folder + CALC_MEASUREMENT_FILENAME;
-        if(!execute_system_command(sys_cmd, &output))
+        if(!sev::execute_system_command(sys_cmd, &output))
             return false;
 
         // FAILURE test: Try a secrets file that's less than 8 bytes
         sys_cmd = "echo HELLO > " + m_output_folder + SECRET_FILENAME;
-        if(!execute_system_command(sys_cmd, &output))
+        if(!sev::execute_system_command(sys_cmd, &output))
             return false;
         if(cmd.package_secret() == STATUS_SUCCESS)   // fail
             break;
 
         // Try a secrets file of 8 bytes
         sys_cmd = "echo HELLOooo > " + m_output_folder + SECRET_FILENAME;
-        if(!execute_system_command(sys_cmd, &output))
+        if(!sev::execute_system_command(sys_cmd, &output))
             return false;
         if(cmd.package_secret() != STATUS_SUCCESS)
             break;
 
         // Try a longer secrets file (use the readable cert_chain file from pdh_cert_export)
         sys_cmd = "cp " + m_output_folder + CERT_CHAIN_READABLE_FILENAME + " " + m_output_folder + SECRET_FILENAME;
-        if(!execute_system_command(sys_cmd, &output))
+        if(!sev::execute_system_command(sys_cmd, &output))
             return false;
         if(cmd.package_secret() != STATUS_SUCCESS)
             break;

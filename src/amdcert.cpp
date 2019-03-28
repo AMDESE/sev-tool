@@ -156,7 +156,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const AMD_CERT *cert)
         // Swap the bytes of the signature
         memcpy(signature, &cert->Sig, cert->ModulusSize/8);
 
-        if(!reverse_bytes(signature, cert->ModulusSize/8))
+        if(!sev::reverse_bytes(signature, cert->ModulusSize/8))
             break;
 
         // Verify the signature

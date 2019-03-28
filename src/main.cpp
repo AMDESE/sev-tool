@@ -209,9 +209,9 @@ int main(int argc, char** argv)
                 user_data.api_minor = (uint8_t)strtol(argv[optind++], NULL, 16);
                 user_data.build_id  = (uint8_t)strtol(argv[optind++], NULL, 16);
                 user_data.policy    = (uint32_t)strtol(argv[optind++], NULL, 16);
-                str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.digest, sizeof(user_data.digest));
-                str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.mnonce, sizeof(user_data.mnonce));
-                str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.tik,    sizeof(user_data.tik));
+                sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.digest, sizeof(user_data.digest));
+                sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.mnonce, sizeof(user_data.mnonce));
+                sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.tik,    sizeof(user_data.tik));
                 cmd_ret = cmd.calc_measurement(&user_data);
                 break;
             }

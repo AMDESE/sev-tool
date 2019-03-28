@@ -100,8 +100,8 @@ int Command::pek_csr(void)
             std::string pek_csr_hex_path = m_output_folder+PEK_CSR_HEX_FILENAME;
 
             print_sev_cert_readable(&pek_csr, pek_csr_readable);
-            write_file(pek_csr_readable_path, (void *)pek_csr_readable.c_str(), pek_csr_readable.size());
-            write_file(pek_csr_hex_path, (void *)&pek_csr, sizeof(pek_csr));
+            sev::write_file(pek_csr_readable_path, (void *)pek_csr_readable.c_str(), pek_csr_readable.size());
+            sev::write_file(pek_csr_hex_path, (void *)&pek_csr, sizeof(pek_csr));
         }
     }
 
@@ -149,10 +149,10 @@ int Command::pdh_cert_export(void)
 
             print_sev_cert_readable((SEV_CERT *)pdh_cert_mem, PDH_readable);
             print_cert_chain_buf_readable((SEV_CERT_CHAIN_BUF *)cert_chain_mem, cc_readable);
-            write_file(PDH_readable_path, (void *)PDH_readable.c_str(), PDH_readable.size());
-            write_file(PDH_path, pdh_cert_mem, sizeof(SEV_CERT));
-            write_file(cc_readable_path, (void *)cc_readable.c_str(), cc_readable.size());
-            write_file(cc_path, cert_chain_mem, sizeof(SEV_CERT_CHAIN_BUF));
+            sev::write_file(PDH_readable_path, (void *)PDH_readable.c_str(), PDH_readable.size());
+            sev::write_file(PDH_path, pdh_cert_mem, sizeof(SEV_CERT));
+            sev::write_file(cc_readable_path, (void *)cc_readable.c_str(), cc_readable.size());
+            sev::write_file(cc_path, cert_chain_mem, sizeof(SEV_CERT_CHAIN_BUF));
         }
     }
 
@@ -251,11 +251,11 @@ int Command::get_id(void)
 
     // Always allocate 2 ID's worth because Linux will always write 2 ID's worth.
     // If you have 1 ID and you are not in Linux, allocating extra is fine
-    void *IDMem = malloc(2*default_id_length);
-    if(!IDMem)
+    void *id_mem = malloc(2*default_id_length);
+    if(!id_mem)
         return cmd_ret;
 
-    cmd_ret = m_sev_device.get_id(data, IDMem, 2*default_id_length);
+    cmd_ret = m_sev_device.get_id(data, id_mem, 2*default_id_length);
 
     if(cmd_ret == STATUS_SUCCESS) {
         char id0_buf[default_id_length*2+1] = {0};  // 2 chars per byte +1 for null term
@@ -274,13 +274,13 @@ int Command::get_id(void)
         if(m_output_folder != "") {     // Print the IDs to a text file
             std::string id0_path = m_output_folder+GET_ID_S0_FILENAME;
             std::string id1_path = m_output_folder+GET_ID_S1_FILENAME;
-            write_file(id0_path, (void *)id0_buf, sizeof(id0_buf)-1);   // Don't write null term
-            write_file(id1_path, (void *)id1_buf, sizeof(id1_buf)-1);
+            sev::write_file(id0_path, (void *)id0_buf, sizeof(id0_buf)-1);   // Don't write null term
+            sev::write_file(id1_path, (void *)id1_buf, sizeof(id1_buf)-1);
         }
     }
 
     // Free memory
-    free(IDMem);
+    free(id_mem);
 
     return (int)cmd_ret;
 }
@@ -402,7 +402,7 @@ int Command::generate_all_certs(void)
 
         // Read in the ask_ark so we can split it into 2 separate cert files
         uint8_t ask_ark_buf[sizeof(AMD_CERT)*2] = {0};
-        if(read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0)
+        if(sev::read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0)
             break;
 
         // Initialize the ask
@@ -423,21 +423,21 @@ int Command::generate_all_certs(void)
         //   the one 'cached by the hypervisor' that's signed by the ask
         //   (the one from the AMD dev site)
         size_t ark_size = tmp_amd.amd_cert_get_size(&ark);
-        if(write_file(pdh_full, pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::write_file(pdh_full, pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
-        if(write_file(pek_full, PEKinCertChain(cert_chain), sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::write_file(pek_full, PEKinCertChain(cert_chain), sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
-        if(write_file(oca_full, OCAinCertChain(cert_chain), sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::write_file(oca_full, OCAinCertChain(cert_chain), sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
         print_amd_cert_hex(&ask, ask_string);       //TODO refactor this
         print_amd_cert_hex(&ark, ark_string);
         uint8_t ask_binary[ask_size*2];
         uint8_t ark_binary[ark_size*2];
-        ascii_hex_bytes_to_binary(ask_binary, ask_string.c_str(), ask_size);
-        ascii_hex_bytes_to_binary(ark_binary, ark_string.c_str(), ark_size);
-        if(write_file(ask_full, ask_binary, ask_size) != ask_size)
+        sev::ascii_hex_bytes_to_binary(ask_binary, ask_string.c_str(), ask_size);
+        sev::ascii_hex_bytes_to_binary(ark_binary, ark_string.c_str(), ark_size);
+        if(sev::write_file(ask_full, ask_binary, ask_size) != ask_size)
             break;
-        if(write_file(ark_full, ark_binary, ark_size) != ark_size)
+        if(sev::write_file(ark_full, ark_binary, ark_size) != ark_size)
             break;
 
         cmd_ret = STATUS_SUCCESS;
@@ -563,7 +563,7 @@ int Command::calc_measurement(measurement_t *user_data)
         }
         if(m_output_folder != "") {     // Print the IDs to a text file
             std::string meas_path = m_output_folder+CALC_MEASUREMENT_FILENAME;
-            write_file(meas_path, (void *)meas_str.c_str(), meas_str.size());
+            sev::write_file(meas_path, (void *)meas_str.c_str(), meas_str.size());
         }
     }
 
@@ -580,7 +580,7 @@ int Command::import_all_certs(SEV_CERT *pdh, SEV_CERT *pek, SEV_CERT *oca,
         // Read in the ark
         std::string ark_full = m_output_folder+ARK_FILENAME;
         uint8_t ark_buf[sizeof(AMD_CERT)] = {0};
-        if(read_file(ark_full, ark_buf, sizeof(AMD_CERT)) == 0)  // Variable size
+        if(sev::read_file(ark_full, ark_buf, sizeof(AMD_CERT)) == 0)  // Variable size
             break;
 
         // Initialize the ark
@@ -592,7 +592,7 @@ int Command::import_all_certs(SEV_CERT *pdh, SEV_CERT *pek, SEV_CERT *oca,
         // Read in the ark
         std::string ask_full = m_output_folder+ASK_FILENAME;
         uint8_t ask_buf[sizeof(AMD_CERT)] = {0};
-        if(read_file(ask_full, ask_buf, sizeof(AMD_CERT)) == 0)  // Variable size
+        if(sev::read_file(ask_full, ask_buf, sizeof(AMD_CERT)) == 0)  // Variable size
             break;
 
         // Initialize the ark
@@ -603,22 +603,22 @@ int Command::import_all_certs(SEV_CERT *pdh, SEV_CERT *pek, SEV_CERT *oca,
 
         // Read in the cek
         std::string cek_full = m_output_folder+CEK_FILENAME;
-        if(read_file(cek_full, cek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(cek_full, cek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Read in the oca
         std::string oca_full = m_output_folder+OCA_FILENAME;
-        if(read_file(oca_full, oca, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(oca_full, oca, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Read in the pek
         std::string pek_full = m_output_folder+PEK_FILENAME;
-        if(read_file(pek_full, pek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pek_full, pek, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Read in the pdh
         std::string pdh_full = m_output_folder+PDH_FILENAME;
-        if(read_file(pdh_full, pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_full, pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         cmd_ret = STATUS_SUCCESS;
@@ -702,7 +702,7 @@ int Command::generate_launch_blob(uint32_t policy)
     do {
         // Read in the PDH (Platform Owner Diffie-Hellman Public Key)
         std::string pdh_full = m_output_folder+PDH_FILENAME;
-        if(read_file(pdh_full, &pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::read_file(pdh_full, &pdh, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Launch Start needs the GODH Pubkey as a cert, so need to create it
@@ -724,13 +724,13 @@ int Command::generate_launch_blob(uint32_t policy)
 
         // Write the cert to file
         std::string godh_cert_file = m_output_folder + GUEST_OWNER_DH_FILENAME;
-        if(write_file(godh_cert_file, &godh_pubkey_cert, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
+        if(sev::write_file(godh_cert_file, &godh_pubkey_cert, sizeof(SEV_CERT)) != sizeof(SEV_CERT))
             break;
 
         // Write the unencrypted TK (TIK and TEK) to a tmp file so it can be
         // read in during package_secret
         std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
-        write_file(tmp_tk_file, &m_tk, sizeof(m_tk));
+        sev::write_file(tmp_tk_file, &m_tk, sizeof(m_tk));
 
         cmd_ret = build_session_buffer(&session_data_buf, policy, godh_key_pair, &pdh);
         if(cmd_ret == STATUS_SUCCESS) {
@@ -762,7 +762,7 @@ int Command::generate_launch_blob(uint32_t policy)
                 }
                 printf("\n");
             }
-            write_file(buf_file, (void *)&session_data_buf, sizeof(SEV_SESSION_BUF));
+            sev::write_file(buf_file, (void *)&session_data_buf, sizeof(SEV_SESSION_BUF));
         }
     } while (0);
 
@@ -781,11 +781,11 @@ int Command::package_secret(void)
 
     uint32_t flags = 0;
     IV128 iv;
-    gen_random_bytes(&iv, sizeof(iv));     // Pick a random IV
+    sev::gen_random_bytes(&iv, sizeof(iv));     // Pick a random IV
 
     do {
         // Get the size of the secret, so we can allocate that much memory
-        size_t secret_size = get_file_size(secret_file);
+        size_t secret_size = sev::get_file_size(secret_file);
         if(secret_size < 8) {
             printf("Error: SEV requires a secret greater than 8 bytes\n");
             break;
@@ -795,17 +795,17 @@ int Command::package_secret(void)
 
         // Read in the secret
         // printf("Attempting to read in Secrets file\n");
-        if(read_file(secret_file, secret_mem, secret_size) != secret_size)
+        if(sev::read_file(secret_file, secret_mem, secret_size) != secret_size)
             break;
 
         // Read in the blob to import the TEK
         // printf("Attempting to read in LaunchBlob file to import TEK\n");
-        if(read_file(launch_blob_file, &session_data_buf, sizeof(SEV_SESSION_BUF)) != sizeof(SEV_SESSION_BUF))
+        if(sev::read_file(launch_blob_file, &session_data_buf, sizeof(SEV_SESSION_BUF)) != sizeof(SEV_SESSION_BUF))
             break;
 
         // Read in the unencrypted TK (TIK and TEK) created in build_session_buffer
         std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
-        if(read_file(tmp_tk_file, &m_tk, sizeof(m_tk) != sizeof(m_tk))) {
+        if(sev::read_file(tmp_tk_file, &m_tk, sizeof(m_tk) != sizeof(m_tk))) {
             printf("Error reading in %s\n", tmp_tk_file.c_str());
             break;
         }
@@ -823,13 +823,13 @@ int Command::package_secret(void)
 
         // Read in the measurement, to be used as part of the launch secret header hmac
         std::string measurement_file = m_output_folder + CALC_MEASUREMENT_FILENAME;
-        if(read_file(measurement_file, &m_measurement, sizeof(m_measurement)) != sizeof(m_measurement)) {
+        if(sev::read_file(measurement_file, &m_measurement, sizeof(m_measurement)) != sizeof(m_measurement)) {
             printf("Error reading in %s\n", measurement_file.c_str());
             break;
         }
 
         // Write the encrypted secret to a file
-        write_file(packaged_secret_file, encrypted_mem, secret_size);
+        sev::write_file(packaged_secret_file, encrypted_mem, secret_size);
 
         // Set up the Launch_Secret packet header
         if(!create_launch_secret_header(&packaged_secret_header, &iv, encrypted_mem,
@@ -838,7 +838,7 @@ int Command::package_secret(void)
         }
 
         // Write the header to a file
-        write_file(packaged_secret_header_file, &packaged_secret_header, sizeof(packaged_secret_header));
+        sev::write_file(packaged_secret_header_file, &packaged_secret_header, sizeof(packaged_secret_header));
 
         cmd_ret = STATUS_SUCCESS;
     } while (0);
@@ -1111,7 +1111,7 @@ int Command::build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy,
 
     do {
         // Generate a random nonce
-        gen_random_bytes(nonce, sizeof(Nonce128));
+        sev::gen_random_bytes(nonce, sizeof(Nonce128));
 
         // Derive Master Secret
         if (!derive_master_secret(master_secret, godh_priv_key, pdh_pub, nonce))
@@ -1125,11 +1125,11 @@ int Command::build_session_buffer(SEV_SESSION_BUF *buf, uint32_t guest_policy,
 
         // Generate a random TEK and TIK. Combine in to TK. Wrap.
         // Preserve TK for use in LAUNCH_MEASURE and LAUNCH_SECRET
-        gen_random_bytes(m_tk.TEK, sizeof(m_tk.TEK));
-        gen_random_bytes(m_tk.TIK, sizeof(m_tk.TIK));
+        sev::gen_random_bytes(m_tk.TEK, sizeof(m_tk.TEK));
+        sev::gen_random_bytes(m_tk.TIK, sizeof(m_tk.TIK));
 
         // Create an IV and wrap the TK with KEK and IV
-        gen_random_bytes(iv, sizeof(IV128));
+        sev::gen_random_bytes(iv, sizeof(IV128));
         if (!encrypt((uint8_t *)&wrap_tk, (uint8_t *)&m_tk, sizeof(m_tk), kek, iv))
             break;
 
