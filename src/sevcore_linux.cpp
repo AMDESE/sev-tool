@@ -538,7 +538,7 @@ int SEVDevice::generate_cek_ask(std::string& output_folder,
         bool cert_found = false;
         int sec_to_sleep = 4;
         int retries = 0;
-        while(!cert_found || retries < (int)((10/sec_to_sleep)+1)) {
+        while(!cert_found && retries < (int)((10/sec_to_sleep)+1)) {
             if(!sev::execute_system_command(cmd, &output)) {
                 printf("Error: pipe not opened for system command\n");
                 cmd_ret = SEV_RET_UNSUPPORTED;
