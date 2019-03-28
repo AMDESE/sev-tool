@@ -120,7 +120,7 @@ public:
     int get_id(std::string& output_folder, int verbose_flag);
 
     // Non-ioctl (custom) commands
-    int sysinfo(void);
+    int sys_info(void);
     int get_platform_owner(void);
     int get_platform_es(void);
     int set_self_owned(void);

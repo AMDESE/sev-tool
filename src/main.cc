@@ -96,7 +96,7 @@ static struct option long_options[] =
     {"test_all",             no_argument,       0, 'T'},
 
     {"help",                 no_argument,       0, 'H'},
-    {"sysinfo",              no_argument,       0, 'I'},
+    {"sys_info",             no_argument,       0, 'I'},
     {"ofolder",              required_argument, 0, 'O'},
     {0, 0, 0, 0}
 };
@@ -113,15 +113,15 @@ int main(int argc, char** argv)
     while ((c = getopt_long (argc, argv, "hio:", long_options, &option_index)) != -1)
     {
         switch (c) {
-            case 'h':           // Help
+            case 'h':           // help
             case 'H': {
                 printf("%s\n", help_array);
                 cmd_ret = 0;
                 break;
             }
-            case 'i':           // Sysinfo
+            case 'i':           // sys_info
             case 'I': {
-                cmd_ret = cmd.sysinfo();  // Display system info
+                cmd_ret = cmd.sys_info();  // Display system info
                 break;
             }
             case 'o':           // ofolder

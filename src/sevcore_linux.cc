@@ -358,7 +358,7 @@ void SEVDevice::get_family_model(uint32_t *family, uint32_t *model)
     *model = std::stoi(model_str, NULL, 10);
 }
 
-int SEVDevice::sysinfo()
+int SEVDevice::sys_info()
 {
     int cmd_ret = SEV_RET_SUCCESS;
     std::string cmd = "";

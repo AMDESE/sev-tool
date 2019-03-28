@@ -282,11 +282,11 @@ int Command::get_id(std::string& output_folder, int verbose_flag)
 // ------------------------------------- //
 // ---- Non-ioctl (Custom) commands ---- //
 // ------------------------------------- //
-int Command::sysinfo(void)
+int Command::sys_info(void)
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device.sysinfo();
+    cmd_ret = m_sev_device.sys_info();
 
     return (int)cmd_ret;
 }

@@ -89,7 +89,7 @@ public:
                         std::string& oca_priv_key_file);
     int get_id(void *data, void *IDMem, uint32_t id_length = 0);
 
-    int sysinfo();
+    int sys_info();
     int set_self_owned(void);
     int get_platform_owner(void* data);
     int get_platform_es(void* data);

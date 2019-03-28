@@ -165,7 +165,7 @@ static std::string DisplayBuildInfo()
     return api_major_ver + ", " + api_minor_ver + ", " + build_id_ver;
 }
 
-int SEVDevice::sysinfo()
+int SEVDevice::sys_info()
 {
     int cmd_ret = 0;
     std::string cmd = "";
