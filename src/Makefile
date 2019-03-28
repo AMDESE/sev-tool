@@ -1,3 +1,19 @@
+###############################################################################
+# Copyright 2018 Advanced Micro Devices, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+###############################################################################
+
 # A sample Makefile for building Google Test and using it in user
 # tests.  Please tweak it to suit your environment and project.  You
 # may want to move it to your project's root directory.
@@ -47,12 +63,12 @@ clean :
 # gtest_main.a, depending on whether it defines its own main()
 # function.
 
-SRCS= $(wildcard ${USER_DIR}/*.cc)
-OBJS= $(SRCS:.cc=.o)
+SRCS= $(wildcard ${USER_DIR}/*.cpp)
+OBJS= $(SRCS:.cpp=.o)
 $(OBJS) : $(USER_DIR)/sevapi.h $(USER_DIR)/utilities.h $(SSL_HEADERS)
 
-.cc.o: $(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/$^
+.cpp.o: $(CXX) $(CXXFLAGS) -c $(USER_DIR)/$^ $(CPPFLAGS)
 
 sevtool : $(OBJS) $(SSL_DIR)/libssl.a $(SSL_DIR)/libcrypto.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -ldl -o $@
+	$(CXX) $(CXXFLAGS) -lpthread $^ -ldl -o $@ $(CPPFLAGS)
 
