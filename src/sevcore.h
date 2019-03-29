@@ -63,15 +63,28 @@ class SEVDevice {
 private:
     int mFd;
 
-    inline int GetFD(void) { return mFd; }
+    inline int get_fd(void) { return mFd; }
     int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
     bool validate_pek_csr(sev_cert *pek_csr);
+    std::string display_build_info(void);
     void get_family_model(uint32_t *family, uint32_t *model);
 
+    // Do NOT create ANY other constructors or destructors of any kind.
+    SEVDevice(void)  = default;
+
+    // Delete the copy and assignment operators which
+    // may be automatically created by the compiler. The user
+    // should not be able to modify the SEVDevice, as it is unique.
+    SEVDevice(const SEVDevice&) = delete;
+    SEVDevice& operator=(const SEVDevice&) = delete;
+
 public:
-    SEVDevice();
-    ~SEVDevice();
+    // Singleton Constructor - Threadsafe in C++ 11 and greater.
+    static SEVDevice& get_sev_device(void);
+
+    // Do NOT create ANY other constructors or destructors of any kind.
+    ~SEVDevice(void);
 
     /*
      * Format for below input variables:

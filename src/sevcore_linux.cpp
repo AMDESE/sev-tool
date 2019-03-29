@@ -26,20 +26,22 @@
 #include <unistd.h>         // for close()
 #include <stdexcept>        // for std::runtime_error()
 
-SEVDevice::SEVDevice()
-{
-    mFd = open(DEFAULT_SEV_DEVICE, O_RDWR);
-    if (mFd < 0) {
-        throw std::runtime_error("Can't open " DEFAULT_SEV_DEVICE "!\n");
-    }
-}
-
 SEVDevice::~SEVDevice()
 {
     if (mFd >= 0) {
         close(mFd);
     }
     mFd = -1;
+}
+
+SEVDevice& SEVDevice::get_sev_device(void)
+{
+    static SEVDevice m_sev_device;
+    m_sev_device.mFd = open(DEFAULT_SEV_DEVICE, O_RDWR);
+    if (m_sev_device.mFd < 0) {
+        throw std::runtime_error("Can't open " + std::string(DEFAULT_SEV_DEVICE) + "!\n");
+    }
+    return m_sev_device;
 }
 
 int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
@@ -66,12 +68,12 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
         if(status_data.api_major == 0 && status_data.api_minor <= 17 &&
            status_data.build < 19) {
             printf("Adding a 5 second delay to account for Naples GetID bug...\n");
-            ioctl_ret = ioctl(GetFD(), SEV_ISSUE_CMD, &arg);
+            ioctl_ret = ioctl(get_fd(), SEV_ISSUE_CMD, &arg);
             usleep(5000000);    // 5 seconds
         }
     }
 
-    ioctl_ret = ioctl(GetFD(), SEV_ISSUE_CMD, &arg);
+    ioctl_ret = ioctl(get_fd(), SEV_ISSUE_CMD, &arg);
     *cmd_ret = arg.error;
     // if(ioctl_ret != 0) {    // Sometimes you expect it to fail
     //     printf("Error: cmd %#x ioctl_ret=%d (%#x)\n", cmd, ioctl_ret, arg.error);
@@ -318,7 +320,7 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
     return (int)cmd_ret;
 }
 
-static std::string display_build_info()
+std::string SEVDevice::display_build_info(void)
 {
     SEVDevice sev_device;
     uint8_t status_data[sizeof(sev_platform_status_cmd_buf)];

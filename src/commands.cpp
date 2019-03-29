@@ -22,17 +22,30 @@
 #include <stdio.h>          // printf
 #include <stdlib.h>         // malloc
 
-Command::Command(std::string output_folder, int verbose_flag)
+Command::Command(void)
+       : m_sev_device(&SEVDevice::get_sev_device())
 {
-    m_output_folder = output_folder;
-    m_verbose_flag = verbose_flag;
+    // Intentionally Empty
+}
+
+Command::Command(std::string output_folder, int verbose_flag)
+       : m_sev_device(&SEVDevice::get_sev_device()),
+         m_output_folder(output_folder),
+         m_verbose_flag(verbose_flag)
+{
+    // Intentionally Empty
+}
+
+Command::~Command(void)
+{
+    //delete m_sev_device;
 }
 
 int Command::factory_reset(void)
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device.factory_reset();
+    cmd_ret = m_sev_device->factory_reset();
 
     return (int)cmd_ret;
 }
@@ -43,7 +56,7 @@ int Command::platform_status(void)
     sev_platform_status_cmd_buf *data_buf = (sev_platform_status_cmd_buf *)&data;
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device.platform_status(data);
+    cmd_ret = m_sev_device->platform_status(data);
 
     if(cmd_ret == STATUS_SUCCESS) {
         // Print ID arrays
@@ -70,7 +83,7 @@ int Command::pek_gen(void)
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device.pek_gen();
+    cmd_ret = m_sev_device->pek_gen();
 
     return (int)cmd_ret;
 }
@@ -87,7 +100,7 @@ int Command::pek_csr(void)
     if(!pek_mem)
         return -1;
 
-    cmd_ret = m_sev_device.pek_csr(data, pek_mem, &pek_csr);
+    cmd_ret = m_sev_device->pek_csr(data, pek_mem, &pek_csr);
 
     if(cmd_ret == STATUS_SUCCESS) {
         if(m_verbose_flag) {            // Print off the cert to stdout
@@ -115,7 +128,7 @@ int Command::pdh_gen(void)
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device.pdh_gen();
+    cmd_ret = m_sev_device->pdh_gen();
 
     return (int)cmd_ret;
 }
@@ -131,7 +144,7 @@ int Command::pdh_cert_export(void)
     if(!pdh_cert_mem || !cert_chain_mem)
         return -1;
 
-    cmd_ret = m_sev_device.pdh_cert_export(data, pdh_cert_mem, cert_chain_mem);
+    cmd_ret = m_sev_device->pdh_cert_export(data, pdh_cert_mem, cert_chain_mem);
 
     if(cmd_ret == STATUS_SUCCESS) {
         if(m_verbose_flag) {            // Print off the cert to stdout
@@ -191,27 +204,27 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
             break;
         }
 
-        cmd_ret = m_sev_device.set_self_owned();
+        cmd_ret = m_sev_device->set_self_owned();
         if(cmd_ret != 0)
             break;
 
         // Just used to confirm afterwards that the cert chain has changed
-        cmd_ret = m_sev_device.pdh_cert_export(pdh_cert_export_data, pdh_cert_mem, cert_chain_mem);
+        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh_cert_mem, cert_chain_mem);
         if(cmd_ret != 0)
             break;
 
         // Run the PEK certificate signing request
-        cmd_ret = m_sev_device.pek_csr(pek_csr_data, pek_mem, &pek_csr);
+        cmd_ret = m_sev_device->pek_csr(pek_csr_data, pek_mem, &pek_csr);
         if(cmd_ret != 0)
             break;
 
         // Run the pek_cert_import command
-        cmd_ret = m_sev_device.pek_cert_import(pek_cert_import_data, &pek_csr, oca_priv_key_file);
+        cmd_ret = m_sev_device->pek_cert_import(pek_cert_import_data, &pek_csr, oca_priv_key_file);
         if(cmd_ret != 0)
             break;
 
         // Export the cert chain again, so we can compare that it has changed after running the pek_cert_import
-        cmd_ret = m_sev_device.pdh_cert_export(pdh_cert_export_data2, pdh_cert_mem2, cert_chain_mem2);
+        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data2, pdh_cert_mem2, cert_chain_mem2);
         if(cmd_ret != 0)
             break;
 
@@ -244,7 +257,7 @@ int Command::get_id(void)
     // Send the first command with a length of 0, then use the returned length
     // as the input parameter for the 'real' command which will succeed
     sev_get_id_cmd_buf data_buf_temp;
-    cmd_ret = m_sev_device.get_id((uint8_t *)&data_buf_temp, NULL); // Sets IDLength
+    cmd_ret = m_sev_device->get_id((uint8_t *)&data_buf_temp, NULL); // Sets IDLength
     if(cmd_ret != ERROR_INVALID_LENGTH)     // What we expect to happen
         return cmd_ret;
     default_id_length = data_buf_temp.id_length;
@@ -255,7 +268,7 @@ int Command::get_id(void)
     if(!id_mem)
         return cmd_ret;
 
-    cmd_ret = m_sev_device.get_id(data, id_mem, 2*default_id_length);
+    cmd_ret = m_sev_device->get_id(data, id_mem, 2*default_id_length);
 
     if(cmd_ret == STATUS_SUCCESS) {
         char id0_buf[default_id_length*2+1] = {0};  // 2 chars per byte +1 for null term
@@ -292,22 +305,21 @@ int Command::sys_info(void)
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device.sys_info();
+    cmd_ret = m_sev_device->sys_info();
 
     return (int)cmd_ret;
 }
-
 
 int Command::get_platform_owner(void)
 {
     uint8_t data[sizeof(sev_platform_status_cmd_buf)];
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device.platform_status(data);
+    cmd_ret = m_sev_device->platform_status(data);
     if(cmd_ret != STATUS_SUCCESS)
         return -1;
 
-    return m_sev_device.get_platform_owner(data);
+    return m_sev_device->get_platform_owner(data);
 }
 
 int Command::get_platform_es(void)
@@ -315,18 +327,18 @@ int Command::get_platform_es(void)
     uint8_t data[sizeof(sev_platform_status_cmd_buf)];
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device.platform_status(data);
+    cmd_ret = m_sev_device->platform_status(data);
     if(cmd_ret != STATUS_SUCCESS)
         return -1;
 
-    return m_sev_device.get_platform_es(data);
+    return m_sev_device->get_platform_es(data);
 }
 
 int Command::set_self_owned(void)
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device.set_self_owned();
+    cmd_ret = m_sev_device->set_self_owned();
 
     return (int)cmd_ret;
 }
@@ -335,7 +347,7 @@ int Command::set_externally_owned(std::string oca_priv_key_file)
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device.set_externally_owned(oca_priv_key_file);
+    cmd_ret = m_sev_device->set_externally_owned(oca_priv_key_file);
 
     return (int)cmd_ret;
 }
@@ -346,7 +358,7 @@ int Command::generate_cek_ask(void)
 
     std::string cert_file = CEK_FILENAME;
 
-    cmd_ret = m_sev_device.generate_cek_ask(m_output_folder, cert_file);
+    cmd_ret = m_sev_device->generate_cek_ask(m_output_folder, cert_file);
 
     return (int)cmd_ret;
 }
@@ -357,7 +369,7 @@ int Command::get_ask_ark(void)
 
     std::string cert_file = ASK_ARK_FILENAME;
 
-    cmd_ret = m_sev_device.get_ask_ark(m_output_folder, cert_file);
+    cmd_ret = m_sev_device->get_ask_ark(m_output_folder, cert_file);
 
     return (int)cmd_ret;
 }
@@ -386,17 +398,17 @@ int Command::generate_all_certs(void)
 
     do {
         // Get the pdh Cert Chain (pdh and pek, oca, cek)
-        cmd_ret = m_sev_device.pdh_cert_export(pdh_cert_export_data, pdh, cert_chain);
+        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh, cert_chain);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
         // Generate the cek from the AMD KDS server
-        cmd_ret = m_sev_device.generate_cek_ask(m_output_folder, cek_file);
+        cmd_ret = m_sev_device->generate_cek_ask(m_output_folder, cek_file);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
         // Get the ask_ark from AMD dev site
-        cmd_ret = m_sev_device.get_ask_ark(m_output_folder, ask_ark_file);
+        cmd_ret = m_sev_device->get_ask_ark(m_output_folder, ask_ark_file);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -467,7 +479,7 @@ int Command::export_cert_chain(void)
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
-        cmd_ret = m_sev_device.zip_certs(m_output_folder, zip_name, cert_names);
+        cmd_ret = m_sev_device->zip_certs(m_output_folder, zip_name, cert_names);
     } while (0);
     return (int)cmd_ret;
 }
@@ -491,7 +503,7 @@ int Command::calculate_measurement(measurement_t *user_data, hmac_sha_256 *final
 
     do {
         // Need platform_status to determine API version
-        cmd_ret = m_sev_device.platform_status(status_data);
+        cmd_ret = m_sev_device->platform_status(status_data);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -1190,7 +1202,7 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
     int cmd_ret = -1;
 
     do {
-        cmd_ret = m_sev_device.platform_status(status_data);
+        cmd_ret = m_sev_device->platform_status(status_data);
         if(cmd_ret != STATUS_SUCCESS)
             break;
 

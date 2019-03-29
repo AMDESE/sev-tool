@@ -75,9 +75,9 @@ struct measurement_t {
 
 class Command {
 private:
-    SEVDevice m_sev_device;
-    tek_tik m_tk;               // Unencrypted TIK/TEK. wrap_tk is this enc with KEK
-    hmac_sha_256 m_measurement;   // Measurement. Used in LaunchSecret header HMAC
+    SEVDevice *m_sev_device;
+    tek_tik m_tk;                   // Unencrypted TIK/TEK. wrap_tk is this enc with KEK
+    hmac_sha_256 m_measurement;     // Measurement. Used in LaunchSecret header HMAC
     std::string m_output_folder = "";
     int m_verbose_flag = 0;
 
@@ -108,9 +108,9 @@ private:
                                      uint32_t hdr_flags);
 
 public:
-    Command() {};
+    Command();
     Command(std::string output_folder, int verbose_flag);
-    ~Command() {};
+    ~Command();
 
     int factory_reset(void);
     int platform_status(void);
