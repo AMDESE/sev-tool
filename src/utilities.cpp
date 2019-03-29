@@ -46,7 +46,7 @@ bool sev::execute_system_command(const std::string cmd, std::string *log)
  * Read up to len bytes from the beginning of a file
  * Returns number of bytes read, or 0 if the file couldn't be opened.
  */
-size_t sev::read_file(const std::string& file_name, void *buffer, size_t len)
+size_t sev::read_file(const std::string file_name, void *buffer, size_t len)
 {
     std::ifstream file(file_name, std::ios::binary);
     if (len > INT_MAX) {
@@ -74,7 +74,7 @@ size_t sev::read_file(const std::string& file_name, void *buffer, size_t len)
  * Returns number of bytes written, or 0 if the file couldn't be opened.
  * ostream CANNOT create a folder, so it has to exist already, to succeed
  */
-size_t sev::write_file(const std::string& file_name, const void *buffer, size_t len)
+size_t sev::write_file(const std::string file_name, const void *buffer, size_t len)
 {
     std::ofstream file(file_name, std::ofstream::out);
     if (len > INT_MAX) {
@@ -101,7 +101,7 @@ size_t sev::write_file(const std::string& file_name, const void *buffer, size_t 
 /**
  * Returns the file size in number of bytes
  */
-size_t sev::get_file_size(const std::string& file_name)
+size_t sev::get_file_size(const std::string file_name)
 {
     std::ifstream file(file_name, std::ios::binary | std::ios::ate);
 
@@ -135,7 +135,8 @@ bool sev::verify_access(uint8_t *buf, size_t len)
     return ret;
 }
 
-bool sev::str_to_array(std::string in_string, uint8_t *array, uint32_t array_size)
+bool sev::str_to_array(const std::string in_string, uint8_t *array,
+                       uint32_t array_size)
 {
     std::string substring = "";
 

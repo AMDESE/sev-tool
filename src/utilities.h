@@ -50,18 +50,18 @@ namespace sev
      * Read an entire file in to a buffer, or as much as will fit. Return length
      * of file or of buffer, whichever is smaller.
      */
-    size_t read_file(const std::string& file_name, void *buffer, size_t len);
+    size_t read_file(const std::string file_name, void *buffer, size_t len);
 
     /**
      * Truncate and write (not append) a file from the beginning
      * Returns number of bytes written
      */
-    size_t write_file(const std::string& file_name, const void *buffer, size_t len);
+    size_t write_file(const std::string file_name, const void *buffer, size_t len);
 
     /**
      * Returns the file size in number of bytes
      */
-    size_t get_file_size(const std::string& file_name);
+    size_t get_file_size(const std::string file_name);
 
     /**
      * Generate some random bytes
@@ -80,7 +80,8 @@ namespace sev
      * This function is expecting the input string to be an even number of elements
      *      not including the null terminator
      */
-    bool str_to_array(std::string in_string, uint8_t *array, uint32_t array_size);
+    bool str_to_array(const std::string in_string, uint8_t *array,
+                      uint32_t array_size);
 
     /**
      * If you have a buffer (or read in input file) that's in AsciiHexBytes,
