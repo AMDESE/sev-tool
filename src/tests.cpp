@@ -25,9 +25,10 @@
 #include <stdlib.h>     // malloc
 
 Tests::Tests(std::string output_folder, int verbose_flag)
+     : m_output_folder(output_folder),
+       m_verbose_flag(verbose_flag)
 {
-    m_output_folder = output_folder;
-    m_verbose_flag = verbose_flag;
+    // Intentionally Empty
 }
 
 bool Tests::clear_output_folder()
