@@ -108,7 +108,6 @@ int main(int argc, char** argv)
     std::string output_folder = "./";
 
     int cmd_ret = 0xFFFF;
-    Command cmd(output_folder, verbose_flag);
 
     while ((c = getopt_long (argc, argv, "hio:", long_options, &option_index)) != -1)
     {
@@ -121,6 +120,7 @@ int main(int argc, char** argv)
             }
             case 'i':           // sys_info
             case 'I': {
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.sys_info();  // Display system info
                 break;
             }
@@ -131,26 +131,32 @@ int main(int argc, char** argv)
                 break;
             }
             case 'a': {         // PLATFORM_RESET
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.factory_reset();
                 break;
             }
             case 'b': {         // PLATFORM_STATUS
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.platform_status();
                 break;
             }
             case 'c': {         // PEK_GEN
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.pek_gen();
                 break;
             }
             case 'd': {         // PEK_CSR
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.pek_csr();
                 break;
             }
             case 'e': {         // PDH_GEN
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.pdh_gen();
                 break;
             }
             case 'f': {         // PDH_CERT_EXPORT
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.pdh_cert_export();
                 break;
             }
@@ -162,14 +168,17 @@ int main(int argc, char** argv)
                 }
 
                 std::string oca_priv_key_file = argv[optind++];
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.pek_cert_import(oca_priv_key_file);
                 break;
             }
             case 'j': {         // GET_ID
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.get_id();
                 break;
             }
             case 'k': {         // SET_SELF_OWNED
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.set_self_owned();
                 break;
             }
@@ -181,18 +190,22 @@ int main(int argc, char** argv)
                 }
 
                 std::string oca_priv_key_file = argv[optind++];
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.set_externally_owned(oca_priv_key_file);
                 break;
             }
             case 'm': {         // GENERATE_CEK_ASK
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.generate_cek_ask();
                 break;
             }
             case 'n': {         // GET_ASK_ARK
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.get_ask_ark();
                 break;
             }
             case 'p': {         // EXPORT_CERT_CHAIN
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.export_cert_chain();
                 break;
             }
@@ -212,11 +225,13 @@ int main(int argc, char** argv)
                 sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.digest, sizeof(user_data.digest));
                 sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.mnonce, sizeof(user_data.mnonce));
                 sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.tik,    sizeof(user_data.tik));
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.calc_measurement(&user_data);
                 break;
             }
             case 'u': {         // VALIDATE_CERT_CHAIN
                 printf("This command is not complete, do not trust the output\n");
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.validate_cert_chain();
                 break;
             }
@@ -228,10 +243,12 @@ int main(int argc, char** argv)
                 }
 
                 uint32_t guest_policy = (uint8_t)strtol(argv[optind++], NULL, 16);
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.generate_launch_blob(guest_policy);
                 break;
             }
             case 'w': {         // PACKAGE_SECRET
+                Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.package_secret();
                 break;
             }
