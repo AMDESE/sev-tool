@@ -46,7 +46,8 @@ void print_amd_cert_hex(const amd_cert *cert, std::string &out_str = amd_empty);
 
 class AMDCert {
 private:
-    SEV_ERROR_CODE amd_cert_validate_sig(const amd_cert *cert);
+    SEV_ERROR_CODE amd_cert_validate_sig(const amd_cert *cert,
+                                         const amd_cert *parent);
     SEV_ERROR_CODE amd_cert_validate_common(const amd_cert *cert);
     bool usage_is_valid(uint32_t usage);
     SEV_ERROR_CODE amd_cert_validate(const amd_cert *cert,

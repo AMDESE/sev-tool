@@ -108,7 +108,8 @@ bool AMDCert::key_size_is_valid(size_t size)
     return (size == AMD_CERT_KEY_BITS_2K) || (size == AMD_CERT_KEY_BITS_4K);
 }
 
-SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert)
+SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
+                                              const amd_cert *parent)
 {
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
     SHA256_CTX ctx;
@@ -118,7 +119,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert)
     uint32_t fixed_offset = offsetof(amd_cert, pub_exp);    // 64 bytes
 
     do {
-        if (!cert) {
+        if (!cert || !parent) {
             cmd_ret = ERROR_INVALID_PARAM;
             break;
         }
@@ -154,15 +155,15 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert)
             break;
 
         // Swap the bytes of the signature
-        memcpy(signature, &cert->sig, cert->modulus_size/8);
+        memcpy(signature, &cert->sig, parent->modulus_size/8);
 
-        if(!sev::reverse_bytes(signature, cert->modulus_size/8))
+        if(!sev::reverse_bytes(signature, parent->modulus_size/8))
             break;
 
         // Verify the signature
         // cmd_ret = rsa_pss_verify(msg_digest, digest_len,
-        //                         cert->modulus, cert->modulus_size/8,
-        //                         cert->pub_exp, cert->pub_exp_size/8,
+        //                         parent->modulus, parent->modulus_size/8,
+        //                         parent->pub_exp, parent->pub_exp_size/8,
         //                         signature); // TODO
         cmd_ret = STATUS_SUCCESS;   //TODO
     } while (0);
@@ -211,7 +212,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate(const amd_cert *cert,
 
         // Validate the signature before using any certificate fields
         if (parent) {
-            cmd_ret = amd_cert_validate_sig(parent);
+            cmd_ret = amd_cert_validate_sig(cert, parent);
             if (cmd_ret != STATUS_SUCCESS)
                 break;
         }
