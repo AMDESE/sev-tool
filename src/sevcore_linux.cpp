@@ -225,7 +225,7 @@ int SEVDevice::pdh_cert_export(uint8_t *data,
 
 int SEVDevice::pek_cert_import(uint8_t *data,
                                sev_cert *pek_csr,
-                               std::string& oca_priv_key_file)
+                               const std::string oca_priv_key_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
@@ -233,7 +233,7 @@ int SEVDevice::pek_cert_import(uint8_t *data,
     sev_user_data_status status_data;  // Platform Status
 
     EVP_PKEY *oca_priv_key = NULL;
-    void *oca_cert = malloc(sizeof(sev_cert));
+    sev_cert *oca_cert = new sev_cert_t;
     if(!oca_cert)
         return SEV_RET_HWSEV_RET_PLATFORM;
 
@@ -277,7 +277,7 @@ int SEVDevice::pek_cert_import(uint8_t *data,
     } while (0);
 
     // Free memory
-    free(oca_cert);
+    delete oca_cert;
 
     return (int)cmd_ret;
 }
@@ -449,12 +449,12 @@ int SEVDevice::set_self_owned()
  *       to whatever is required to run each command, but that does not
  *       include shutting down Guests to do so.
  */
-int SEVDevice::set_externally_owned(std::string& oca_priv_key_file)
+int SEVDevice::set_externally_owned(const std::string oca_priv_key_file)
 {
     sev_user_data_status platform_status_data;
 
     int cmd_ret = SEV_RET_UNSUPPORTED;
-    void *PEKMem = malloc(sizeof(sev_cert));
+    sev_cert *PEKMem = new sev_cert_t;
 
     if(!PEKMem)
         return SEV_RET_HWSEV_RET_PLATFORM;
@@ -495,13 +495,13 @@ int SEVDevice::set_externally_owned(std::string& oca_priv_key_file)
     } while (0);
 
     // Free memory
-    free(PEKMem);
+    delete PEKMem;
 
     return (int)cmd_ret;
 }
 
-int SEVDevice::generate_cek_ask(std::string& output_folder,
-                                std::string& cert_file)
+int SEVDevice::generate_cek_ask(const std::string output_folder,
+                                const std::string cert_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
@@ -572,7 +572,8 @@ int SEVDevice::generate_cek_ask(std::string& output_folder,
     return cmd_ret;
 }
 
-int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
+int SEVDevice::get_ask_ark(const std::string output_folder,
+                           const std::string cert_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     std::string cmd = "wget ";
@@ -631,8 +632,9 @@ int SEVDevice::get_ask_ark(std::string& output_folder, std::string& cert_file)
     return cmd_ret;
 }
 
-int SEVDevice::zip_certs(std::string& output_folder, std::string& zip_name,
-                         std::string& files_to_zip)
+int SEVDevice::zip_certs(const std::string output_folder,
+                         const std::string zip_name,
+                         const std::string files_to_zip)
 {
     int cmd_ret = SEV_RET_SUCCESS;
     std::string cmd = "";

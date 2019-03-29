@@ -29,11 +29,11 @@
 /**
  * Description: This function prints out an sev_cert in readable ASCII format
  * Parameters:  [cert] is the source cert which to be printed
- *              [OutStr][optional] if passed in, will be filled up with the
+ *              [out_str][optional] if passed in, will be filled up with the
  *               text output, instead of the output being printed to the screen
  *               using std::out
  */
-void print_sev_cert_readable(const sev_cert *cert, std::string& out_str)
+void print_sev_cert_readable(const sev_cert *cert, std::string &out_str)
 {
     char out[sizeof(sev_cert)*3+500];   // 2 chars per byte + 1 spaces + ~500 extra chars for text
 
@@ -47,8 +47,8 @@ void print_sev_cert_readable(const sev_cert *cert, std::string& out_str)
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->pub_key)[i] );
     }
     sprintf(out+strlen(out), "\n");
-    sprintf(out+strlen(out), "%-15s%08x\n", "sig1_usage:", cert->sig_1_usage);      // uint32_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "sig1_algo:", cert->sig_1_algo);        // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "sig_1_usage:", cert->sig_1_usage);     // uint32_t
+    sprintf(out+strlen(out), "%-15s%08x\n", "sig_1_algo:", cert->sig_1_algo);       // uint32_t
     sprintf(out+strlen(out), "%-15s\n", "Sig1:");                                   // sev_sig
     for(size_t i = 0; i < (size_t)(sizeof(sev_sig)); i++) {     //bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->sig_1)[i] );
@@ -87,11 +87,11 @@ void print_sev_cert_hex(const sev_cert *cert)
 /**
  * Description: Prints out the cert chain (PDK, OCA, and CEK) in a readable format
  * Parameters:  [p] is the source cert chain buf to be printed
- *              [OutStr][optional] if passed in, will be filled up with the
+ *              [out_str][optional] if passed in, will be filled up with the
  *               text output, instead of the output being printed to the screen
  *               using std::out
  */
-void print_cert_chain_buf_readable(const sev_cert_chain_buf *p, std::string& out_str)
+void print_cert_chain_buf_readable(const sev_cert_chain_buf *p, std::string &out_str)
 {
     char out_pek[50];    // Just big enough for string below
     char out_oca[50];
@@ -147,9 +147,10 @@ void print_cert_chain_buf_hex(const sev_cert_chain_buf *p)
  * Description:   Reads in a private key pem file and write it to a RSA key
  * Notes:         This function allocates a new RSA key which must be
  *                freed by the calling function
- * Parameters:    [rsa_priv_key] RSA key where the private key gets stored
+ * Parameters:    [file_name] The name of the pem file being read from
+ *                [rsa_priv_key] RSA key where the private key gets stored
  */
-void read_priv_key_pem_into_rsakey(const std::string& file_name, RSA **rsa_priv_key)
+void read_priv_key_pem_into_rsakey(const std::string file_name, RSA **rsa_priv_key)
 {
     do {
         // New up the EC_KEY with the EC_GROUP
@@ -172,9 +173,10 @@ void read_priv_key_pem_into_rsakey(const std::string& file_name, RSA **rsa_priv_
  * Notes:         This function allocates a new EC PrivateKey which must be
  *                freed by the calling function
  * Typical Usage: Usually used to read in OCA or GODH private key
- * Parameters:    [ec_priv_key] EC_KEY where the private key gets stored
+ * Parameters:    [file_name] The name of the pem file being read from
+ *                [ec_priv_key] EC_KEY where the private key gets stored
  */
-void read_priv_key_pem_into_eckey(const std::string& file_name, EC_KEY **ec_priv_key)
+void read_priv_key_pem_into_eckey(const std::string file_name, EC_KEY **ec_priv_key)
 {
     do {
         // New up the EC_KEY with the EC_GROUP
@@ -226,7 +228,7 @@ bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_p
  * Parameters:  [file_name] the full path of the file to write
  *              [evp_key_pair] the key which ti pull the public key from
  */
-bool write_pub_key_pem(const std::string& file_name, EVP_PKEY *evp_key_pair)
+bool write_pub_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
 {
     FILE *pFile = NULL;
     pFile = fopen(file_name.c_str(), "wt");
@@ -248,7 +250,7 @@ bool write_pub_key_pem(const std::string& file_name, EVP_PKEY *evp_key_pair)
  * Parameters:  [file_name] the full path of the file to write
  *              [evp_key_pair] the key which ti pull the public key from
  */
-bool write_priv_key_pem(const std::string& file_name, EVP_PKEY *evp_key_pair)
+bool write_priv_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
 {
     FILE *pFile = NULL;
     pFile = fopen(file_name.c_str(), "wt");
@@ -269,7 +271,7 @@ bool write_priv_key_pem(const std::string& file_name, EVP_PKEY *evp_key_pair)
  * Typical Usage: Used to create a new Guest Owner DH
  *                (Elliptic Curve Diffie Hellman (ECDH)) P-384 key pair
  * Parameters:    [evp_key_pair] the output EVP_PKEY to which the key pair gets
- *                set
+ *                  set
  * Note:          This key must be initialized (with EVP_PKEY_new())
  *                before passing in
  */
@@ -315,12 +317,15 @@ bool SEVCert::generate_ecdh_key_pair(EVP_PKEY **evp_key_pair)
  * Description:   Populates an empty sev_cert using an existing ECDH keypair
  * Typical Usage: Used to generate the Guest Owner Diffie-Hellman cert used in
  *                LaunchStart
- * Parameters:    [api_major] the api_major returned from a PlatformStatus command
- *                  as input to this function, to help populate the cert
- *                [api_minor] the api_minor returned from a PlatformStatus command
- *                  as input to this function, to help populate the cert
+ * Parameters:    [godh_key_pair] the input pub/priv key pair used to populate
+ *                  and sign the cert
+ *                [api_major] the api_major returned from a PlatformStatus
+ *                  command as input to this function, to help populate the cert
+ *                [api_minor] the api_minor returned from a PlatformStatus
+ *                  command as input to this function, to help populate the cert
  */
-bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major, uint8_t api_minor)
+bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
+                               uint8_t api_minor)
 {
     bool cmd_ret = false;
 
@@ -362,12 +367,15 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major, uint
  * Description:   Populates an empty sev_cert using an existing ECDH keypair
  * Typical Usage: Used to generate the Guest Owner Diffie-Hellman cert used in
  *                LaunchStart
- * Parameters:    [api_major] the api_major returned from a PlatformStatus command
- *                  as input to this function, to help populate the cert
- *                [api_minor] the api_minor returned from a PlatformStatus command
- *                  as input to this function, to help populate the cert
+ * Parameters:    [oca_key_pair] the input pub/priv key pair used to populate
+ *                  and sign the cert
+ *                [api_major] the api_major returned from a PlatformStatus
+ *                  command as input to this function, to help populate the cert
+ *                [api_minor] the api_minor returned from a PlatformStatus
+ *                  command as input to this function, to help populate the cert
  */
-bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major, uint8_t api_minor)
+bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
+                              uint8_t api_minor)
 {
     bool cmd_ret = false;
 
@@ -406,12 +414,14 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major, uint8_
 }
 
 /**
- * Description: Calculates a hash digest (using SHA256 of SHA384) of the input cert
+ * Description: Calculates a hash digest (using SHA256 of SHA384) of the input
+ *              cert
  * Parameters:  [Cert] is the input sev_cert which to be hashed
- *              [pub_key_algo] used to determine the algorithm type (RSA/ECDSA/ECDH)
- *               and whether to use SHA256 or SHA384
- *              [PubKeyOffset] number of bytes to be hashed, from the top of the
- *               sev_cert until the first signature. Version through and including Pubkey
+ *              [pub_key_algo] used to determine the algorithm type
+ *                (RSA/ECDSA/ECDH) and whether to use SHA256 or SHA384
+ *              [pub_key_offset] number of bytes to be hashed, from the top of
+ *                the sev_cert until the first signature. Version through and
+ *                including pub_key
  *              [sha_digest_256] the output digest, if using SHA256
  *              [sha_digest_384] the output digest, if using SHA384
  */
@@ -422,7 +432,7 @@ bool SEVCert::calc_hash_digest(const sev_cert *cert, uint32_t pub_key_algo, uint
     SHA256_CTX ctx_256;
     SHA512_CTX ctx_384;              // size is the same for 384 and 512
 
-    // SHA256/SHA384 hash the Cert from Version through Pubkey parameters
+    // SHA256/SHA384 hash the Cert from Version through pub_key parameters
     // Calculate the digest of the input message   rsa.c -> rsa_pss_verify_msg()
     do {
         if( (pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
@@ -459,22 +469,24 @@ bool SEVCert::calc_hash_digest(const sev_cert *cert, uint32_t pub_key_algo, uint
  * Notes:       - sev_cert.c -> sev_cert_create() (kinda)
  *              - Signs the PEK's sig1 with the OCA (private key)
  *              The firmware signs sig2 with the CEK during PEK_CERT_IMPORT
- * Parameters:  [Version][PubKeyUsage][PubKeyAlgorithm] are for the child cert (PEK)
+ * Parameters:  [version][pub_key_usage][pub_key_algo] are for the child cert (PEK)
  *              [priv_evp_key][sig_1_usage][sig_1_algo] are for the parent cert (OCA)
  *
  * To optimize this function, can make the PEM read code RSA, EC, or general EVP.
- * The issue is that if it reads it into a common-format EVP_PKEY, how to we get that
- * private key into the EC_KEY or RSA_KEY that we are doing the signing on.
- * Also, to make the EC_KEY validate, I only figured out how to create the EC_KEY with
- * a GROUP as the input parm, not new up the EC_KEY then assign it a GROUP and all other
- * params later (don't know what other params it needed to validate correctly)
+ * The issue is that if it reads it into a common-format EVP_PKEY, how to we get
+ * that private key into the EC_KEY or RSA_KEY that we are doing the signing on.
+ * Also, to make the EC_KEY validate, I only figured out how to create the EC_KEY
+ * with a GROUP as the input parm, not new up the EC_KEY then assign it a GROUP
+ * and all other params later (don't know what other params it needed to validate
+ * correctly)
  */
-bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t pub_key_algorithm,
-                            EVP_PKEY **priv_evp_key, uint32_t sig1_usage, uint32_t sig1_algo)
+bool SEVCert::sign_with_key(uint32_t version, uint32_t pub_key_usage,
+                            uint32_t pub_key_algo, EVP_PKEY **priv_evp_key,
+                            uint32_t sig_1_usage, uint32_t sig_1_algo)
 {
     bool isValid = false;
-    hmac_sha_256 sha_digest_256;           // Hash on the cert from Version to PubKey
-    hmac_sha_512 sha_digest_384;           // Hash on the cert from Version to PubKey
+    hmac_sha_256 sha_digest_256;        // Hash of cert from version to PubKey
+    hmac_sha_512 sha_digest_384;        // Hash of cert from version to PubKey
     EC_KEY *priv_ec_key = NULL;
     RSA *priv_rsa_key = NULL;
     const BIGNUM *r = NULL;
@@ -484,20 +496,20 @@ bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t p
         // Sign the certificate    sev_cert.c -> sev_cert_sign()
         // The constructor defaults all member vars, and the user can change them
         memset(&m_child_cert.sig_1, 0, sizeof(sev_cert::sig_1));
-        m_child_cert.version = Version;
+        m_child_cert.version = version;
         m_child_cert.pub_key_usage = pub_key_usage;
-        m_child_cert.pub_key_algo = pub_key_algorithm;
+        m_child_cert.pub_key_algo = pub_key_algo;
 
-        m_child_cert.sig_1_usage = sig1_usage;       // Parent cert's sig
-        m_child_cert.sig_1_algo = sig1_algo;
+        m_child_cert.sig_1_usage = sig_1_usage;       // Parent cert's sig
+        m_child_cert.sig_1_algo = sig_1_algo;
 
-        // SHA256/SHA384 hash the Cert from the [Version:Pubkey] params
+        // SHA256/SHA384 hash the Cert from the [version:Pubkey] params
         uint32_t pub_key_offset = offsetof(sev_cert, sig_1_usage);  // 16 + sizeof(sev_pubkey)
-        if(!calc_hash_digest(&m_child_cert, sig1_algo, pub_key_offset, &sha_digest_256, &sha_digest_384))
+        if(!calc_hash_digest(&m_child_cert, sig_1_algo, pub_key_offset, &sha_digest_256, &sha_digest_384))
             break;
 
-        if( (sig1_algo == SEV_SIG_ALGO_RSA_SHA256) ||
-            (sig1_algo == SEV_SIG_ALGO_RSA_SHA384)) {
+        if( (sig_1_algo == SEV_SIG_ALGO_RSA_SHA256) ||
+            (sig_1_algo == SEV_SIG_ALGO_RSA_SHA384)) {
             printf("Error: RSA signing untested!");
             // This code probably does not work!
 
@@ -508,21 +520,21 @@ bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t p
                 break;
 
             uint32_t sigLen = sizeof(m_child_cert.sig_1.rsa);
-            if(sig1_algo == SEV_SIG_ALGO_RSA_SHA256) {
+            if(sig_1_algo == SEV_SIG_ALGO_RSA_SHA256) {
                 if(RSA_sign(NID_sha256, sha_digest_256, sizeof(sha_digest_256), (uint8_t *)&m_child_cert.sig_1.rsa, &sigLen, priv_rsa_key) != 1)
                     break;
                 if(RSA_verify(NID_sha256, sha_digest_256, sizeof(sha_digest_256), (uint8_t *)&m_child_cert.sig_1.rsa, sigLen, priv_rsa_key) != 1)
                     break;
             }
-            else if(sig1_algo == SEV_SIG_ALGO_RSA_SHA384) {
+            else if(sig_1_algo == SEV_SIG_ALGO_RSA_SHA384) {
                 if(RSA_sign(NID_sha384, sha_digest_384, sizeof(sha_digest_384), (uint8_t *)&m_child_cert.sig_1.rsa, &sigLen, priv_rsa_key) != 1)
                     break;
                 if(RSA_verify(NID_sha384, sha_digest_384, sizeof(sha_digest_384), (uint8_t *)&m_child_cert.sig_1.rsa, sigLen, priv_rsa_key) != 1)
                     break;
             }
         }
-        else if( (sig1_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
-                 (sig1_algo == SEV_SIG_ALGO_ECDSA_SHA384)) {
+        else if( (sig_1_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
+                 (sig_1_algo == SEV_SIG_ALGO_ECDSA_SHA384)) {
             int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
             priv_ec_key = EC_KEY_new_by_curve_name(nid);
 
@@ -530,7 +542,7 @@ bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t p
             if(!priv_ec_key)
                 break;
 
-            if(sig1_algo == SEV_SIG_ALGO_ECDSA_SHA256) {
+            if(sig_1_algo == SEV_SIG_ALGO_ECDSA_SHA256) {
                 ECDSA_SIG *sig = ECDSA_do_sign(sha_digest_256, sizeof(sha_digest_256), priv_ec_key); // Contains 2 bignums
                 if(!sig)
                     break;
@@ -546,7 +558,7 @@ bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t p
                 }
                 ECDSA_SIG_free(sig);
             }
-            else if(sig1_algo == SEV_SIG_ALGO_ECDSA_SHA384) {
+            else if(sig_1_algo == SEV_SIG_ALGO_ECDSA_SHA384) {
                 ECDSA_SIG *sig = ECDSA_do_sign(sha_digest_384, sizeof(sha_digest_384), priv_ec_key); // Contains 2 bignums
                 if(!sig)
                     break;
@@ -563,8 +575,8 @@ bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t p
                 ECDSA_SIG_free(sig);
             }
         }
-        else if( (sig1_algo == SEV_SIG_ALGO_ECDH_SHA256) ||
-                 (sig1_algo == SEV_SIG_ALGO_ECDH_SHA384)) {
+        else if( (sig_1_algo == SEV_SIG_ALGO_ECDH_SHA256) ||
+                 (sig_1_algo == SEV_SIG_ALGO_ECDH_SHA384)) {
             printf("Error: ECDH signing unsupported");
             break;                       // Error unsupported
         }
@@ -586,13 +598,13 @@ bool SEVCert::sign_with_key(uint32_t Version, uint32_t pub_key_usage, uint32_t p
 /**
  * Description: Validates the usage parameter of an sev_cert
  * Notes:       sev_cert.c  -> usage_is_valid()
- * Parameters:  [Usage] is the input value to be validated
+ * Parameters:  [usage] is the input value to be validated
  */
-SEV_ERROR_CODE SEVCert::validate_usage(uint32_t Usage)
+SEV_ERROR_CODE SEVCert::validate_usage(uint32_t usage)
 {
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
 
-    switch (Usage)
+    switch (usage)
     {
     case SEV_USAGE_ARK:
     case SEV_USAGE_ASK:
@@ -613,8 +625,8 @@ SEV_ERROR_CODE SEVCert::validate_usage(uint32_t Usage)
  * Description: Gets called from ValidatePublicKey as a subfunction to do the
  *              work of actually validating an RSA public key
  * Notes:       rsa.c -> rsa_pubkey_is_valid()
- * Parameters:  [Cert] the input sev_cert which to validate the public key of
- *              [PublicKey] currently unused
+ * Parameters:  [m_child_cert] the input sev_cert to validate the public key of
+ *              [public_key] currently unused
  *
  * This function is untested because we don't have any RSA SEV_CERTs to test
  */
@@ -673,11 +685,11 @@ SEV_ERROR_CODE SEVCert::validate_public_key(const sev_cert *cert, const EVP_PKEY
  * Notes:       sev_cert.c -> sev_cert_validate_sig()
  *              This function gets called from a loop, and this function has
  *              to see which of the signatures this currentSig matches to
- * Parameters:  [ChildCert] the cert which we want to validate the signature of.
+ * Parameters:  [m_child_cert] the cert which we want to validate the signature of.
  *               This is the cert that gets hashed and validated
- *              [ParentCert] tells us the algo used to sign the child cert
- *              [ParentSigningKey] used to validate the hash of the child cert
- *              Ex) ChildCert = PEK. ParentCert = OCA. ParentSigningKey = OCA PubKey
+ *              [parent_cert] tells us the algo used to sign the child cert
+ *              [parent_signing_key] used to validate the hash of the child cert
+ *              Ex) m_child_cert = PEK. ParentCert = OCA. ParentSigningKey = OCA PubKey
  */
 SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                                            const sev_cert *parent_cert,

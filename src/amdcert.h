@@ -41,8 +41,8 @@ static const uint8_t amd_root_key_id[AMD_CERT_ID_SIZE_BYTES] = {
 
 // Public global functions
 static std::string amd_empty = "NULL";
-void print_amd_cert_readable(const amd_cert *cert, std::string& out_str = amd_empty);
-void print_amd_cert_hex(const amd_cert *cert, std::string& out_str = amd_empty);
+void print_amd_cert_readable(const amd_cert *cert, std::string &out_str = amd_empty);
+void print_amd_cert_hex(const amd_cert *cert, std::string &out_str = amd_empty);
 
 class AMDCert {
 private:

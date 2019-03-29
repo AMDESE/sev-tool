@@ -25,7 +25,7 @@
 /**
  * If out_str is passed in, fill up the string, else prints to std::out
  */
-void print_amd_cert_readable(const amd_cert *cert, std::string& out_str)
+void print_amd_cert_readable(const amd_cert *cert, std::string &out_str)
 {
     char out[sizeof(amd_cert)*3+500];   // 2 chars per byte + 1 space + ~500 extra chars for text
 
@@ -68,7 +68,7 @@ void print_amd_cert_readable(const amd_cert *cert, std::string& out_str)
  * Note: there are no spaces in this printout because this function is also used
  *       to write to a .cert file, not just printing to the screen
  */
-void print_amd_cert_hex(const amd_cert *cert, std::string& out_str)
+void print_amd_cert_hex(const amd_cert *cert, std::string &out_str)
 {
     char out[sizeof(amd_cert)*2];   // 2 chars per byte
     size_t fixed_offset = offsetof(amd_cert, pub_exp);      // 64 bytes

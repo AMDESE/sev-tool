@@ -118,7 +118,7 @@ public:
     int pek_csr(void);
     int pdh_gen(void);
     int pdh_cert_export(void);
-    int pek_cert_import(std::string& oca_priv_key_file);
+    int pek_cert_import(std::string oca_priv_key_file);
     int get_id(void);
 
     // Non-ioctl (custom) commands
@@ -126,7 +126,7 @@ public:
     int get_platform_owner(void);
     int get_platform_es(void);
     int set_self_owned(void);
-    int set_externally_owned(std::string& oca_priv_key_file);
+    int set_externally_owned(std::string oca_priv_key_file);
     int generate_cek_ask(void);
     int get_ask_ark(void);
     int export_cert_chain(void);

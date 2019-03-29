@@ -81,7 +81,7 @@ int Command::pek_csr(void)
     int cmd_ret = -1;
 
     // Populate PEKCSR buffer with CSRLength = 0
-    void *pek_mem = malloc(sizeof(sev_cert));
+    sev_cert *pek_mem = new sev_cert_t;
     sev_cert pek_csr;
 
     if(!pek_mem)
@@ -106,7 +106,7 @@ int Command::pek_csr(void)
     }
 
     // Free memory
-    free(pek_mem);
+    delete pek_mem;
 
     return (int)cmd_ret;
 }
@@ -125,8 +125,8 @@ int Command::pdh_cert_export(void)
     uint8_t data[sizeof(sev_pdh_cert_export_cmd_buf)];
     int cmd_ret = -1;
 
-    void *pdh_cert_mem = malloc(sizeof(sev_cert));
-    void *cert_chain_mem = malloc(sizeof(sev_cert_chain_buf));
+    sev_cert *pdh_cert_mem = new sev_cert_t;
+    sev_cert_chain_buf_t *cert_chain_mem = new sev_cert_chain_buf_t();
 
     if(!pdh_cert_mem || !cert_chain_mem)
         return -1;
@@ -157,24 +157,24 @@ int Command::pdh_cert_export(void)
     }
 
     // Free memory
-    free(pdh_cert_mem);
-    free(cert_chain_mem);
+    delete pdh_cert_mem;
+    delete cert_chain_mem;
 
     return (int)cmd_ret;
 }
 
-int Command::pek_cert_import(std::string& oca_priv_key_file)
+int Command::pek_cert_import(std::string oca_priv_key_file)
 {
     int cmd_ret = -1;
 
     // Initial PDH cert chain export, so we can confirm that it changed after running the pek_cert_import
     uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
-    void *pdh_cert_mem = malloc(sizeof(sev_cert));
-    void *cert_chain_mem = malloc(sizeof(sev_cert_chain_buf));
+    sev_cert *pdh_cert_mem = new sev_cert_t;
+    sev_cert_chain_buf *cert_chain_mem = new sev_cert_chain_buf_t;
 
     // The certificate signing request
     uint8_t pek_csr_data[sizeof(sev_pek_csr_cmd_buf)];                  // pek_csr
-    void *pek_mem = malloc(sizeof(sev_cert));
+    sev_cert *pek_mem = new sev_cert_t;
     sev_cert pek_csr;
 
     // The actual pek_cert_import command
@@ -182,8 +182,8 @@ int Command::pek_cert_import(std::string& oca_priv_key_file)
 
     // Afterwards PDH cert chain export, to verify that the certs have changed after running pek_cert_import
     uint8_t pdh_cert_export_data2[sizeof(sev_pdh_cert_export_cmd_buf)]; // pdh_cert_export
-    void *pdh_cert_mem2 = malloc(sizeof(sev_cert));
-    void *cert_chain_mem2 = malloc(sizeof(sev_cert_chain_buf));
+    sev_cert *pdh_cert_mem2 = new sev_cert_t;
+    sev_cert_chain_buf *cert_chain_mem2 = new sev_cert_chain_buf_t;
 
     do {
         if(!pdh_cert_mem || !cert_chain_mem || !pek_mem || !pdh_cert_mem2 || !cert_chain_mem2) {
@@ -223,11 +223,11 @@ int Command::pek_cert_import(std::string& oca_priv_key_file)
     } while (0);
 
     // Free memory
-    free(pdh_cert_mem);
-    free(cert_chain_mem);
-    free(pek_mem);
-    free(pdh_cert_mem2);
-    free(cert_chain_mem2);
+    delete pdh_cert_mem;
+    delete cert_chain_mem;
+    delete pek_mem;
+    delete pdh_cert_mem2;
+    delete cert_chain_mem2;
 
     return (int)cmd_ret;
 }
@@ -331,7 +331,7 @@ int Command::set_self_owned(void)
     return (int)cmd_ret;
 }
 
-int Command::set_externally_owned(std::string& oca_priv_key_file)
+int Command::set_externally_owned(std::string oca_priv_key_file)
 {
     int cmd_ret = -1;
 
@@ -366,8 +366,8 @@ int Command::generate_all_certs(void)
 {
     int cmd_ret = -1;
     uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
-    void *pdh = malloc(sizeof(sev_cert));
-    void *cert_chain = malloc(sizeof(sev_cert_chain_buf)); // PEK, OCA, CEK
+    sev_cert_t *pdh = new sev_cert_t;
+    sev_cert_chain_buf *cert_chain = new sev_cert_chain_buf_t; // PEK, OCA, CEK
     amd_cert ask;
     amd_cert ark;
 
@@ -381,8 +381,8 @@ int Command::generate_all_certs(void)
     std::string ask_full = m_output_folder + ASK_FILENAME;
     std::string ark_full = m_output_folder + ARK_FILENAME;
     AMDCert tmp_amd;
-    std::string ask_string = "";    // For printing. AMD certs can't just print their
-    std::string ark_string = "";    // bytes because they're unions based on key sizes
+    std::string ask_string = ""; // For printing. AMD certs can't just print straight
+    std::string ark_string = ""; // bytes because they're unions based on key sizes
 
     do {
         // Get the pdh Cert Chain (pdh and pek, oca, cek)
@@ -444,8 +444,8 @@ int Command::generate_all_certs(void)
     } while (0);
 
     // Free memory
-    free(pdh);
-    free(cert_chain);
+    delete pdh;
+    delete cert_chain;
 
     return (int)cmd_ret;
 }
@@ -575,49 +575,47 @@ int Command::import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
 {
     int cmd_ret = ERROR_INVALID_CERTIFICATE;
     AMDCert tmp_amd;
+    std::string ark_full = m_output_folder + ARK_FILENAME;
+    std::string ask_full = m_output_folder + ASK_FILENAME;
+    std::string cek_full = m_output_folder + CEK_FILENAME;
+    std::string oca_full = m_output_folder + OCA_FILENAME;
+    std::string pek_full = m_output_folder + PEK_FILENAME;
+    std::string pdh_full = m_output_folder + PDH_FILENAME;
 
     do {
         // Read in the ark
-        std::string ark_full = m_output_folder+ARK_FILENAME;
         uint8_t ark_buf[sizeof(amd_cert)] = {0};
-        if(sev::read_file(ark_full, ark_buf, sizeof(amd_cert)) == 0)    // Variable size
+        if(sev::read_file(ark_full, ark_buf, sizeof(amd_cert)) == 0) // Variable size
             break;
 
         // Initialize the ark
         cmd_ret = tmp_amd.amd_cert_init(ark, ark_buf);
         if (cmd_ret != STATUS_SUCCESS)
             break;
-        // print_amd_cert_readable(ark);
 
         // Read in the ark
-        std::string ask_full = m_output_folder+ASK_FILENAME;
         uint8_t ask_buf[sizeof(amd_cert)] = {0};
-        if(sev::read_file(ask_full, ask_buf, sizeof(amd_cert)) == 0)    // Variable size
+        if(sev::read_file(ask_full, ask_buf, sizeof(amd_cert)) == 0) // Variable size
             break;
 
         // Initialize the ark
         cmd_ret = tmp_amd.amd_cert_init(ask, ask_buf);
         if (cmd_ret != STATUS_SUCCESS)
             break;
-        // print_amd_cert_readable(ask);
 
         // Read in the cek
-        std::string cek_full = m_output_folder+CEK_FILENAME;
         if(sev::read_file(cek_full, cek, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Read in the oca
-        std::string oca_full = m_output_folder+OCA_FILENAME;
         if(sev::read_file(oca_full, oca, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Read in the pek
-        std::string pek_full = m_output_folder+PEK_FILENAME;
         if(sev::read_file(pek_full, pek, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Read in the pdh
-        std::string pdh_full = m_output_folder+PDH_FILENAME;
         if(sev::read_file(pdh_full, pdh, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 

@@ -24,19 +24,19 @@
 // Public global functions
 static std::string sev_empty = "NULL";
 void print_sev_cert_readable(const sev_cert *cert,
-                             std::string& out_str = sev_empty);
+                             std::string &out_str = sev_empty);
 void print_sev_cert_hex(const sev_cert *cert);
 void print_cert_chain_buf_readable(const sev_cert_chain_buf *p,
-                                   std::string& out_str = sev_empty);
+                                   std::string &out_str = sev_empty);
 void print_cert_chain_buf_hex(const sev_cert_chain_buf *p);
-void read_priv_key_pem_into_rsakey(const std::string& file_name,
+void read_priv_key_pem_into_rsakey(const std::string file_name,
                                    RSA **rsa_priv_key);
-void read_priv_key_pem_into_eckey(const std::string& file_name,
+void read_priv_key_pem_into_eckey(const std::string file_name,
                                   EC_KEY **ec_priv_key);
 bool read_priv_key_pem_into_evpkey(const std::string file_name,
                                    EVP_PKEY **evp_priv_key);
-bool write_pub_key_pem(const std::string& file_name, EVP_PKEY *evp_key_pair);
-bool write_priv_key_pem(const std::string& file_name, EVP_PKEY *evp_key_pair);
+bool write_pub_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair);
+bool write_priv_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair);
 
 class SEVCert {
 private:
@@ -70,7 +70,7 @@ public:
     bool create_oca_cert(EVP_PKEY **oca_key_pair,
                          uint8_t api_major,
                          uint8_t api_minor);
-    bool sign_with_key(uint32_t Version, uint32_t pub_key_usage,
+    bool sign_with_key(uint32_t version, uint32_t pub_key_usage,
                        uint32_t pub_key_algorithm, EVP_PKEY **priv_key,
                        uint32_t sig1_usage, uint32_t sig1_algo);
     SEV_ERROR_CODE compile_public_key_from_certificate(const sev_cert *cert,

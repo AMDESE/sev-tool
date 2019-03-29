@@ -123,8 +123,8 @@ int SEVDevice::pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
 // todo. dont want to be reading from a file. use openssl to generate
 int SEVDevice::pek_cert_import(uint8_t *data,
                                sev_cert *pek_csr,
-                               std::string& oca_priv_key_file,
-                               std::string& oca_cert_file)
+                               std::string &oca_priv_key_file,
+                               std::string &oca_cert_file)
 {
     int cmd_ret = -1;
 
@@ -198,8 +198,8 @@ int SEVDevice::set_self_owned()
     return cmd_ret;
 }
 
-int SEVDevice::set_externally_owned(std::string& oca_priv_key_file,
-                                    std::string& oca_cert_file)
+int SEVDevice::set_externally_owned(std::string &oca_priv_key_file,
+                                    std::string &oca_cert_file)
 {
     int cmd_ret = -1;
 

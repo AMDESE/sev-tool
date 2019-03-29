@@ -14,13 +14,12 @@
  * limitations under the License.
  **************************************************************************/
 
-//TODO check if these are needed
 #include "amdcert.h"
 #include "commands.h"
 #include "sevapi.h"
 #include "sevcert.h"
 #include "tests.h"
-#include "utilities.h"  // for WriteToFile
+#include "utilities.h"  // for read_file
 #include <cstring>      // For memcmp
 #include <stdio.h>      // prboolf
 #include <stdlib.h>     // malloc

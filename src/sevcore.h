@@ -73,10 +73,13 @@ public:
     SEVDevice();
     ~SEVDevice();
 
-    // Format for below input variables:
-    // data is a uint8_t pointer to an empty buffer the size of the cmd_buffer
-    // All other variables are specific input/output variables for that command
-    // Each function sets the params in data to the input/output variables of the function
+    /*
+     * Format for below input variables:
+     * data is a uint8_t pointer to an empty buffer the size of the cmd_buffer
+     * All other variables are specific input/output variables for that command
+     * Each function sets the params in data to the input/output variables of
+     *   the function
+     */
     int factory_reset(void);
     int platform_status(uint8_t *data);
     int pek_gen(void);
@@ -84,17 +87,20 @@ public:
     int pdh_gen(void);
     int pdh_cert_export(uint8_t *data, void *pdh_cert_mem, void *cert_chain_mem);
     int pek_cert_import(uint8_t *data, sev_cert *pek_csr,
-                        std::string& oca_priv_key_file);
+                        const std::string oca_priv_key_file);
     int get_id(void *data, void *id_mem, uint32_t id_length = 0);
 
     int sys_info();
     int set_self_owned(void);
     int get_platform_owner(void* data);
     int get_platform_es(void* data);
-    int set_externally_owned(std::string& oca_priv_key_file);
-    int generate_cek_ask(std::string& output_folder, std::string& cert_file);
-    int get_ask_ark(std::string& output_folder, std::string& cert_file);
-    int zip_certs(std::string& output_folder, std::string& zip_name, std::string& files_to_zip);
+    int set_externally_owned(const std::string oca_priv_key_file);
+    int generate_cek_ask(const std::string output_folder,
+                         const std::string cert_file);
+    int get_ask_ark(const std::string output_folder,
+                    const std::string cert_file);
+    int zip_certs(const std::string output_folder, const std::string zip_name,
+                  const std::string files_to_zip);
 };
 
 #endif /* sevcore_linux_h */
