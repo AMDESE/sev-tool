@@ -37,7 +37,7 @@ SEVDevice::~SEVDevice()
 SEVDevice& SEVDevice::get_sev_device(void)
 {
     static SEVDevice m_sev_device;
-    m_sev_device.mFd = open(DEFAULT_SEV_DEVICE, O_RDWR);
+    m_sev_device.mFd = open(DEFAULT_SEV_DEVICE.c_str(), O_RDWR);
     if (m_sev_device.mFd < 0) {
         throw std::runtime_error("Can't open " + std::string(DEFAULT_SEV_DEVICE) + "!\n");
     }

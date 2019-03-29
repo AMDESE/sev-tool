@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <string>
 
-char help_array[] =  "The following commands are supported:\n" \
+const char help_array[] =  "The following commands are supported:\n" \
                     " sevtool -[global opts] --[command] [command opts]\n" \
                     "(Please see the readme file for more detailed information)\n" \
                     "Platform Owner commands:\n" \

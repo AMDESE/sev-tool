@@ -23,45 +23,46 @@
 #include <openssl/sha.h>    // for SHA256_DIGEST_LENGTH
 #include <string>
 
-#define PDH_FILENAME                    "pdh.cert"          // PDH signed by PEK
-#define PDH_READABLE_FILENAME           "pdh_readable.txt"
-#define PEK_FILENAME                    "pek.cert"          // PEK signed by CEK
-#define PEK_READABLE_FILENAME           "pek_readable.txt"
-#define OCA_FILENAME                    "oca.cert"          // OCA signed by P.O.
-#define OCA_READABLE_FILENAME           "oca_readable.cert"
-#define CEK_FILENAME                    "cek.cert"          // CEK signed by ASK
-#define CEK_READABLE_FILENAME           "cek_readable.cert"
-#define ASK_FILENAME                    "ask.cert"          // ASK signed by ARK
-#define ASK_READABLE_FILENAME           "ask_readable.cert"
-#define ARK_FILENAME                    "ark.cert"          // ARK self-signed
-#define ARK_READABLE_FILENAME           "ark_readable.cert"
+const std::string PDH_FILENAME          = "pdh.cert";      // PDH signed by PEK
+const std::string PDH_READABLE_FILENAME = "pdh_readable.txt";
+const std::string PEK_FILENAME          = "pek.cert";      // PEK signed by CEK
+const std::string PEK_READABLE_FILENAME = "pek_readable.txt";
+const std::string OCA_FILENAME          = "oca.cert";      // OCA signed by P.O.
+const std::string OCA_READABLE_FILENAME = "oca_readable.cert";
+const std::string CEK_FILENAME          = "cek.cert";      // CEK signed by ASK
+const std::string CEK_READABLE_FILENAME = "cek_readable.cert";
+const std::string ASK_FILENAME          = "ask.cert";      // ASK signed by ARK
+const std::string ASK_READABLE_FILENAME = "ask_readable.cert";
+const std::string ARK_FILENAME          = "ark.cert";      // ARK self-signed
+const std::string ARK_READABLE_FILENAME = "ark_readable.cert";
 
-#define CERTS_ZIP_FILENAME              "certs_export"          // export_cert_chain
-#define ASK_ARK_FILENAME                "ask_ark.cert"          // get_ask_ark
-#define PEK_CSR_HEX_FILENAME            "pek_csr.cert"          // pek_csr
-#define PEK_CSR_READABLE_FILENAME       "pek_csr_readable.txt"  // pek_csr
-#define CERT_CHAIN_HEX_FILENAME         "cert_chain.cert"       // pdh_cert_export
-#define CERT_CHAIN_READABLE_FILENAME    "cert_chain_readable.txt"// pdh_cert_export
-#define GET_ID_S0_FILENAME              "getid_s0_out.txt"      // get_id
-#define GET_ID_S1_FILENAME              "getid_s1_out.txt"      // get_id
-#define CALC_MEASUREMENT_FILENAME       "calc_measurement_out.txt" // calc_measurement
-#define LAUNCH_BLOB_FILENAME            "launch_blob.bin"       // generate_launch_blob
-#define GUEST_OWNER_DH_FILENAME         "godh.cert"             // generate_launch_blob
-#define GUEST_TK_FILENAME               "tmp_tk.bin"            // generate_launch_blob
-#define SECRET_FILENAME                 "secret.txt"            // package_secret
-#define PACKAGED_SECRET_FILENAME        "packaged_secret.bin"   // package_secret
-#define PACKAGED_SECRET_HEADER_FILENAME "packaged_secret_header.bin" // package_secret
+const std::string CERTS_ZIP_FILENAME              = "certs_export";             // export_cert_chain
+const std::string ASK_ARK_FILENAME                = "ask_ark.cert";             // get_ask_ark
+const std::string PEK_CSR_HEX_FILENAME            = "pek_csr.cert";             // pek_csr
+const std::string PEK_CSR_READABLE_FILENAME       = "pek_csr_readable.txt";     // pek_csr
+const std::string CERT_CHAIN_HEX_FILENAME         = "cert_chain.cert";          // pdh_cert_export
+const std::string CERT_CHAIN_READABLE_FILENAME    = "cert_chain_readable.txt";  // pdh_cert_export
+const std::string GET_ID_S0_FILENAME              = "getid_s0_out.txt";         // get_id
+const std::string GET_ID_S1_FILENAME              = "getid_s1_out.txt";         // get_id
+const std::string CALC_MEASUREMENT_FILENAME       = "calc_measurement_out.txt"; // calc_measurement
+const std::string LAUNCH_BLOB_FILENAME            = "launch_blob.bin";          // generate_launch_blob
+const std::string GUEST_OWNER_DH_FILENAME         = "godh.cert";                // generate_launch_blob
+const std::string GUEST_TK_FILENAME               = "tmp_tk.bin";               // generate_launch_blob
+const std::string SECRET_FILENAME                 = "secret.txt";               // package_secret
+const std::string PACKAGED_SECRET_FILENAME        = "packaged_secret.bin";      // package_secret
+const std::string PACKAGED_SECRET_HEADER_FILENAME = "packaged_secret_header.bin"; // package_secret
 
-#define BITS_PER_BYTE    8
-#define NIST_KDF_H_BYTES 32
-#define NIST_KDF_H       (NIST_KDF_H_BYTES*BITS_PER_BYTE)   // 32*8=256
-#define NIST_KDF_R       sizeof(uint32_t)*BITS_PER_BYTE     // 32
+constexpr uint32_t BITS_PER_BYTE    = 8;
+constexpr uint32_t NIST_KDF_H_BYTES = 32;
+constexpr uint32_t NIST_KDF_H       = (NIST_KDF_H_BYTES*BITS_PER_BYTE); // 32*8=256
+constexpr uint32_t NIST_KDF_R       = sizeof(uint32_t)*BITS_PER_BYTE;   // 32
 
-#define SEV_MASTER_SECRET_LABEL "sev-master-secret"
-#define SEV_KEK_LABEL           "sev-kek"
-#define SEV_KIK_LABEL           "sev-kik"
+constexpr uint8_t SEV_MASTER_SECRET_LABEL[] = "sev-master-secret";
+constexpr uint8_t SEV_KEK_LABEL[]           = "sev-kek";
+constexpr uint8_t SEV_KIK_LABEL[]           = "sev-kik";
 
-#define LAUNCH_MEASURE_CTX 0x4
+constexpr auto LAUNCH_MEASURE_CTX           = 0x4;
+
 struct measurement_t {
     uint8_t  meas_ctx;  // LAUNCH_MEASURE_CTX
     uint8_t  api_major;

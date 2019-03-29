@@ -180,7 +180,8 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
 {
     int cmd_ret = -1;
 
-    // Initial PDH cert chain export, so we can confirm that it changed after running the pek_cert_import
+    // Initial PDH cert chain export, so we can confirm that it
+    // changed after running the pek_cert_import
     uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
     sev_cert *pdh_cert_mem = new sev_cert_t;
     sev_cert_chain_buf *cert_chain_mem = new sev_cert_chain_buf_t;
@@ -193,7 +194,8 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
     // The actual pek_cert_import command
     uint8_t pek_cert_import_data[sizeof(sev_pek_cert_import_cmd_buf)];  // pek_cert_import
 
-    // Afterwards PDH cert chain export, to verify that the certs have changed after running pek_cert_import
+    // Afterwards PDH cert chain export, to verify that the certs
+    // have changed after running pek_cert_import
     uint8_t pdh_cert_export_data2[sizeof(sev_pdh_cert_export_cmd_buf)]; // pdh_cert_export
     sev_cert *pdh_cert_mem2 = new sev_cert_t;
     sev_cert_chain_buf *cert_chain_mem2 = new sev_cert_chain_buf_t;
@@ -223,12 +225,13 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
         if(cmd_ret != 0)
             break;
 
-        // Export the cert chain again, so we can compare that it has changed after running the pek_cert_import
+        // Export the cert chain again, so we can compare that it has changed
+        // after running the pek_cert_import
         cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data2, pdh_cert_mem2, cert_chain_mem2);
         if(cmd_ret != 0)
             break;
 
-        // Make sure that the cert chain has changed after running the pek_cert_import
+        // Make sure the cert chain changed after running the pek_cert_import
         if(0 != memcmp(pdh_cert_export_data2, pdh_cert_export_data, sizeof(sev_pdh_cert_export_cmd_buf)))
             break;
 
@@ -273,8 +276,7 @@ int Command::get_id(void)
     if(cmd_ret == STATUS_SUCCESS) {
         char id0_buf[default_id_length*2+1] = {0};  // 2 chars per byte +1 for null term
         char id1_buf[default_id_length*2+1] = {0};
-        for(uint8_t i = 0; i < default_id_length; i++)
-        {
+        for(uint8_t i = 0; i < default_id_length; i++) {
             sprintf(id0_buf+strlen(id0_buf), "%02x", ((uint8_t *)(data_buf->id_p_addr))[i]);
             sprintf(id1_buf+strlen(id1_buf), "%02x", ((uint8_t *)(data_buf->id_p_addr))[i+default_id_length]);
         }

@@ -14,11 +14,8 @@
  * limitations under the License.
  **************************************************************************/
 
-#ifndef sevcore_linux_h
-#define sevcore_linux_h
-
-// Class SEVDevice is for the SEV "device", as manifested by the special
-// SEV FW test driver. struct ioctl_cmd is also defined by that driver.
+#ifndef SEVCORE_H
+#define SEVCORE_H
 
 #include "sevcert.h"
 #include <cstddef>      // For size_t
@@ -26,36 +23,36 @@
 #include <stdio.h>
 #include <string>
 
-#define DEFAULT_SEV_DEVICE     "/dev/sev"
+const std::string DEFAULT_SEV_DEVICE     = "/dev/sev";
 
-#define KDS_CERT_SITE           "https://kdsintf.amd.com/cek/id/"
-#define AMD_SEV_DEVELOPER_SITE  "https://developer.amd.com/sev/"
-#define ASK_ARK_PATH_SITE       "https://developer.amd.com/wp-content/resources/"
-#define ASK_ARK_NAPLES_FILE     "ask_ark_naples.cert"
-#define ASK_ARK_ROME_FILE       "ask_ark_rome.cert"
-#define ASK_ARK_NAPLES_SITE      ASK_ARK_PATH_SITE ASK_ARK_NAPLES_FILE
-#define ASK_ARK_ROME_SITE        ASK_ARK_PATH_SITE ASK_ARK_ROME_FILE
+const std::string KDS_CERT_SITE          = "https://kdsintf.amd.com/cek/id/";
+const std::string AMD_SEV_DEVELOPER_SITE = "https://developer.amd.com/sev/";
+const std::string ASK_ARK_PATH_SITE      = "https://developer.amd.com/wp-content/resources/";
+const std::string ASK_ARK_NAPLES_FILE    = "ask_ark_naples.cert";
+const std::string ASK_ARK_ROME_FILE      = "ask_ark_rome.cert";
+const std::string ASK_ARK_NAPLES_SITE    = ASK_ARK_PATH_SITE + ASK_ARK_NAPLES_FILE;
+const std::string ASK_ARK_ROME_SITE      = ASK_ARK_PATH_SITE + ASK_ARK_ROME_FILE;
 
-#define NAPLES_FAMILY       0x17UL      // 23
-#define NAPLES_MODEL_LOW    0x00UL
-#define NAPLES_MODEL_HIGH   0x0FUL
-#define ROME_FAMILY         0x17UL      // 23
-#define ROME_MODEL_LOW      0x30UL
-#define ROME_MODEL_HIGH     0x3FUL
+constexpr uint32_t NAPLES_FAMILY     = 0x17UL;      // 23
+constexpr uint32_t NAPLES_MODEL_LOW  = 0x00UL;
+constexpr uint32_t NAPLES_MODEL_HIGH = 0x0FUL;
+constexpr uint32_t ROME_FAMILY       = 0x17UL;      // 23
+constexpr uint32_t ROME_MODEL_LOW    = 0x30UL;
+constexpr uint32_t ROME_MODEL_HIGH   = 0x3FUL;
 
 // A system physical address that should always be invalid.
 // Used to test the SEV FW detects such invalid addresses and returns the
 // correct error return value.
-#define INVALID_ADDRESS ((void *)0xFD000000018)
-#define BAD_ASID ((uint32_t)~0)
-#define BAD_DEVICE_TYPE ((uint32_t)~0)
-#define BAD_FAMILY_MODEL ((uint32_t)~0)
+constexpr uint64_t INVALID_ADDRESS  = (0xFD000000018);
+constexpr uint32_t BAD_ASID         = ((uint32_t)~0);
+constexpr uint32_t BAD_DEVICE_TYPE  = ((uint32_t)~0);
+constexpr uint32_t BAD_FAMILY_MODEL = ((uint32_t)~0);
 
 // Platform Status Buffer flags param was split up into owner/ES in API v0.17
-#define PLAT_STAT_OWNER_OFFSET    0
-#define PLAT_STAT_CONFIGES_OFFSET 8
-#define PLAT_STAT_OWNER_MASK      (1U << PLAT_STAT_OWNER_OFFSET)
-#define PLAT_STAT_ES_MASK         (1U << PLAT_STAT_CONFIGES_OFFSET)
+constexpr uint8_t PLAT_STAT_OWNER_OFFSET    = 0;
+constexpr uint8_t PLAT_STAT_CONFIGES_OFFSET = 8;
+constexpr uint32_t PLAT_STAT_OWNER_MASK      = (1U << PLAT_STAT_OWNER_OFFSET);
+constexpr uint32_t PLAT_STAT_ES_MASK         = (1U << PLAT_STAT_CONFIGES_OFFSET);
 
 
 // Class to access the special SEV FW API test suite driver.
@@ -98,7 +95,8 @@ public:
     int pek_gen(void);
     int pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr);
     int pdh_gen(void);
-    int pdh_cert_export(uint8_t *data, void *pdh_cert_mem, void *cert_chain_mem);
+    int pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
+                        void *cert_chain_mem);
     int pek_cert_import(uint8_t *data, sev_cert *pek_csr,
                         const std::string oca_priv_key_file);
     int get_id(void *data, void *id_mem, uint32_t id_length = 0);
@@ -112,8 +110,9 @@ public:
                          const std::string cert_file);
     int get_ask_ark(const std::string output_folder,
                     const std::string cert_file);
-    int zip_certs(const std::string output_folder, const std::string zip_name,
+    int zip_certs(const std::string output_folder,
+                  const std::string zip_name,
                   const std::string files_to_zip);
 };
 
-#endif /* sevcore_linux_h */
+#endif /* sevcore_h */

@@ -60,12 +60,12 @@ int SEVDevice::factory_reset()
     return cmd_ret;
 }
 
-static int get_platform_owner(void* data)
+int SEVDevice::get_platform_owner(void* data)
 {
     return 0;
 }
 
-static int get_platform_es(void* data)
+int SEVDevice::get_platform_es(void* data)
 {
     return 0;
 }
@@ -86,12 +86,12 @@ int SEVDevice::pek_gen()
 
 bool SEVDevice::validate_pek_csr(sev_cert *pek_csr)
 {
-    if(pek_csr->version     == 1                     &&
-       pek_csr->pub_key_usage == SEV_USAGE_PEK           &&
+    if(pek_csr->version       == 1                         &&
+       pek_csr->pub_key_usage == SEV_USAGE_PEK             &&
        pek_csr->pub_key_algo  == SEV_SIG_ALGO_ECDSA_SHA256 &&
-       pek_csr->sig_1_usage   == SEV_USAGE_INVALID       &&
-       pek_csr->sig_1_algo    == SEV_SIG_ALGO_INVALID     &&
-       pek_csr->sig_2_usage   == SEV_USAGE_INVALID       &&
+       pek_csr->sig_1_usage   == SEV_USAGE_INVALID         &&
+       pek_csr->sig_1_algo    == SEV_SIG_ALGO_INVALID      &&
+       pek_csr->sig_2_usage   == SEV_USAGE_INVALID         &&
        pek_csr->sig_2_algo    == SEV_SIG_ALGO_INVALID) {
         return true;
     }
@@ -207,6 +207,5 @@ int SEVDevice::set_externally_owned(std::string &oca_priv_key_file,
 
     return cmd_ret;
 }
-
 
 #endif
