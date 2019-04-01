@@ -14,6 +14,7 @@
 # limitations under the License.
 ###############################################################################
 
+
 # A sample Makefile for building Google Test and using it in user
 # tests.  Please tweak it to suit your environment and project.  You
 # may want to move it to your project's root directory.
@@ -31,25 +32,13 @@
 # Where to find user code.
 USER_DIR = .
 
-# Points to the root of OpenSSL, relative to where this file is.
-# Remember to tweak this if you move this file.
-SSL_DIR = ../openssl
-
-# Flags passed to the preprocessor.
-# Set Google Test's header directory as a system directory, such that
-# the compiler doesn't generate warnings in Google Test headers.
-CPPFLAGS += -isystem $(SSL_DIR)/include -isystem $(SSL_DIR)
-
+CPPFLAGS += -lcrypto -lssl
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g -Wall -Wextra -Wconversion -pthread -std=c++11
 
 # All tests produced by this Makefile.  Remember to add new tests you
 # created to the list.
 TOOL = sevtool
-
-# All OpenSSL headers. Usually you shouldn't change this.
-SSL_HEADERS = $(SSL_DIR)/include/openssl/*.h \
-              $(SSL_DIR)/include/internal/*.h
 
 # House-keeping build targets.
 
@@ -67,8 +56,7 @@ SRCS= $(wildcard ${USER_DIR}/*.cpp)
 OBJS= $(SRCS:.cpp=.o)
 $(OBJS) : $(USER_DIR)/sevapi.h $(USER_DIR)/utilities.h $(SSL_HEADERS)
 
-.cpp.o: $(CXX) $(CXXFLAGS) -c $(USER_DIR)/$^ $(CPPFLAGS)
+.cpp.o: $(CXX) $(CXXFLAGS) -c $(USER_DIR)/$^ ${CPPFLAGS}
 
-sevtool : $(OBJS) $(SSL_DIR)/libssl.a $(SSL_DIR)/libcrypto.a
+sevtool : $(OBJS)
 	$(CXX) $(CXXFLAGS) -lpthread $^ -ldl -o $@ $(CPPFLAGS)
-

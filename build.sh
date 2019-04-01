@@ -90,7 +90,7 @@ then
 else
     debug $LINENO ":" "Regular expression could not match: \n" "${OS_RELEASE}"
     echo "Distribution not recognized. Please manually install "\
-         "libelf libraries, make, zip, gcc, g++, git, and wget." >&2
+         "libelf libraries, make, zip, gcc, g++, git, wget, and libssl-dev." >&2
     exit 1
 fi
 
@@ -99,12 +99,13 @@ debug $LINENO ":" "Checking for dependencies..."
 # Check for all required dependancies
 if [ "${INSTALLER}" = "zypper" ] || [ "${INSTALLER}" = "yum" ]
 then
-    if [ "$(rpm -q 'git' 2>&1 | grep 'not installed')" != "" ]      ||
-       [ "$(rpm -q 'make' 2>&1 | grep 'not installed')" != "" ]     ||
-       [ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]      ||
-       [ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]      ||
-       [ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]     ||
-       [ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ] ||
+    if [ "$(rpm -q 'git' 2>&1 | grep 'not installed')" != "" ]        ||
+       [ "$(rpm -q 'make' 2>&1 | grep 'not installed')" != "" ]       ||
+       [ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]        ||
+       [ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]        ||
+       [ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]       ||
+       [ "$(rpm -q 'libssl-dev' 2>&1 | grep 'not installed')" != "" ] ||
+       [ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ]   ||
        [ "$(rpm -q ${GCC_CPP} 2>&1 | grep 'not installed')" != "" ]
     then
         debug $LINENO ":" "A dependency is missing, setting flag!"
@@ -112,12 +113,13 @@ then
     fi
 elif [ "${INSTALLER}" = "apt-get" ]
 then
-    if [ "$(dpkg -l 'git' 2>&1 | grep 'no packages')" != "" ]      ||
-       [ "$(dpkg -l 'make' 2>&1 | grep 'no packages')" != "" ]     ||
-       [ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]      ||
-       [ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]      ||
-       [ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]     ||
-       [ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ] ||
+    if [ "$(dpkg -l 'git' 2>&1 | grep 'no packages')" != "" ]        ||
+       [ "$(dpkg -l 'make' 2>&1 | grep 'no packages')" != "" ]       ||
+       [ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]        ||
+       [ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]        ||
+       [ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]       ||
+       [ "$(dpkg -l 'libssl-dev' 2>&1 | grep 'no packages')" != "" ] ||
+       [ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ]   ||
        [ "$(dpkg -l ${GCC_CPP} 2>&1 | grep 'no packages')" != "" ]
     then
         debug $LINENO ":" "A dependency is missing, setting flag!"
@@ -131,18 +133,8 @@ then
     debug $LINENO ":" "A dependency is missing, installing now."
     debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
           "zip ${SSL_DEV} ${GCC_CPP}\""
-    sudo ${INSTALLER} install -y git make gcc zip wget ${SSL_DEV} ${GCC_CPP}
+    sudo ${INSTALLER} install -y git make gcc zip wget libssl-dev ${SSL_DEV} ${GCC_CPP}
 fi
-
-# Fetch openssl submodule
-git submodule init
-git submodule update
-
-# Config and make openssl
-cd openssl/
-./config
-make -j64
-cd ../
 
 # Rebuild SEV Tool binary
 cd src/
