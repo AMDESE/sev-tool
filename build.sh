@@ -134,6 +134,16 @@ then
     sudo ${INSTALLER} install -y git make gcc zip wget ${SSL_DEV} ${GCC_CPP}
 fi
 
+# Fetch openssl submodule
+git submodule init
+git submodule update
+
+# Config and make openssl
+cd openssl/
+./config
+make -j64
+cd ../
+
 # Rebuild SEV Tool binary
 cd src/
 make clean
