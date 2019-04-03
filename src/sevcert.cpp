@@ -416,7 +416,7 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
 /**
  * Description: Calculates a hash digest (using SHA256 of SHA384) of the input
  *              cert
- * Parameters:  [Cert] is the input sev_cert which to be hashed
+ * Parameters:  [cert] is the input sev_cert which to be hashed
  *              [pub_key_algo] used to determine the algorithm type
  *                (RSA/ECDSA/ECDH) and whether to use SHA256 or SHA384
  *              [pub_key_offset] number of bytes to be hashed, from the top of
@@ -625,7 +625,7 @@ SEV_ERROR_CODE SEVCert::validate_usage(uint32_t usage)
  * Description: Gets called from ValidatePublicKey as a subfunction to do the
  *              work of actually validating an RSA public key
  * Notes:       rsa.c -> rsa_pubkey_is_valid()
- * Parameters:  [m_child_cert] the input sev_cert to validate the public key of
+ * Parameters:  [cert] the input sev_cert to validate the public key of
  *              [public_key] currently unused
  *
  * This function is untested because we don't have any RSA SEV_CERTs to test

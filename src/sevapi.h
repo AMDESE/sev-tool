@@ -340,13 +340,13 @@ typedef enum __attribute__((mode(HI))) SEV_USAGE
  */
 typedef enum __attribute__((mode(HI))) SEV_SIG_ALGO
 {
-    SEV_SIG_ALGO_INVALID       = 0x0,
-    SEV_SIG_ALGO_RSA_SHA256    = 0x1,
-    SEV_SIG_ALGO_ECDSA_SHA256  = 0x2,
-    SEV_SIG_ALGO_ECDH_SHA256   = 0x3,
-    SEV_SIG_ALGO_RSA_SHA384    = 0x101,
-    SEV_SIG_ALGO_ECDSA_SHA384  = 0x102,
-    SEV_SIG_ALGO_ECDH_SHA384   = 0x103,
+    SEV_SIG_ALGO_INVALID      = 0x0,
+    SEV_SIG_ALGO_RSA_SHA256   = 0x1,
+    SEV_SIG_ALGO_ECDSA_SHA256 = 0x2,
+    SEV_SIG_ALGO_ECDH_SHA256  = 0x3,
+    SEV_SIG_ALGO_RSA_SHA384   = 0x101,
+    SEV_SIG_ALGO_ECDSA_SHA384 = 0x102,
+    SEV_SIG_ALGO_ECDH_SHA384  = 0x103,
 } SEV_SIG_ALGO;
 
 #define SEV_CERT_MAX_VERSION    1       // Max supported version
@@ -416,8 +416,8 @@ typedef union
 
 typedef enum __attribute__((mode(QI))) AMD_SIG_USAGE
 {
-    AMD_USAGE_ARK  = 0x00,
-    AMD_USAGE_ASK  = 0x13,
+    AMD_USAGE_ARK   = 0x00,
+    AMD_USAGE_ASK   = 0x13,
 } AMD_SIG_USAGE;
 
 // Appendix B.1: AMD Signing Key Certificate Format
@@ -913,4 +913,4 @@ typedef struct __attribute__ ((__packed__)) sev_dbg_encrypt_cmd_buf_t
     uint32_t    length;
 } sev_dbg_encrypt_cmd_buf;
 
-#endif /* sevapi_h */
+#endif /* SEVAPI_H */

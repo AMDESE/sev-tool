@@ -14,8 +14,8 @@
  * limitations under the License.
  **************************************************************************/
 
-#ifndef tests_h
-#define tests_h
+#ifndef TESTS_H
+#define TESTS_H
 
 class Tests {
 private:
@@ -48,4 +48,4 @@ public:
     bool test_all();
 };
 
-#endif /* tests_h */
+#endif /* TESTS_H */

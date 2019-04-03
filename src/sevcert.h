@@ -81,4 +81,4 @@ public:
                                    const sev_cert *parent_cert2 = NULL);
 };
 
-#endif /* sevcert_h */
+#endif /* SEVCERT_H */

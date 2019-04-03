@@ -137,4 +137,4 @@ public:
     int package_secret(void);
 };
 
-#endif /* commands_h */
+#endif /* COMMANDS_H */

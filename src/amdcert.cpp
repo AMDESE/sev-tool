@@ -340,7 +340,7 @@ size_t AMDCert::amd_cert_get_size(const amd_cert *cert)
  *   place it into a tmp sev_cert to help validate the cek
  */
 SEV_ERROR_CODE AMDCert::amd_cert_export_pub_key(const amd_cert *cert,
-                                               sev_cert *pub_key_cert)
+                                                sev_cert *pub_key_cert)
 {
     SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;
 

@@ -115,4 +115,4 @@ public:
                   const std::string files_to_zip);
 };
 
-#endif /* sevcore_h */
+#endif /* SEVCORE_H */

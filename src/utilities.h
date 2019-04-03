@@ -47,8 +47,8 @@ namespace sev
     bool execute_system_command(const std::string cmd, std::string *log);
 
     /**
-     * Read an entire file in to a buffer, or as much as will fit. Return length
-     * of file or of buffer, whichever is smaller.
+     * Read an entire file in to a buffer, or as much as will fit.
+     * Return length * of file or of buffer, whichever is smaller.
      */
     size_t read_file(const std::string file_name, void *buffer, size_t len);
 
@@ -69,7 +69,8 @@ namespace sev
     void gen_random_bytes(void *bytes, size_t num_bytes);
 
     /**
-     * Verify read/write access to an area of memory. Used to confirm TMR release.
+     * Verify read/write access to an area of memory.
+     * Used to confirm TMR (trusted memory region) release.
      */
     bool verify_access(uint8_t *buf, size_t len);
 
@@ -77,8 +78,8 @@ namespace sev
      * Converts a string of ascii-encoded hex bytes into a Hex array
      * Ex. To generate the string, do printf("%02x", myArray) will generate
      *     "0123456ACF" and this function will put it back into an array
-     * This function is expecting the input string to be an even number of elements
-     *      not including the null terminator
+     * This function is expecting the input string to be an even number of
+     *      elements not including the null terminator
      */
     bool str_to_array(const std::string in_string, uint8_t *array,
                       uint32_t array_size);
@@ -90,8 +91,9 @@ namespace sev
     void ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len);
 
     /**
-     * Reverses bytes in a section of memory. Used in validating a cert signature
+     * Reverses bytes in a section of memory. Used in validating cert signatures
      */
     bool reverse_bytes(uint8_t *bytes, size_t size);
 } // namespace
-#endif /* utilities_h */
+
+#endif /* UTILITIES_H */

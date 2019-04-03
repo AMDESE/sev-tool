@@ -70,4 +70,4 @@ public:
     SEV_ERROR_CODE amd_cert_init(amd_cert *cert, const uint8_t *buffer);
 };
 
-#endif /* amdcert_h */
+#endif /* AMDCERT_H */
