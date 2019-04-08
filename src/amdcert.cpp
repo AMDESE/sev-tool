@@ -15,12 +15,9 @@
  **************************************************************************/
 
 #include "amdcert.h"
-#include "utilities.h"
-#include <cstring>                  // memset
-#include <stdio.h>
-#include <stdexcept>
-#include <fstream>
-#include <stdio.h>
+#include <openssl/ts.h> // SHA256_CTX
+#include "utilities.h"  // reverse_bytes
+#include <cstring>      // memset
 
 /**
  * If out_str is passed in, fill up the string, else prints to std::out

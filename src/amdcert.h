@@ -19,13 +19,6 @@
 
 #include "sevapi.h"
 #include <string>
-#include <openssl/evp.h>
-#include <openssl/hmac.h>
-#include <openssl/ts.h>
-#include <openssl/ecdsa.h>
-#include <openssl/ecdh.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
 
 constexpr uint32_t AMD_CERT_VERSION       = 0x01;
 constexpr uint32_t AMD_CERT_ID_SIZE_BYTES = 16;      // sizeof(amd_cert:key_id_0 + amd_cert:key_id_1)
