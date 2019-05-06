@@ -753,11 +753,11 @@ int Command::generate_launch_blob(uint32_t policy)
                     printf("%02x ", session_data_buf.nonce[i]);
                 }
                 printf("\nWrapTK TEK:\n");
-                for(size_t i = 0; i < sizeof(session_data_buf.wrap_tk); i++) {
+                for(size_t i = 0; i < sizeof(session_data_buf.wrap_tk.tek); i++) {
                     printf("%02x ", session_data_buf.wrap_tk.tek[i]);
                 }
                 printf("\nWrapTK TIK:\n");
-                for(size_t i = 0; i < sizeof(session_data_buf.wrap_tk); i++) {
+                for(size_t i = 0; i < sizeof(session_data_buf.wrap_tk.tik); i++) {
                     printf("%02x ", session_data_buf.wrap_tk.tik[i]);
                 }
                 printf("\nWrapIV:\n");
