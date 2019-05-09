@@ -44,10 +44,6 @@ else
   }
 fi
 
-# save the current directory to we can go back to it at the end
-OLD_DIR=$(pwd)
-debug $LINENO ":" "OLD_DIR => " ${OLD_DIR}
-
 OS_RELEASE=$(cat /etc/os-release)
 debug $LINENO ":" "OS_RELEASE => " ${OS_RELEASE}
 
@@ -125,20 +121,117 @@ then
     fi
 fi
 
+fcomp()
+{
+	python -c "print(0 if '${1}' < '${2}' else 1)"
+}
+
+check_ssl()
+{
+	SSL_VERSION="1.1.0j"
+	ACCEPTED_SSL_VERSION="1.1.0"
+	SYSTEM_SSL_VERSION=$(openssl version | awk '{print $2}' | sed "s/[a-zA-Z-]//g")
+
+	CURRENT_DIR=$(pwd)
+
+	if [ $(fcomp ${SYSTEM_SSL_VERSION} ${ACCEPTED_SSL_VERSION}) ] &&
+	   [ ! -d ./openssl/ ]
+	then
+		debug $LINENO ":" "Local directory of openssl not detected..."
+		echo "Your version of openssl is not new enough!"
+		echo "Would you like to build a self-contained instance of the required openssl version"
+		printf "(internet connection required)? [y/N] "
+		read ssl_response
+
+		case ${ssl_response} in
+			[yY]*)
+				debug $LINENO ":" "User responded with YES."
+
+				echo "Downloading, compiling, and building against openssl version ${SSL_VERSION}"
+
+				# Download an acceptable version of openssl
+				wget https://www.openssl.org/source/openssl-${SSL_VERSION}.tar.gz
+
+				# create openssl directory
+				mkdir -p openssl
+
+				# Extract the tarball.
+				tar -xf openssl-${SSL_VERSION}.tar.gz -C openssl --strip-components 1
+
+				# Removing the tarball.
+				rm -f openssl-${SSL_VERSION}.tar.gz
+
+				# Enter the openssl directory, and build the library.
+				cd openssl/
+				./config
+				make -j64
+
+				cd ${CURRENT_DIR}
+
+				# Remove system ssl libraries from src Makefile.am
+				sed -i 's/^\# linked.*$//g' src/Makefile.am
+				sed -i 's/^sevtool_LDADD.*$//g' src/Makefile.am
+
+				# Add local ssl libraries to the src Makefile.am
+				echo "SSL_DIR=../openssl" >> src/Makefile.am
+				echo "sevtool_LDADD = \$(SSL_DIR)/libcrypto.a -ldl" >> src/Makefile.am
+				echo "sevtool_CXXFLAGS += -isystem \$(SSL_DIR)/include -isystem \$(SSL_DIR)" >> src/Makefile.am
+				;;
+			*)
+				debug $LINENO ":" "User responded with no."
+				echo "You will need to make sure you manually install all required dependencies."
+				;;
+		esac
+	elif [ $(fcomp ${SYSTEM_SSL_VERSION} ${ACCEPTED_SSL_VERSION}) ] &&
+		 [ -d ./openssl/ ]
+	then
+		debug $LINENO ":" "Local directory of openssl detected..."
+		echo "Your version of openssl is not new enough!"
+		printf "Would you like to locally compile and build against the appropriate version? [y/N] "
+		read ssl_response
+
+		case ${ssl_response} in
+			[yY]*)
+				# Enter the openssl directory, and rebuild the library.
+				cd openssl/
+				./config
+				make -j64
+
+				# No adjustments to the automake file should be necessary as they were already done once.
+
+				cd ${CURRENT_DIR}
+				;;
+			*)
+				debug $LINENO ":" "User responded with no."
+				echo "You will need to make sure you manually install all required dependencies."
+				;;
+		esac
+	else
+		debug $LINENO ":" "Proper version of openssl detected as system install."
+	fi
+}
+
 # Install dependencies if they are needed.
 if [ ${NEED_DEPS} -eq 1 ]
 then
-    debug $LINENO ":" "A dependency is missing, installing now."
-    debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
-          "zip ${SSL_DEV} ${GCC_CPP}\""
-    sudo ${INSTALLER} install -y git make gcc zip wget libssl-dev ${SSL_DEV} ${GCC_CPP}
+	echo   "One or more required software dependencies are missing on your system."
+	printf "Would you like to have them automatically installed? [y/N] "
+	read response
+
+	case ${response} in
+		[yY]*)
+			debug $LINENO ":" "User responded with YES."
+			debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
+				  "zip wget autoconf ${SSL_DEV} ${GCC_CPP}\""
+			sudo ${INSTALLER} install -y git make gcc zip wget autoconf ${SSL_DEV} ${GCC_CPP}
+			;;
+		*)
+			debug $LINENO ":" "User responded with no."
+			echo "You will need to make sure you manually install all required dependencies."
+			;;
+	esac
 fi
 
-# Rebuild SEV Tool binary
-cd src/
-make clean
-make -j64
-cd ../
+check_ssl
 
-# Return to original directory
-cd ${OLD_DIR}
+echo "With all dependencies met, you should be able to run \"autoreconf -if && ./configure && make\" to compile the sevtool."

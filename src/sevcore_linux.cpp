@@ -17,7 +17,7 @@
 #ifdef __linux__
 #include "sevcore.h"
 #include "utilities.h"
-#include "linux/psp-sev.h"
+#include "psp-sev.h"
 #include <sys/ioctl.h>      // for ioctl()
 #include <sys/mman.h>       // for mmap() and friends
 #include <cstdio>           // for std::rename
