@@ -34,6 +34,7 @@ Tests::Tests(std::string output_folder, int verbose_flag)
 bool Tests::clear_output_folder()
 {
     std::string cmd = "rm -rf " + m_output_folder + "*";
+    // std::string cmd = "find " + m_output_folder + " -type f \\( -name \\*.cert -o -name \\*.txt -o -name \\*.pem -o -name \\*.bin \\) -delete";
     std::string output = "";
     if(!sev::execute_system_command(cmd, &output))
         return false;
