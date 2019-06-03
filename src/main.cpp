@@ -128,6 +128,21 @@ int main(int argc, char** argv)
             case 'O': {
                 output_folder = optarg;
                 output_folder += "/";
+
+                // Check that output folder exists, and immediately stop if not
+                std::string cmd = "if test -d " + output_folder + " ; then echo \"exist\"; else echo \"no\"; fi";
+                std::string output = "";
+                if(!sev::execute_system_command(cmd, &output)) {
+                    printf("Error. Output directory %s existance check failed.\n", output_folder.c_str());
+                    return false;
+                }
+
+                if(strncmp(output.c_str(), "exists", 2) != 0) {
+                    printf("Error. Output directory %s does not exist. " \
+                           "Please manually create it and try again\n", output_folder.c_str());
+                    return false;
+                }
+
                 break;
             }
             case 'a': {         // PLATFORM_RESET
@@ -163,8 +178,8 @@ int main(int argc, char** argv)
             case 'g': {         // PEK_CERT_IMPORT
                 optind--;   // Can't use option_index because it doesn't account for '-' flags
                 if(argc - optind != 1) {
-                    printf("Error: Expecting exactly 1 arg\n");
-                    break;
+                    printf("Error: Expecting exactly 1 arg for pek_cert_import\n");
+                    return false;
                 }
 
                 std::string oca_priv_key_file = argv[optind++];
@@ -185,8 +200,8 @@ int main(int argc, char** argv)
             case 'l': {         // SET_EXTERNALLY_OWNED
                 optind--;   // Can't use option_index because it doesn't account for '-' flags
                 if(argc - optind != 1) {
-                    printf("Error: Expecting exactly 1 args\n");
-                    break;
+                    printf("Error: Expecting exactly 1 arg for set_externally_owned\n");
+                    return false;
                 }
 
                 std::string oca_priv_key_file = argv[optind++];
@@ -212,8 +227,8 @@ int main(int argc, char** argv)
             case 't': {         // CALC_MEASUREMENT
                 optind--;   // Can't use option_index because it doesn't account for '-' flags
                 if(argc - optind != 8) {
-                    printf("Error: Expecting exactly 8 args\n");
-                    break;
+                    printf("Error: Expecting exactly 8 args for calc_measurement\n");
+                    return false;
                 }
 
                 measurement_t user_data;
@@ -238,8 +253,8 @@ int main(int argc, char** argv)
             case 'v': {         // GENERATE_LAUNCH_BLOB
                 optind--;   // Can't use option_index because it doesn't account for '-' flags
                 if(argc - optind != 1) {
-                    printf("Error: Expecting exactly 1 args\n");
-                    break;
+                    printf("Error: Expecting exactly 1 arg for generate_launch_blob\n");
+                    return false;
                 }
 
                 uint32_t guest_policy = (uint8_t)strtol(argv[optind++], NULL, 16);
@@ -264,7 +279,7 @@ int main(int argc, char** argv)
             }
             default: {
                 fprintf(stderr, "Unrecognised option: -%c\n", optopt);
-                break;
+                return false;
             }
         }
     }
