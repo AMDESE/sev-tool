@@ -16,11 +16,13 @@
 
 #include "sevcert.h"
 #include "utilities.h"
-#include <openssl/hmac.h>
-#include <openssl/ecdsa.h>
+#include <openssl/bn.h>
+#include <openssl/ec.h>
 #include <openssl/ecdh.h>
-#include <openssl/rsa.h>
+#include <openssl/ecdsa.h>
+#include <openssl/hmac.h>
 #include <openssl/pem.h>
+#include <openssl/rsa.h>
 #include <cstring>                  // memset
 #include <fstream>
 #include <stdio.h>
@@ -213,10 +215,12 @@ bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_p
     // Read in the file as an EC key
     read_priv_key_pem_into_eckey(file_name, &ec_privkey);
 
-    // Convert EC key to EVP_PKEY
-    // This function links EVP_pubKey to EC_pubKey, so when EVP_pubKey
-    //  is freed, EC_pubKey is freed. We don't want the user to have to
-    //  manage 2 keys, so just return EVP_PKEY and make sure user free's it
+    /*
+     * Convert EC key to EVP_PKEY
+     * This function links EVP_pubKey to EC_pubKey, so when EVP_pubKey
+     *  is freed, EC_pubKey is freed. We don't want the user to have to
+     *  manage 2 keys, so just return EVP_PKEY and make sure user free's it
+     */
     if(EVP_PKEY_assign_EC_KEY(*evp_priv_key, ec_privkey) != 1)
         return false;
 
@@ -238,6 +242,7 @@ bool write_pub_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
     // printf("Writing to file: %s\n", file_name.c_str());
     if(PEM_write_PUBKEY(pFile, evp_key_pair) != 1) {
         printf("Error writing pubkey to file: %s\n", file_name.c_str());
+        fclose(pFile);
         return false;
     }
     fclose(pFile);
@@ -260,6 +265,7 @@ bool write_priv_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
     // printf("Writing to file: %s\n", file_name.c_str());
     if(PEM_write_PrivateKey(pFile, evp_key_pair, NULL, NULL, 0, NULL, 0) != 1) {
         printf("Error writing privkey to file: %s\n", file_name.c_str());
+        fclose(pFile);
         return false;
     }
     fclose(pFile);
@@ -297,10 +303,12 @@ bool SEVCert::generate_ecdh_key_pair(EVP_PKEY **evp_key_pair)
         if(EC_KEY_generate_key(ec_key_pair) != 1)
             break;
 
-        // Convert EC key to EVP_PKEY
-        // This function links evp_key_pair to ec_key_pair, so when evp_key_pair is
-        //  freed, ec_key_pair is freed. We don't want the user to have to manage 2
-        //  keys, so just return EVP_PKEY and make sure user free's it
+        /*
+         * Convert EC key to EVP_PKEY
+         * This function links evp_key_pair to ec_key_pair, so when evp_key_pair is
+         *  freed, ec_key_pair is freed. We don't want the user to have to manage 2
+         *  keys, so just return EVP_PKEY and make sure user free's it
+         */
         if(EVP_PKEY_assign_EC_KEY(*evp_key_pair, ec_key_pair) != 1)
             break;
 
@@ -349,10 +357,12 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
         if(decompile_public_key_into_certificate(&m_child_cert, *godh_key_pair) != STATUS_SUCCESS)
             break;
 
-        // Set the rest of the params and sign the signature with the newly
-        // generated GODH privkey
-        // Technically this step is not necessary, as the firmware doesn't
-        // validate the GODH signature
+        /*
+         * Set the rest of the params and sign the signature with the newly
+         * generated GODH privkey
+         * Technically this step is not necessary, as the firmware doesn't
+         * validate the GODH signature
+         */
         if(!sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_PDH, SEV_SIG_ALGO_ECDH_SHA256,
                         godh_key_pair, SEV_USAGE_PEK, SEV_SIG_ALGO_ECDSA_SHA256))
             break;
@@ -399,10 +409,12 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
         if(decompile_public_key_into_certificate(&m_child_cert, *oca_key_pair) != STATUS_SUCCESS)
             break;
 
-        // Set the rest of the params and sign the signature with the newly
-        // generated GODH privkey
-        // Technically this step is not necessary, as the firmware doesn't
-        // validate the GODH signature
+        /*
+         * Set the rest of the params and sign the signature with the newly
+         * generated GODH privkey
+         * Technically this step is not necessary, as the firmware doesn't
+         * validate the GODH signature
+         */
         if(!sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256,
                         oca_key_pair, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256))
             break;
@@ -426,7 +438,7 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
  *              [sha_digest_384] the output digest, if using SHA384
  */
 bool SEVCert::calc_hash_digest(const sev_cert *cert, uint32_t pub_key_algo, uint32_t pub_key_offset,
-                             hmac_sha_256 *sha_digest_256, hmac_sha_512 *sha_digest_384)
+                               hmac_sha_256 *sha_digest_256, hmac_sha_512 *sha_digest_384)
 {
     bool ret = false;
     SHA256_CTX ctx_256;
@@ -535,9 +547,6 @@ bool SEVCert::sign_with_key(uint32_t version, uint32_t pub_key_usage,
         }
         else if( (sig_1_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                  (sig_1_algo == SEV_SIG_ALGO_ECDSA_SHA384)) {
-            int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
-            priv_ec_key = EC_KEY_new_by_curve_name(nid);
-
             priv_ec_key = EVP_PKEY_get1_EC_KEY(*priv_evp_key);
             if(!priv_ec_key)
                 break;
@@ -685,11 +694,11 @@ SEV_ERROR_CODE SEVCert::validate_public_key(const sev_cert *cert, const EVP_PKEY
  * Notes:       sev_cert.c -> sev_cert_validate_sig()
  *              This function gets called from a loop, and this function has
  *              to see which of the signatures this currentSig matches to
- * Parameters:  [m_child_cert] the cert which we want to validate the signature of.
+ * Parameters:  [child_cert] the cert which we want to validate the signature of.
  *               This is the cert that gets hashed and validated
  *              [parent_cert] tells us the algo used to sign the child cert
  *              [parent_signing_key] used to validate the hash of the child cert
- *              Ex) m_child_cert = PEK. ParentCert = OCA. ParentSigningKey = OCA PubKey
+ *              Ex) child_cert = PEK. ParentCert = OCA. ParentSigningKey = OCA PubKey
  */
 SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                                            const sev_cert *parent_cert,
@@ -718,7 +727,6 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
         {
             if( (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
                 (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
-
                 // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 printf("TODO validate_signature segfaults on RSA_verify\n");
 
@@ -730,12 +738,16 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
 
                 uint32_t sigLen = sizeof(parent_cert->sig_1.rsa);
                 if(parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) {
-                    if( RSA_verify(NID_sha256, sha_digest_256, sizeof(sha_digest_256), (uint8_t *)&parent_cert->sig_1.rsa, sigLen, rsa) != 1 )
+                    if( RSA_verify(NID_sha256, sha_digest_256, sizeof(sha_digest_256), (uint8_t *)&parent_cert->sig_1.rsa, sigLen, rsa) != 1 ) {
+                        RSA_free(rsa);
                         break;
+                    }
                 }
                 else if(parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384) {
-                    if( RSA_verify(NID_sha384, sha_digest_384, sizeof(sha_digest_384), (uint8_t *)&parent_cert->sig_1.rsa, sigLen, rsa) != 1 )
+                    if( RSA_verify(NID_sha384, sha_digest_384, sizeof(sha_digest_384), (uint8_t *)&parent_cert->sig_1.rsa, sigLen, rsa) != 1 ) {
+                        RSA_free(rsa);
                         break;
+                    }
                 }
                 found_match = true;
                 RSA_free(rsa);
@@ -758,22 +770,23 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                 // the ECDSA_SIG object, and therefore the values that have been passed
                 // in should not be freed directly after this function has been called
                 if(ECDSA_SIG_set0(tmp_ecdsa_sig, r_big_num, s_big_num) != 1) {
-                    BN_free(s_big_num);
+                    BN_free(s_big_num);                   // Frees BIGNUMs manually here
                     BN_free(r_big_num);
+                    ECDSA_SIG_free(tmp_ecdsa_sig);
                     continue;
                 }
+                EC_KEY *tmp_ec_key = EVP_PKEY_get1_EC_KEY(parent_signing_key); // Make a local key so you can free it later
                 if( (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                     (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA256)) {
-                    if(ECDSA_do_verify(sha_digest_256, sizeof(sha_digest_256), tmp_ecdsa_sig,
-                                    EVP_PKEY_get1_EC_KEY(parent_signing_key)) == 1)
+                    if(ECDSA_do_verify(sha_digest_256, sizeof(sha_digest_256), tmp_ecdsa_sig, tmp_ec_key) == 1)
                         found_match = true;
                 }
                 else if( (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA384) ||
                          (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384)) {
-                    if(ECDSA_do_verify(sha_digest_384, sizeof(sha_digest_384), tmp_ecdsa_sig,
-                                EVP_PKEY_get1_EC_KEY(parent_signing_key)) == 1)
+                    if(ECDSA_do_verify(sha_digest_384, sizeof(sha_digest_384), tmp_ecdsa_sig, tmp_ec_key) == 1)
                         found_match = true;
                 }
+                EC_KEY_free(tmp_ec_key);
                 ECDSA_SIG_free(tmp_ecdsa_sig);      // Frees BIGNUMs too
                 continue;
             }
@@ -860,10 +873,12 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
             // if (RSA_check_key(rsa_pub_key) != 1)
             //     break;
 
-            // Create a public EVP_PKEY from the public RSA_KEY
-            // This function links evp_pub_key to rsa_pub_key, so when evp_pub_key
-            //  is freed, rsa_pub_key is freed. We don't want the user to have to
-            //  manage 2 keys, so just return EVP_PKEY and make sure user free's it
+            /*
+             * Create a public EVP_PKEY from the public RSA_KEY
+             * This function links evp_pub_key to rsa_pub_key, so when evp_pub_key
+             *  is freed, rsa_pub_key is freed. We don't want the user to have to
+             *  manage 2 keys, so just return EVP_PKEY and make sure user free's it
+             */
             // if(EVP_PKEY_assign_RSA(evp_pub_key, rsa_pub_key) != 1)
             //     break;
         }
@@ -889,10 +904,12 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
             if (EC_KEY_check_key(ec_pub_key) != 1)
                 break;
 
-            // Create a public EVP_PKEY from the public EC_KEY
-            // This function links evp_pub_key to ec_pub_key, so when evp_pub_key
-            //  is freed, ec_pub_key is freed. We don't want the user to have to
-            //  manage 2 keys, so just return EVP_PKEY and make sure user free's it
+            /*
+             * Create a public EVP_PKEY from the public EC_KEY
+             * This function links evp_pub_key to ec_pub_key, so when evp_pub_key
+             *  is freed, ec_pub_key is freed. We don't want the user to have to
+             *  manage 2 keys, so just return EVP_PKEY and make sure user free's it
+             */
             if(EVP_PKEY_assign_EC_KEY(evp_pub_key, ec_pub_key) != 1)
                 break;
         }
@@ -929,8 +946,7 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
     EC_KEY *ec_pubkey = NULL;
     BIGNUM *x_bignum = NULL;
     BIGNUM *y_bignum = NULL;
-    BIGNUM *modulus = NULL;
-    BIGNUM *pub_exp = NULL;
+    EC_GROUP *ec_group = NULL;
 
     do {
         if( (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
@@ -945,14 +961,10 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384) ) {      // ecdsa.c -> sign_verify_msg
 
             int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
-            EC_GROUP *ec_group = EC_GROUP_new_by_curve_name(nid);
+            ec_group = EC_GROUP_new_by_curve_name(nid);
 
             // Set the curve parameter of the cert's pubkey
             cert->pub_key.ecdh.curve = SEV_EC_P384;
-
-            // Create/allocate memory for an EC_KEY object using the NID above
-            if (!(ec_pubkey = EC_KEY_new_by_curve_name(nid)))
-                break;
 
             // Pull the EC_KEY from the EVP_PKEY
             ec_pubkey = EVP_PKEY_get1_EC_KEY(evp_pubkey);
@@ -965,8 +977,8 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
             const EC_POINT *pub = EC_KEY_get0_public_key(ec_pubkey);
 
             // New up the BIGNUMs
-            BIGNUM *x_bignum = BN_new();
-            BIGNUM *y_bignum = BN_new();
+            x_bignum = BN_new();
+            y_bignum = BN_new();
 
             // Get the x and y coordinates from the EC_POINT and store as separate BIGNUM objects
             if(!EC_POINT_get_affine_coordinates_GFp(ec_group, pub, x_bignum, y_bignum, NULL))
@@ -990,8 +1002,8 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
     // Free memory if it was allocated
     BN_free(y_bignum);       // If NULL, does nothing
     BN_free(x_bignum);
-    BN_free(modulus);
-    BN_free(pub_exp);
+    EC_GROUP_free(ec_group);
+    EC_KEY_free(ec_pubkey);
 
     return cmd_ret;
 }

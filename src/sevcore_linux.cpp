@@ -590,7 +590,7 @@ int SEVDevice::get_ask_ark(const std::string output_folder,
         cert_w_path = output_folder;
 
         get_family_model(&family, &model);
-        if(family == NAPLES_FAMILY && model >= NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
+        if(family == NAPLES_FAMILY && (int)model >= (int)NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
             cmd += ASK_ARK_NAPLES_SITE;
             cert_w_path += ASK_ARK_NAPLES_FILE;
         }
