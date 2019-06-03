@@ -177,8 +177,10 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 
         // Verify the CSR complies to API specification
         memcpy(csr, (sev_cert*)data_buf->address, sizeof(sev_cert));
-        if(!validate_pek_csr(csr))
+        if(!validate_pek_csr(csr)) {
+            cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
+        }
 
     } while (0);
 
@@ -244,8 +246,10 @@ int SEVDevice::pek_cert_import(uint8_t *data,
 
     do {
         // Verify the CSR complies to API specification
-        if(!validate_pek_csr(pek_csr))
+        if(!validate_pek_csr(pek_csr)) {
+            cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
+        }
 
         // Do a platform_status to get api_major and api_minor to create oca cert
         cmd_ret = platform_status((uint8_t *)&status_data);
@@ -254,10 +258,16 @@ int SEVDevice::pek_cert_import(uint8_t *data,
 
         // Import the OCA pem file and turn it into an sev_cert
         SEVCert cert_obj(*(sev_cert *)oca_cert);
-        if(!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key))
+        if(!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key)) {
+            printf("Error importing OCA Priv Key\n");
+            cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
-        if(!cert_obj.create_oca_cert(&oca_priv_key, status_data.api_major, status_data.api_minor))
+        }
+        if(!cert_obj.create_oca_cert(&oca_priv_key, status_data.api_major, status_data.api_minor)) {
+            printf("Error creating OCA cert\n");
+            cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
+        }
         memcpy(oca_cert, cert_obj.data(), sizeof(sev_cert)); // TODO, shouldn't need this?
         // print_sev_cert_readable((sev_cert *)oca_cert);
 

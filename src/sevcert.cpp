@@ -165,7 +165,8 @@ void read_priv_key_pem_into_rsakey(const std::string file_name, RSA **rsa_priv_k
             break;
         *rsa_priv_key = PEM_read_RSAPrivateKey(pFile, NULL, NULL, NULL);
         fclose(pFile);
-        if(!rsa_priv_key)
+
+        if(!rsa_priv_key)   // TODO find a better check
             break;
     } while (0);
 }
@@ -178,8 +179,10 @@ void read_priv_key_pem_into_rsakey(const std::string file_name, RSA **rsa_priv_k
  * Parameters:    [file_name] The name of the pem file being read from
  *                [ec_priv_key] EC_KEY where the private key gets stored
  */
-void read_priv_key_pem_into_eckey(const std::string file_name, EC_KEY **ec_priv_key)
+bool read_priv_key_pem_into_eckey(const std::string file_name, EC_KEY **ec_priv_key)
 {
+    bool success = false;
+
     do {
         // New up the EC_KEY with the EC_GROUP
         int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
@@ -191,9 +194,15 @@ void read_priv_key_pem_into_eckey(const std::string file_name, EC_KEY **ec_priv_
             break;
         *ec_priv_key = PEM_read_ECPrivateKey(pFile, NULL, NULL, NULL);
         fclose(pFile);
-        if(!ec_priv_key)
+
+        // Make sure the key is good
+        if (EC_KEY_check_key(*ec_priv_key) != 1)
             break;
+
+        success = true;
     } while (0);
+
+    return success;
 }
 
 /**
@@ -213,7 +222,8 @@ bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_p
         return false;
 
     // Read in the file as an EC key
-    read_priv_key_pem_into_eckey(file_name, &ec_privkey);
+    if(!read_priv_key_pem_into_eckey(file_name, &ec_privkey))
+        return false;
 
     /*
      * Convert EC key to EVP_PKEY

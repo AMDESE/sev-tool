@@ -31,7 +31,7 @@ void print_cert_chain_buf_readable(const sev_cert_chain_buf *p,
 void print_cert_chain_buf_hex(const sev_cert_chain_buf *p);
 void read_priv_key_pem_into_rsakey(const std::string file_name,
                                    RSA **rsa_priv_key);
-void read_priv_key_pem_into_eckey(const std::string file_name,
+bool read_priv_key_pem_into_eckey(const std::string file_name,
                                   EC_KEY **ec_priv_key);
 bool read_priv_key_pem_into_evpkey(const std::string file_name,
                                    EVP_PKEY **evp_priv_key);
