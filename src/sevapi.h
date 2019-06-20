@@ -152,7 +152,7 @@ typedef enum __attribute__((mode(QI))) SEV_GUEST_STATE
 /**
  * SEV Error Codes (each entry stored in a byte).
  */
-typedef enum __attribute__((mode(QI))) SEV_ERROR_CODE
+typedef enum __attribute__((mode(HI))) SEV_ERROR_CODE
 {
     STATUS_SUCCESS                  = 0x00,
     ERROR_INVALID_PLATFORM_STATE    = 0x01,
