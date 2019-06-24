@@ -31,7 +31,7 @@
 # Where to find user code.
 USER_DIR = .
 
-CPPFLAGS += -lcrypto -lssl
+CPPFLAGS += -lcrypto -lssl -lvirt -lvirt-qemu
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g -Wall -Wextra -Wconversion -pthread -std=c++11
 

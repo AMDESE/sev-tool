@@ -18,8 +18,12 @@
 #define SEVCORE_H
 
 #include "sevcert.h"
-#include <cstddef>      // For size_t
-#include <cstring>      // For memcmp
+#include <cstddef>
+#include <cstring>
+#include <sys/stat.h>
+#include <fstream>
+#include <libvirt/libvirt.h>
+#include <libvirt/libvirt-qemu.h>
 #include <stdio.h>
 #include <string>
 
@@ -40,6 +44,12 @@ constexpr uint32_t ROME_FAMILY       = 0x17UL;      // 23
 constexpr uint32_t ROME_MODEL_LOW    = 0x30UL;
 constexpr uint32_t ROME_MODEL_HIGH   = 0x3FUL;
 
+constexpr char LINUX_SEV_FILE[] 		= "/dev/sev";
+constexpr char QMP_SEV_CAPS_CMD[] 		= "{\"execute\": \"query-sev-capabilities\"}";
+constexpr char KVM_AND_SEV_PARAM[] 		= "/sys/module/kvm_amd/parameters/sev";
+constexpr char LIBVIRT_SEV_SUPPORTED[] 	= "<sev supported='yes'>";
+constexpr char COMMAND_NOT_FOUND[] 		= "CommandNotFound";
+
 // A system physical address that should always be invalid.
 // Used to test the SEV FW detects such invalid addresses and returns the
 // correct error return value.
@@ -54,11 +64,51 @@ constexpr uint8_t PLAT_STAT_CONFIGES_OFFSET = 8;
 constexpr uint32_t PLAT_STAT_OWNER_MASK      = (1U << PLAT_STAT_OWNER_OFFSET);
 constexpr uint32_t PLAT_STAT_ES_MASK         = (1U << PLAT_STAT_CONFIGES_OFFSET);
 
+const std::string SHELL_VM_XML_1 = "<domain type='kvm'>"
+"<memory>256000</memory>"
+"<features>"
+"<acpi/>"
+"</features>";
+
+const std::string SHELL_VM_XML_2 = "<memtune>"
+"<hard_limit unit='KiB'>300000</hard_limit>"
+"<soft_limit unit='KiB'>300000</soft_limit>"
+"</memtune>"
+"</domain>";
+
+const std::string OVMF_VAR_FILE = "/tmp/sev_ovmf_file_test.fd";
+const std::string SEV_PIPE_FILE_1_IN = "/tmp/sev_pipe_1.in";
+const std::string SEV_PIPE_FILE_1_OUT = "/tmp/sev_pipe_1.out";
+const std::string SEV_PIPE_FILE_2_IN = "/tmp/sev_pipe_2.in";
+const std::string SEV_PIPE_FILE_2_OUT = "/tmp/sev_pipe_2.out";
+
+const std::string SHELL_VM_NAME_BASE = "fceac9812431d";
+
+struct sev_dom_details
+{
+	std::string ovmf_bin_loc;
+	std::string c_bit_pos;
+	std::string reduced_phys_bits;
+};
+
+typedef union
+{
+	struct
+	{
+		bool kernel  : 1;
+		bool kvm     : 1;
+		bool qemu    : 1;
+		bool libvirt : 1;
+		bool ovmf    : 1;
+	};
+	uint8_t raw;
+} Deps;
 
 // Class to access the special SEV FW API test suite driver.
 class SEVDevice {
 private:
     int mFd;
+	Deps dep_bits;
 
     inline int get_fd(void) { return mFd; }
     int sev_ioctl(int cmd, void *data, int *cmd_ret);
@@ -66,6 +116,23 @@ private:
     bool validate_pek_csr(sev_cert *pek_csr);
     std::string display_build_info(void);
     void get_family_model(uint32_t *family, uint32_t *model);
+
+	bool kvm_amd_sev_enabled(void);
+	bool valid_qemu(virDomainPtr dom);
+	bool valid_libvirt(virConnectPtr con);
+	bool valid_ovmf(virDomainPtr dom, bool sev_enabled);
+	bool dom_state_down(virDomainPtr dom);
+	virDomainPtr start_new_domain(virConnectPtr con,
+			std::string name,
+			bool sev_enable,
+			struct sev_dom_details dom_details);
+	void create_sev_pipe_files(void);
+	void create_ovmf_var_file(std::string ovmf_bin);
+	struct sev_dom_details find_sev_dom_details(virConnectPtr con);
+	std::string find_sev_ovmf_bin(char * capabilities);
+	std::string find_sev_c_bit_pos(char * capabilities);
+	std::string find_sev_reduced_phys_bits(char * capabilities);
+	std::string format_software_support_text(void);
 
     // Do NOT create ANY other constructors or destructors of any kind.
     SEVDevice(void)  = default;
@@ -113,6 +180,8 @@ public:
     int zip_certs(const std::string output_folder,
                   const std::string zip_name,
                   const std::string files_to_zip);
+
+    void check_dependencies(void);
 };
 
 #endif /* SEVCORE_H */
