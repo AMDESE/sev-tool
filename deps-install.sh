@@ -221,10 +221,6 @@ check_ssl()
 # Install dependencies if they are needed.
 if [ ${NEED_DEPS} -eq 1 ]
 then
-    debug $LINENO ":" "A dependency is missing, installing now."
-    debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
-          "zip ${SSL_DEV} ${GCC_CPP}\""
-    sudo ${INSTALLER} install -y git make gcc zip wget libssl-dev ${SSL_DEV} ${GCC_CPP}
 	echo   "One or more required software dependencies are missing on your system."
 	printf "Would you like to have them automatically installed? [y/N] "
 	read response
