@@ -33,6 +33,8 @@ Tests::Tests(std::string output_folder, int verbose_flag)
 
 bool Tests::clear_output_folder()
 {
+    printf("*Clearing output folder %s\n", m_output_folder.c_str());
+
     std::string cmd = "rm -rf " + m_output_folder + "*";
     // std::string cmd = "find " + m_output_folder + " -type f \\( -name \\*.cert -o -name \\*.txt -o -name \\*.pem -o -name \\*.bin \\) -delete";
     std::string output = "";
@@ -729,6 +731,7 @@ bool Tests::test_package_secret()
             return false;
 
         // FAILURE test: Try a secrets file that's less than 8 bytes
+        printf("Running a negative/failure test. Should print an 'Error'\n");
         sys_cmd = "echo HELLO > " + m_output_folder + SECRET_FILENAME;
         if(!sev::execute_system_command(sys_cmd, &output))
             return false;
@@ -760,6 +763,13 @@ bool Tests::test_all()
     bool ret = false;
 
     do {
+        printf("Starting self-tests\n");
+        printf("Note: Positive and negative self-tests will be run,\n" \
+               "      The word 'Error' is part of some negative tests.\n" \
+               "      If any test fails, the tests immediately stop and \n" \
+               "      no other tests are run. A successful run will say \n" \
+               "      'All tests Succeeded' at the bottom.\n");
+
         clear_output_folder();
 
         if(!test_factory_reset())
@@ -813,6 +823,7 @@ bool Tests::test_all()
         if(!test_package_secret())
             break;
 
+        printf("All tests Succeeded!\n");
         ret = true;
     } while (0);
 
