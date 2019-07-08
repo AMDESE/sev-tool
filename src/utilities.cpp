@@ -100,14 +100,13 @@ size_t sev::write_file(const std::string file_name, const void *buffer, size_t l
 
 /**
  * Returns the file size in number of bytes
+ * May be used to tell if a file exists
  */
 size_t sev::get_file_size(const std::string file_name)
 {
     std::ifstream file(file_name, std::ios::binary | std::ios::ate);
 
     if (!file.is_open()) {
-        printf("Readfile Error: Could not open file. Ensure directory exists\n" \
-               "  Filename: %s\n", file_name.c_str());
         return 0;
     }
 

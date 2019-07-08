@@ -60,6 +60,7 @@ namespace sev
 
     /**
      * Returns the file size in number of bytes
+     * May be used to tell if a file exists
      */
     size_t get_file_size(const std::string file_name);
 

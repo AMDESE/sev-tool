@@ -520,6 +520,7 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
     sev_user_data_get_id id_buf;
     std::string cmd = "wget ";
     std::string output = "";
+    std::string to_cert_w_path = output_folder + cert_file;
 
     // Set struct to 0
     memset(&id_buf, 0, sizeof(sev_user_data_get_id));
@@ -544,11 +545,18 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
         }
         cmd += id0_buf;
 
+        // Don't re-download the CEK from the KDS server if you already have it
+        if(sev::get_file_size(to_cert_w_path) != 0) {
+            // printf("CEK already exists, not re-downloading\n");
+            cmd_ret = SEV_RET_SUCCESS;
+            break;
+        }
+
         // The AMD KDS server only accepts requests every 10 seconds
         std::string cert_w_path = output_folder + id0_buf;
         char tmp_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
         bool cert_found = false;
-        int sec_to_sleep = 4;
+        int sec_to_sleep = 6;
         int retries = 0;
         int max_retries = (int)((10/sec_to_sleep)+2);
         while(!cert_found && retries <= max_retries) {
@@ -574,7 +582,6 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
         }
 
         // Copy the file from (get_id) name to something known (cert_file)
-        std::string to_cert_w_path = output_folder + cert_file;
         if(std::rename(cert_w_path.c_str(), to_cert_w_path.c_str()) != 0) {
             printf("Error: renaming cek cert file\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
@@ -594,10 +601,18 @@ int SEVDevice::get_ask_ark(const std::string output_folder,
     uint32_t family = 0;
     uint32_t model = 0;
     std::string cert_w_path = "";
+    std::string to_cert_w_path = output_folder + cert_file;
 
     do {
         cmd += "-P " + output_folder + " ";
         cert_w_path = output_folder;
+
+        // Don't re-download the CEK from the KDS server if you already have it
+        if(sev::get_file_size(to_cert_w_path) != 0) {
+            // printf("ASK_ARK already exists, not re-downloading\n");
+            cmd_ret = SEV_RET_SUCCESS;
+            break;
+        }
 
         get_family_model(&family, &model);
         if(family == NAPLES_FAMILY && (int)model >= (int)NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
@@ -633,7 +648,6 @@ int SEVDevice::get_ask_ark(const std::string output_folder,
         }
 
         // Rename the file (_PlatformType) to something known (cert_file)
-        std::string to_cert_w_path = output_folder + cert_file;
         if(std::rename(cert_w_path.c_str(), to_cert_w_path.c_str()) != 0) {
             printf("Error: renaming ask_ark cert file\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
