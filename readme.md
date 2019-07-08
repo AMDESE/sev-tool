@@ -9,7 +9,7 @@ Updated: 2019-04-08
 - The SEV API can be found here: https://developer.amd.com/sev/
 
 ## OS Requirements
-  - Your Kernel must support SEV. 
+  - Your Kernel must support SEV.
   - If running Linux, the ccp Kernel driver must be running and supported, as that is how the SEV-Tool communicates to the firmware. To tell if your Kernel supports SEV and the ccp driver is working correctly, run a dmesg and look for the following line:
      ```sh
       $ ccp [xxxx:xx:xx.x]: SEV API:x.xx build:x

@@ -48,7 +48,7 @@ typedef bool _Bool;
 /**
  * SEV commands (each entry stored in a byte).
  */
-typedef enum __attribute__((mode(QI))) SEV_API_COMMANDS
+typedef enum __attribute__((mode(HI))) SEV_API_COMMANDS
 {
     NO_COMMAND          = 0x0,
     INIT                = 0x1,
