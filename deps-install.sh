@@ -158,7 +158,7 @@ check_ssl()
 
 	CURRENT_DIR=$(pwd)
 
-	if [ $(fcomp ${SYSTEM_SSL_VER_TRUNK} ${ACCEPTED_SSL_VER_TRUNK}) -eq 0 ] &&
+	if [ "$(fcomp ${SYSTEM_SSL_VER_TRUNK} ${ACCEPTED_SSL_VER_TRUNK})" = "0" ] &&
 	   [ ! -d ./openssl/ ]
 	then
 		debug $LINENO ":" "Local directory of openssl not detected..."
@@ -206,7 +206,7 @@ check_ssl()
 				echo "You will need to make sure you manually install all required dependencies."
 				;;
 		esac
-	elif [ $(fcomp ${SYSTEM_SSL_VERSION} ${ACCEPTED_SSL_VERSION}) -eq 0 ] &&
+	elif [ "$(fcomp ${SYSTEM_SSL_VERSION} ${ACCEPTED_SSL_VERSION})" = "0" ] &&
 		 [ -d ./openssl/ ]
 	then
 		debug $LINENO ":" "Local directory of openssl detected..."
