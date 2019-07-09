@@ -35,7 +35,7 @@ then
   debug()
   {
     echo -n "[ DEBUG ] LINE "
-    echo $@
+    echo "$@"
   }
 else
   debug()
@@ -50,7 +50,7 @@ debug $LINENO ":" "OS_RELEASE => " ${OS_RELEASE}
 # Regular Expression to read /etc/os-release for major distributions.
 ID_RE='ID\(\_LIKE\)\?\=\"\?[[:alpha:]]\+\([[:space:]][[:alpha:]]\*\)\?\"\?'
 
-debug $LINENO ":" "ID_RE => " ${ID_RE}
+debug $LINENO ":" "ID_RE => ${ID_RE}"
 
 # Read /etc/os-release to find the distribution base.
 DIST_BASE=$(cat /etc/os-release | grep "${ID_RE}")
@@ -128,17 +128,21 @@ fcomp()
 
 	if [ -n "${1}" ] && [ -n ${2} ]
 	then
+		debug $LINENO ":" "Both arguments are non-zero values."
+		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}"
+		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}"
+
 		if [ ${1%.*} -eq ${2%.*} ] && [ ${1#*.} \> ${2#*.} ] || [ ${1%.*} -gt ${2%.*} ]
 		then
 			debug $LINENO ":" "The system SSL version is new enough to use."
-			debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}" 
-			debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}" 
+			debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}"
+			debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}"
 			RETVAL=1
 		fi
 	else
 		debug $LINENO ":" "An error occured while attempting to parse the SSL version number."
-		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}" 
-		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}" 
+		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}"
+		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}"
 	fi
 
 	return ${RETVAL}
