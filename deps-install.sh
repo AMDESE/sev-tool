@@ -152,9 +152,9 @@ check_ssl()
 {
 	SSL_VERSION="1.1.0j"
 	ACCEPTED_SSL_VERSION="1.1.0"
-	ACCEPTED_SSL_VER_TRUNK=${ACCEPTED_SSL_VERSION} | sed 's/.\{2\}$//'
+	ACCEPTED_SSL_VER_TRUNK=$(${ACCEPTED_SSL_VERSION} | sed 's/.\{2\}$//')
 	SYSTEM_SSL_VERSION=$(openssl version | awk '{print $2}' | sed "s/[a-zA-Z-]//g")
-	SYSTEM_SSL_VER_TRUNK=${SYSTEM_SSL_VERSION} | sed 's/.\{2\}$//'
+	SYSTEM_SSL_VER_TRUNK=$(${SYSTEM_SSL_VERSION} | sed 's/.\{2\}$//')
 
 	CURRENT_DIR=$(pwd)
 
@@ -165,7 +165,7 @@ check_ssl()
 		echo "Your version of openssl is not new enough!"
 		echo "Would you like to build a self-contained instance of the required openssl version"
 		printf "(internet connection required)? [y/N] "
-		read ssl_response
+		read -r ssl_response
 
 		case ${ssl_response} in
 			[yY]*)
@@ -186,11 +186,11 @@ check_ssl()
 				rm -f openssl-${SSL_VERSION}.tar.gz
 
 				# Enter the openssl directory, and build the library.
-				cd openssl/
+				cd openssl/ || exit
 				./config
 				make -j64
 
-				cd ${CURRENT_DIR}
+				cd "${CURRENT_DIR}" || exit
 
 				# Remove system ssl libraries from src Makefile.am
 				sed -i 's/^\# linked.*$//g' src/Makefile.am
@@ -212,18 +212,18 @@ check_ssl()
 		debug $LINENO ":" "Local directory of openssl detected..."
 		echo "Your version of openssl is not new enough!"
 		printf "Would you like to locally compile and build against the appropriate version? [y/N] "
-		read ssl_response
+		read -r ssl_response
 
 		case ${ssl_response} in
 			[yY]*)
 				# Enter the openssl directory, and rebuild the library.
-				cd openssl/
+				cd openssl/ || exit
 				./config
 				make -j64
 
 				# No adjustments to the automake file should be necessary as they were already done once.
 
-				cd ${CURRENT_DIR}
+				cd "${CURRENT_DIR}" || exit
 				;;
 			*)
 				debug $LINENO ":" "User responded with no."
@@ -240,7 +240,7 @@ if [ ${NEED_DEPS} -eq 1 ]
 then
 	echo   "One or more required software dependencies are missing on your system."
 	printf "Would you like to have them automatically installed? [y/N] "
-	read response
+	read -r response
 
 	case ${response} in
 		[yY]*)
