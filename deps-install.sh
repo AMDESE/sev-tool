@@ -1,3 +1,6 @@
+#!/bin/bash
+# Script to build AMD SEV Tool
+
 ###############################################################################
 # Copyright 2018 Advanced Micro Devices, Inc.
 #
@@ -13,9 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ###############################################################################
-
-#!/bin/bash
-# Script to build AMD SEV Tool
 
 # Set to 1 to enable debugging or pass -d or --debug.
 if [ "$(echo $1 | grep -E '^\-{0,2}d(ebug)?$')" != "" ]
@@ -126,13 +126,13 @@ fcomp()
 	debug $LINENO ":" "Attempting to determine which version number is greater."
 	RETVAL=0
 
-	if [ -n "${1}" ] && [ -n ${2} ]
+	if [ -n "${1}" ] && [ -n "${2}" ]
 	then
 		debug $LINENO ":" "Both arguments are non-zero values."
 		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}"
 		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}"
 
-		if [ ${1%.*} -eq ${2%.*} ] && [ ${1#*.} \> ${2#*.} ] || [ ${1%.*} -gt ${2%.*} ]
+		if [ "${1%.*}" \> "${2%.*}" ] && [ "${1#*.}" \> "${2#*.}" ] || [ "${1%.*}" \> "${2%.*}" ]
 		then
 			debug $LINENO ":" "The system SSL version is new enough to use."
 			debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}"
