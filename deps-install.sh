@@ -123,12 +123,25 @@ fi
 
 fcomp()
 {
-	if [ ${1%.*} -eq ${2%.*} ] && [ ${1#*.} \> ${2#*.} ] || [ ${1%.*} -gt ${2%.*} ]
+	debug $LINENO ":" "Attempting to determine which version number is greater."
+	RETVAL=0
+
+	if [ -n "${1}" ] && [ -n ${2} ]
 	then
-		return 1
+		if [ ${1%.*} -eq ${2%.*} ] && [ ${1#*.} \> ${2#*.} ] || [ ${1%.*} -gt ${2%.*} ]
+		then
+			debug $LINENO ":" "The system SSL version is new enough to use."
+			debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}" 
+			debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}" 
+			RETVAL=1
+		fi
 	else
-		return 0
+		debug $LINENO ":" "An error occured while attempting to parse the SSL version number."
+		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}" 
+		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}" 
 	fi
+
+	return ${RETVAL}
 }
 
 check_ssl()
