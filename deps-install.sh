@@ -86,7 +86,7 @@ then
 else
     debug $LINENO ":" "Regular expression could not match: \n" "${OS_RELEASE}"
     echo "Distribution not recognized. Please manually install "\
-         "libelf libraries, make, zip, gcc, g++, git, wget, and libssl-dev." >&2
+         "libelf libraries, make, zip, gcc, g++, git, wget, autoconf, and libssl-dev." >&2
     exit 1
 fi
 
