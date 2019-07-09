@@ -152,13 +152,13 @@ check_ssl()
 {
 	SSL_VERSION="1.1.0j"
 	ACCEPTED_SSL_VERSION="1.1.0"
-	ACCEPTED_SSL_VER_TRUNK=$(${ACCEPTED_SSL_VERSION} | sed 's/.\{2\}$//')
+	ACCEPTED_SSL_VER_TRUNK=$(echo "${ACCEPTED_SSL_VERSION}" | sed 's/.\{2\}$//')
 	SYSTEM_SSL_VERSION=$(openssl version | awk '{print $2}' | sed "s/[a-zA-Z-]//g")
-	SYSTEM_SSL_VER_TRUNK=$(${SYSTEM_SSL_VERSION} | sed 's/.\{2\}$//')
+	SYSTEM_SSL_VER_TRUNK=$(echo "${SYSTEM_SSL_VERSION}" | sed 's/.\{2\}$//')
 
 	CURRENT_DIR=$(pwd)
 
-	if [ $(fcomp ${SYSTEM_SSL_VER_TRUNK} ${ACCEPTED_SSL_VER_TRUNK}) ] &&
+	if [ $(fcomp ${SYSTEM_SSL_VER_TRUNK} ${ACCEPTED_SSL_VER_TRUNK}) -eq 0 ] &&
 	   [ ! -d ./openssl/ ]
 	then
 		debug $LINENO ":" "Local directory of openssl not detected..."
@@ -206,7 +206,7 @@ check_ssl()
 				echo "You will need to make sure you manually install all required dependencies."
 				;;
 		esac
-	elif [ $(fcomp ${SYSTEM_SSL_VERSION} ${ACCEPTED_SSL_VERSION}) ] &&
+	elif [ $(fcomp ${SYSTEM_SSL_VERSION} ${ACCEPTED_SSL_VERSION}) -eq 0 ] &&
 		 [ -d ./openssl/ ]
 	then
 		debug $LINENO ":" "Local directory of openssl detected..."
