@@ -100,6 +100,7 @@ then
        [ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]        ||
        [ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]        ||
        [ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]       ||
+	   [ "$(rpm -q 'autoconf' 2>&1 | grep 'not installed')" != "" ]   ||
        [ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ]   ||
        [ "$(rpm -q ${GCC_CPP} 2>&1 | grep 'not installed')" != "" ]
     then
@@ -113,6 +114,7 @@ then
        [ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]        ||
        [ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]        ||
        [ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]       ||
+	   [ "$(dpkg -l 'autoconf' 2>&1 | grep 'no packages')" != "" ]   ||
        [ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ]   ||
        [ "$(dpkg -l ${GCC_CPP} 2>&1 | grep 'no packages')" != "" ]
     then
