@@ -86,7 +86,7 @@ then
 else
     debug $LINENO ":" "Regular expression could not match: \n" "${OS_RELEASE}"
     echo "Distribution not recognized. Please manually install "\
-         "libelf libraries, make, zip, gcc, g++, git, wget, autoconf, and libssl-dev." >&2
+         "libelf libraries, make, zip, gcc, g++, git, wget, autoreconf, and libssl-dev." >&2
     exit 1
 fi
 
@@ -100,7 +100,7 @@ then
        [ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]        ||
        [ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]        ||
        [ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]       ||
-	   [ "$(rpm -q 'autoconf' 2>&1 | grep 'not installed')" != "" ]   ||
+       [ "$(rpm -q 'autoreconf' 2>&1 | grep 'not installed')" != "" ] ||
        [ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ]   ||
        [ "$(rpm -q ${GCC_CPP} 2>&1 | grep 'not installed')" != "" ]
     then
@@ -114,7 +114,7 @@ then
        [ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]        ||
        [ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]        ||
        [ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]       ||
-	   [ "$(dpkg -l 'autoconf' 2>&1 | grep 'no packages')" != "" ]   ||
+       [ "$(dpkg -l 'autoreconf' 2>&1 | grep 'no packages')" != "" ] ||
        [ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ]   ||
        [ "$(dpkg -l ${GCC_CPP} 2>&1 | grep 'no packages')" != "" ]
     then
@@ -248,8 +248,8 @@ then
 		[yY]*)
 			debug $LINENO ":" "User responded with YES."
 			debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
-				  "zip wget autoconf ${SSL_DEV} ${GCC_CPP}\""
-			sudo ${INSTALLER} install -y git make gcc zip wget autoconf ${SSL_DEV} ${GCC_CPP}
+				  "zip wget autoreconf ${SSL_DEV} ${GCC_CPP}\""
+			sudo ${INSTALLER} install -y git make gcc zip wget autoreconf ${SSL_DEV} ${GCC_CPP}
 			;;
 		*)
 			debug $LINENO ":" "User responded with no."
