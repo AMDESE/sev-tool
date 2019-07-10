@@ -29,6 +29,7 @@ fi
 NEED_DEPS=0
 INSTALLER=""
 SSL_DEV=""
+AUTO_CONF="autoconf"
 
 if [ ${DEBUGGING} -eq 1 ]
 then
@@ -90,6 +91,19 @@ else
     exit 1
 fi
 
+older_than_bionic()
+{
+	VERSION_NUMBER=$(cat /etc/os-release | grep 'VERSION_ID=' | sed s%[a-z\_\-\=]%%ig)
+	IS_OLDER=0
+
+	if [ "${VERSION_NUMBER}" -lt "1804" ]
+	then
+		IS_OLDER=1
+	fi
+
+	return "${IS_OLDER}"
+}
+
 debug $LINENO ":" "Checking for dependencies..."
 
 # Check for all required dependancies
@@ -100,7 +114,7 @@ then
        [ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]        ||
        [ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]        ||
        [ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]       ||
-       [ "$(rpm -q 'autoconf' 2>&1 | grep 'not installed')" != "" ]   ||
+       [ "$(rpm -q ${AUTO_CONF} 2>&1 | grep 'not installed')" != "" ]   ||
        [ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ]   ||
        [ "$(rpm -q ${GCC_CPP} 2>&1 | grep 'not installed')" != "" ]
     then
@@ -109,12 +123,18 @@ then
     fi
 elif [ "${INSTALLER}" = "apt-get" ]
 then
+
+	if [ "${older_than_bionic}" -eq "1" ]
+	then
+		AUTO_CONF="autoreconf"
+	fi
+
     if [ "$(dpkg -l 'git' 2>&1 | grep 'no packages')" != "" ]        ||
        [ "$(dpkg -l 'make' 2>&1 | grep 'no packages')" != "" ]       ||
        [ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]        ||
        [ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]        ||
        [ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]       ||
-       [ "$(dpkg -l 'autoreconf' 2>&1 | grep 'no packages')" != "" ] ||
+       [ "$(dpkg -l ${AUTO_CONF} 2>&1 | grep 'no packages')" != "" ]   ||
        [ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ]   ||
        [ "$(dpkg -l ${GCC_CPP} 2>&1 | grep 'no packages')" != "" ]
     then
@@ -122,6 +142,7 @@ then
         NEED_DEPS=1
     fi
 fi
+
 
 fcomp()
 {
@@ -248,8 +269,8 @@ then
 		[yY]*)
 			debug $LINENO ":" "User responded with YES."
 			debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
-				  "zip wget autoconf ${SSL_DEV} ${GCC_CPP}\""
-			sudo ${INSTALLER} install -y git make gcc zip wget autoconf ${SSL_DEV} ${GCC_CPP}
+				  "zip wget ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}\""
+			sudo ${INSTALLER} install -y git make gcc zip wget ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}
 			;;
 		*)
 			debug $LINENO ":" "User responded with no."
