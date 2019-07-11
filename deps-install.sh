@@ -187,9 +187,12 @@ check_ssl()
 {
 	SSL_VERSION="1.1.0j"
 	ACCEPTED_SSL_VERSION="1.1.0"
-	ACCEPTED_SSL_VER_TRUNK=$(echo "${ACCEPTED_SSL_VERSION}" | sed 's/.\{2\}$//')/
+	ACCEPTED_SSL_VER_TRUNK=$(echo "${ACCEPTED_SSL_VERSION}" | sed 's/.\{2\}$//')
 	SYSTEM_SSL_VERSION=$(openssl version | awk '{print $2}' | sed "s/[a-zA-Z-]//g")
 	SYSTEM_SSL_VER_TRUNK=$(echo "${SYSTEM_SSL_VERSION}" | sed 's/.\{2\}$//')
+
+	debug $LINENO ":" "ACCEPTED_SSL_VER_TRUNK => ${ACCEPTED_SSL_VER_TRUNK}"
+	debug $LINENO ":" "SYSTEM_SSL_VER_TRUNK  => ${SYSTEM_SSL_VER_TRUNK}"
 
 	CURRENT_DIR=$(pwd)
 
