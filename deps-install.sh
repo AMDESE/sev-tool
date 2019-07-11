@@ -165,11 +165,11 @@ fcomp()
 		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)   => ${1}"
 		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSION) => ${2}"
 
-		if [ "${1%.*}" -eq "${2%.*}" ] && [ "${1#*.}" -gt "${2#*.}" ]
+		if [ "${1%.*}" = "${2%.*}" ] && [ "${1#*.}" \> "${2#*.}" ]
 		then
 			debug $LINENO ":" "The system SSL version is new enough to use."
 			RETVAL=1
-		elif [ "${1%.*}" -gt "${2%.*}" ]
+		elif [ "${1%.*}" \> "${2%.*}" ]
 		then
 			debug $LINENO ":" "The system SSL version is new enough to use."
 			RETVAL=1
@@ -180,7 +180,7 @@ fcomp()
 		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIPN) => ${2}"
 	fi
 
-	echo ${RETVAL}
+	return ${RETVAL}
 }
 
 check_ssl()
@@ -196,7 +196,9 @@ check_ssl()
 
 	CURRENT_DIR=$(pwd)
 
-	FCOMP_RETURN=$(fcomp ${SYSTEM_SSL_VER_TRUNK} ${ACCEPTED_SSL_VER_TRUNK})
+	debug $LINENO ":" "CURRENT_DIR => ${CURRENT_DIR}"
+	fcomp ${SYSTEM_SSL_VER_TRUNK} ${ACCEPTED_SSL_VER_TRUNK}
+	FCOMP_RETURN=$?
 
 	if [ "${FCOMP_RETURN}" = "0" ] &&
 	   [ ! -d ./openssl/ ]
@@ -246,7 +248,7 @@ check_ssl()
 				echo "You will need to make sure you manually install all required dependencies."
 				;;
 		esac
-	elif [ "$(fcomp ${SYSTEM_SSL_VERSION} ${ACCEPTED_SSL_VERSION})" = "0" ] &&
+	elif [ "${FCOMP_RETURN}" = "0" ] &&
 		 [ -d ./openssl/ ]
 	then
 		debug $LINENO ":" "Local directory of openssl detected..."
