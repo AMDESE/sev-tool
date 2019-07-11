@@ -279,6 +279,7 @@ check_ssl()
 
 main()
 {
+	find_distribution_details
 	check_dependencies
 
 	# Install dependencies if they are needed.
