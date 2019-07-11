@@ -1,7 +1,7 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v13
-Updated: 2019-04-08
+Version: v14
+Updated: 2019-07-11
 &nbsp;
 &nbsp;
 
@@ -12,11 +12,11 @@ Updated: 2019-04-08
   - Your Kernel must support SEV.
   - If running Linux, the ccp Kernel driver must be running and supported, as that is how the SEV-Tool communicates to the firmware. To tell if your Kernel supports SEV and the ccp driver is working correctly, run a dmesg and look for the following line:
      ```sh
-      $ ccp [xxxx:xx:xx.x]: SEV API:x.xx build:x
+     $ ccp [xxxx:xx:xx.x]: SEV API:x.xx build:x
      ```
      For example, in Ubuntu 18.10, Kernel 4.18.0-15-generic, you will see something similar to
      ```sh
-      $ ccp [0000:01:00.2]: SEV API:0.17 build:5
+     $ ccp [0000:01:00.2]: SEV API:0.17 build:5
      ```
     This means that the ccp driver was able to run the Init command against the SEV firmware.
     Note: You might also see a dmesg line noting that "Direct firmware load for amd/sev.fw failed with error -2". This just means that the firmware file is not there for the ccp driver to run the Download_Firmware command on startup, and you will be running with the SEV firmware that is provided in the BIOS. This is totally normal.
@@ -27,28 +27,33 @@ Updated: 2019-04-08
     - https://packages.ubuntu.com/bionic-updates/amd64/libssl-dev/download
     - https://packages.ubuntu.com/bionic-updates/amd64/libssl1.1/download
     - sudo dpkg -i [DEB_PACKAGE]
+    - __OR__ you may run the `deps-install.sh` script to meet this requirement (see below).
   - Ubuntu 18.04 might not come with OpenSSL 1.1.x pre-installed, so it will need to updated through apt-get
 
 ## Downloading the SEV-Tool
 1. Boot into a Kernel that supports SEV (see above to confirm your Kernel supports SEV)
-2. Install git, make, gcc, g++ and dependencies
-   - If running Debian, Ubuntu
+2. Install git, make, gcc, g++, and openssl dependencies
+   - In most cases, you can run `deps-install.sh`.
      ```sh
-      $ sudo apt install git make gcc g++ -y --allow-unauthenticated
+     $ sh deps-install.sh
+     ```
+   - If you would like to manually install dependencies, and are running Debian, Ubuntu
+     ```sh
+     $ sudo apt install git make gcc g++ -y --allow-unauthenticated
      ```
     - Otherwise, use the method that is supported by your OS
 2. The Github is located at: [SEV-Tool Github](https://github.com/AMDESE/SEV-Tool). Do a git clone with SSH
      ```sh
      $ git clone git@github.com:AMDESE/sev-tool.git
      ```
-3. Compile the SEV-Tool. 
+3. Compile the SEV-Tool.
    - Running the build script does the following things:
       - Downloads, configs, and builds the OpenSSL Git code (submodule init/update)
       - Cleans and builds the SEV-Tool
    - To run the build script
      ```sh
      $ cd sev-tool
-     $ sh ./build.sh
+     $ autoreconf -vif && ./configure && make
      ```
 
 ## How to Run the SEV-Tool
@@ -56,11 +61,10 @@ Updated: 2019-04-08
      ```sh
      $ cd sev-tool
      $ git pull
-     $ sh ./build.sh
+     $ autoreconf -vif && ./configure && make
      ```
-2.	Run the tool with the help flag (-h or --help):
+2. Run the tool with the help flag (-h or --help):
      ```sh
-     $ cd src
      $ sudo ./sevtool -h
      ```
 - The help menu (and also the documentation below) will provide you with instructions on input parameters, etc
@@ -69,7 +73,7 @@ Updated: 2019-04-08
 - The input flag format for every command is as follows and will be explained further in the coming sections
      ```sh
      $ sudo ./sevtool [optional_input_flags] [command_flag] [required_command_arguments]
-     ``` 
+     ```
 
 ## Optional Input Flags for Every Command
 * The -h or --help flag will display the help menu to the user
@@ -138,7 +142,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
 1. factory_reset
      - Input args: none
      - Outputs: none
-     - Note: in the current SEV API, this command was renamed to PLATFORM_RESET 
+     - Note: in the current SEV API, this command was renamed to PLATFORM_RESET
      - Example
          ```sh
          $ sudo ./sevtool --factory_reset
@@ -160,8 +164,8 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
 4. pek_csr
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the certificate signing request
-     - Outputs: 
-         - If --[verbose] flag used: The pek_csr will be printed out to the screen as a hex dump and as a readable format 
+     - Outputs:
+         - If --[verbose] flag used: The pek_csr will be printed out to the screen as a hex dump and as a readable format
          - If --[ofolder] flag used: The pek_csr will be written as files to the specified folder as a hex dump and as a readable format. Files: pek_csr_out.cert and pek_csr_out_readable.cert
      - Example
          ```sh
@@ -186,7 +190,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          ```
 7. pek_cert_import
 This command imports an OCA private key from the user, runs a platform_status command to get the API major/minor used to create the certificate, runs the pek_csr to create the PEK certificate signing request, signs the PEK signing request with the OCA private key, and calls pek_cert_import to import the PEK and OCA certificates.
-     - Required input args: The unencrypted OCA Private key file (.pem). 
+     - Required input args: The unencrypted OCA Private key file (.pem).
      - Outputs: none
      - Example
          ```sh
@@ -272,15 +276,15 @@ This command calls the get_id command and passes that ID into the AMD KDS server
                Digest: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
                MNonce: 4fbe0bedbad6c86ae8f68971d103e554
                TIK: 66320db73158a35a255d051758e95ed4
-            
+
              Output Measurement:
              6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea
-     
+
             Command Successful
          ```
     - Note that, for security reasons, the TIK will not be shown when the user runs the tool
 15. validate_cert_chain
-     - This function imports the entire cert chain as separate cert files and validates it. 
+     - This function imports the entire cert chain as separate cert files and validates it.
      - When calling this command, please unzip the certs into the folder you expect the tool to use.
      - The steps are as follows:
         - Imports the PDH, PEK, OCA, CEK, ASK, and ARK certs
@@ -307,7 +311,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          $ sudo ./sevtool --ofolder ./certs --generate_launch_blob 39
          ```
 17. package_secret
-     - This command reads in the file generated by generate_launch_blob (launch_blob.txt) to get the TEK and also reads in the secert file (secret.txt) to be encrypted/wrapped by the TEK. It then outputs a file (packaged_secret.txt) which is then passed into Launch_Secret as part of the normal API flow 
+     - This command reads in the file generated by generate_launch_blob (launch_blob.txt) to get the TEK and also reads in the secert file (secret.txt) to be encrypted/wrapped by the TEK. It then outputs a file (packaged_secret.txt) which is then passed into Launch_Secret as part of the normal API flow
      - Required input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will look for the launch blob file and the secrets file, and where it will export the packaged secret file to
      - Outputs:
@@ -318,10 +322,10 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          ```
 
 ## Running tests
-To run tests to check that each command is functioning correctly, run the test_all command and check that the entire thing returns success. 
+To run tests to check that each command is functioning correctly, run the test_all command and check that the entire thing returns success.
 1. test_all
      - Required input args: --ofolder [folder_path]
-         - Make a directly that the tests can use to store certs/data in during the test. Note that the tool will clear this directly before the tests are run.   
+         - Make a directly that the tests can use to store certs/data in during the test. Note that the tool will clear this directly before the tests are run.
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./tests --test_all
