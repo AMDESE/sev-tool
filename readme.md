@@ -1,7 +1,7 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v13
-Updated: 2019-04-08
+Version: v14
+Updated: 2019-07-11
 &nbsp;
 &nbsp;
 
@@ -12,11 +12,11 @@ Updated: 2019-04-08
   - Your Kernel must support SEV.
   - If running Linux, the ccp Kernel driver must be running and supported, as that is how the SEV-Tool communicates to the firmware. To tell if your Kernel supports SEV and the ccp driver is working correctly, run a dmesg and look for the following line:
      ```sh
-      $ ccp [xxxx:xx:xx.x]: SEV API:x.xx build:x
+     $ ccp [xxxx:xx:xx.x]: SEV API:x.xx build:x
      ```
      For example, in Ubuntu 18.10, Kernel 4.18.0-15-generic, you will see something similar to
      ```sh
-      $ ccp [0000:01:00.2]: SEV API:0.17 build:5
+     $ ccp [0000:01:00.2]: SEV API:0.17 build:5
      ```
     This means that the ccp driver was able to run the Init command against the SEV firmware.
     Note: You might also see a dmesg line noting that "Direct firmware load for amd/sev.fw failed with error -2". This just means that the firmware file is not there for the ccp driver to run the Download_Firmware command on startup, and you will be running with the SEV firmware that is provided in the BIOS. This is totally normal.
@@ -27,8 +27,7 @@ Updated: 2019-04-08
     - https://packages.ubuntu.com/bionic-updates/amd64/libssl-dev/download
     - https://packages.ubuntu.com/bionic-updates/amd64/libssl1.1/download
     - sudo dpkg -i [DEB_PACKAGE]
-	- __OR__ you may run the `deps-install.sh` script to meet this
-	  requirement (see below).
+    - __OR__ you may run the `deps-install.sh` script to meet this requirement (see below).
   - Ubuntu 18.04 might not come with OpenSSL 1.1.x pre-installed, so it will need to updated through apt-get
 
 ## Downloading the SEV-Tool
@@ -36,11 +35,11 @@ Updated: 2019-04-08
 2. Install git, make, gcc, g++, and openssl dependencies
    - In most cases, you can run `deps-install.sh`.
      ```sh
-	  $ sh deps-install.sh
-	 ```
+     $ sh deps-install.sh
+     ```
    - If you would like to manually install dependencies, and are running Debian, Ubuntu
      ```sh
-      $ sudo apt install git make gcc g++ -y --allow-unauthenticated
+     $ sudo apt install git make gcc g++ -y --allow-unauthenticated
      ```
     - Otherwise, use the method that is supported by your OS
 2. The Github is located at: [SEV-Tool Github](https://github.com/AMDESE/SEV-Tool). Do a git clone with SSH
@@ -64,7 +63,7 @@ Updated: 2019-04-08
      $ git pull
      $ autoreconf -vif && ./configure && make
      ```
-2.	Run the tool with the help flag (-h or --help):
+2. Run the tool with the help flag (-h or --help):
      ```sh
      $ sudo ./sevtool -h
      ```
