@@ -96,7 +96,7 @@ older_than_bionic()
 	VERSION_NUMBER=$(cat /etc/os-release | grep 'VERSION_ID=' | sed s%[a-z\_\-\=]%%ig)
 	IS_OLDER=0
 
-	if [ "${VERSION_NUMBER}" -lt "1804" ]
+	if [ "${VERSION_NUMBER}" \< "1804" ]
 	then
 		IS_OLDER=1
 	fi
@@ -124,7 +124,7 @@ then
 elif [ "${INSTALLER}" = "apt-get" ]
 then
 
-	if [ "${older_than_bionic}" -eq "1" ]
+	if [ "$(older_than_bionic)" = "1" ]
 	then
 		AUTO_CONF="autoreconf"
 	fi
