@@ -17,6 +17,11 @@
 # limitations under the License.
 ###############################################################################
 
+NEED_DEPS=0
+INSTALLER=""
+SSL_DEV=""
+AUTO_CONF="autoconf"
+
 # Set to 1 to enable debugging or pass -d or --debug.
 if [ "$(echo $1 | grep -E '^\-{0,2}d(ebug)?$')" != "" ]
 then
@@ -24,12 +29,6 @@ then
 else
     DEBUGGING=0
 fi
-
-# If dependancies are needed
-NEED_DEPS=0
-INSTALLER=""
-SSL_DEV=""
-AUTO_CONF="autoconf"
 
 if [ ${DEBUGGING} -eq 1 ]
 then
@@ -45,104 +44,115 @@ else
   }
 fi
 
-OS_RELEASE=$(cat /etc/os-release)
-debug $LINENO ":" "OS_RELEASE => " ${OS_RELEASE}
+find_distribution_details()
+{
+	OS_RELEASE=$(cat /etc/os-release)
+	debug $LINENO ":" "OS_RELEASE => " ${OS_RELEASE}
 
-# Regular Expression to read /etc/os-release for major distributions.
-ID_RE='ID\(\_LIKE\)\?\=\"\?[[:alpha:]]\+\([[:space:]][[:alpha:]]\*\)\?\"\?'
+	# Regular Expression to read /etc/os-release for major distributions.
+	ID_RE='ID\(\_LIKE\)\?\=\"\?[[:alpha:]]\+\([[:space:]][[:alpha:]]\*\)\?\"\?'
+	debug $LINENO ":" "ID_RE => ${ID_RE}"
 
-debug $LINENO ":" "ID_RE => ${ID_RE}"
+	# Read /etc/os-release to find the distribution base.
+	DIST_BASE=$(cat /etc/os-release | grep "${ID_RE}")
+	debug $LINENO ":" "DIST_BASE =>" ${DIST_BASE}
 
-# Read /etc/os-release to find the distribution base.
-DIST_BASE=$(cat /etc/os-release | grep "${ID_RE}")
+	if [ "$(echo ${DIST_BASE} | grep 'suse')" != "" ] ||
+	[ "$(echo ${DIST_BASE} | grep 'sles')" != "" ]
+	then
+		# Cover all SLE and openSUSE distributions.
+		debug $LINENO ":" "Distribution recognized as SUSE based"
 
-debug $LINENO ":" "DIST_BASE =>" ${DIST_BASE}
-if [ "$(echo ${DIST_BASE} | grep 'suse')" != "" ] ||
-   [ "$(echo ${DIST_BASE} | grep 'sles')" != "" ]
-then
-    # Cover all SLE and openSUSE distributions.
-    debug $LINENO ":" "Distribution recognized as SUSE based"
+		INSTALLER="zypper"
+		SSL_DEV="libopenssl-devel"
+		GCC_CPP="gcc-c++"
+	elif [ "$(echo ${DIST_BASE} | grep 'debian')" != "" ] ||
+		[ "$(echo ${DIST_BASE} | grep 'ubuntu')" != "" ]
+	then
+		# Cover all Debian and Ubuntu based distributions.
+		debug $LINENO ":" "Distribution recognized as Debian or Ubuntu based"
 
-    INSTALLER="zypper"
-    SSL_DEV="libopenssl-devel"
-    GCC_CPP="gcc-c++"
-elif [ "$(echo ${DIST_BASE} | grep 'debian')" != "" ] ||
-     [ "$(echo ${DIST_BASE} | grep 'ubuntu')" != "" ]
-then
-    # Cover all Debian and Ubuntu based distributions.
-    debug $LINENO ":" "Distribution recognized as Debian or Ubuntu based"
+		INSTALLER="apt-get"
+		SSL_DEV="libssl-dev"
+		GCC_CPP="g++"
+	elif [ "$(echo ${DIST_BASE} | grep 'fedora')" != "" ] ||
+		[ "$(echo ${DIST_BASE} | grep 'rhel')" != "" ]
+	then
+		# Cover all Redhat based distributions.
+		debug $LINENO ":" "Distribution recognized as Fedora or Rhel based"
 
-    INSTALLER="apt-get"
-    SSL_DEV="libssl-dev"
-    GCC_CPP="g++"
-elif [ "$(echo ${DIST_BASE} | grep 'fedora')" != "" ] ||
-     [ "$(echo ${DIST_BASE} | grep 'rhel')" != "" ]
-then
-    # Cover all Redhat based distributions.
-    debug $LINENO ":" "Distribution recognized as Fedora or Rhel based"
+		INSTALLER="yum"
+		SSL_DEV="openssl-devel"
+		GCC_CPP="gcc-c++"
+	else
+		debug $LINENO ":" "Regular expression could not match: \n" "${OS_RELEASE}"
+		echo "Distribution not recognized. Please manually install "\
+			"libelf libraries, make, zip, gcc, g++, git, wget, autoconf, and libssl-dev." >&2
+		exit 1
+	fi
 
-    INSTALLER="yum"
-    SSL_DEV="openssl-devel"
-    GCC_CPP="gcc-c++"
-else
-    debug $LINENO ":" "Regular expression could not match: \n" "${OS_RELEASE}"
-    echo "Distribution not recognized. Please manually install "\
-         "libelf libraries, make, zip, gcc, g++, git, wget, autoconf, and libssl-dev." >&2
-    exit 1
-fi
+	debug $LINENO ":" "INSTALLER => ${INSTALLER}"
+	debug $LINENO ":" "SSL_DEV   => ${SSL_DEV}"
+	debug $LINENO ":" "GCC_CPP   => ${GCC_CPP}"
+}
 
 older_than_bionic()
 {
 	VERSION_NUMBER=$(cat /etc/os-release | grep 'VERSION_ID=' | sed s%[a-z\_\-\=]%%ig)
 	IS_OLDER=0
 
-	if [ "${VERSION_NUMBER}" \< "1804" ]
+	debug $LINENO ":" "VERSION_NUMBER => ${VERSION_NUMBER}"
+
+	if [ ${VERSION_NUMBER} -lt 1804 ]
 	then
 		IS_OLDER=1
 	fi
 
-	return "${IS_OLDER}"
+	debug $LINENO ":" "IS_OLDER => ${IS_OLDER}"
+	echo "${IS_OLDER}"
 }
 
-debug $LINENO ":" "Checking for dependencies..."
+check_dependencies()
+{
+	debug $LINENO ":" "Checking for dependencies..."
 
-# Check for all required dependancies
-if [ "${INSTALLER}" = "zypper" ] || [ "${INSTALLER}" = "yum" ]
-then
-    if [ "$(rpm -q 'git' 2>&1 | grep 'not installed')" != "" ]        ||
-       [ "$(rpm -q 'make' 2>&1 | grep 'not installed')" != "" ]       ||
-       [ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]        ||
-       [ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]        ||
-       [ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]       ||
-       [ "$(rpm -q ${AUTO_CONF} 2>&1 | grep 'not installed')" != "" ]   ||
-       [ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ]   ||
-       [ "$(rpm -q ${GCC_CPP} 2>&1 | grep 'not installed')" != "" ]
-    then
-        debug $LINENO ":" "A dependency is missing, setting flag!"
-        NEED_DEPS=1
-    fi
-elif [ "${INSTALLER}" = "apt-get" ]
-then
-
-	if [ "$(older_than_bionic)" = "1" ]
+	# Check for all required dependancies
+	if [ "${INSTALLER}" = "zypper" ] || [ "${INSTALLER}" = "yum" ]
 	then
-		AUTO_CONF="autoreconf"
+		if [ "$(rpm -q 'git' 2>&1 | grep 'not installed')" != "" ]        ||
+		[ "$(rpm -q 'make' 2>&1 | grep 'not installed')" != "" ]       ||
+		[ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]        ||
+		[ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]        ||
+		[ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]       ||
+		[ "$(rpm -q ${AUTO_CONF} 2>&1 | grep 'not installed')" != "" ]   ||
+		[ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ]   ||
+		[ "$(rpm -q ${GCC_CPP} 2>&1 | grep 'not installed')" != "" ]
+		then
+			debug $LINENO ":" "A dependency is missing, setting flag!"
+			NEED_DEPS=1
+		fi
+	elif [ "${INSTALLER}" = "apt-get" ]
+	then
+
+		if [ "$(older_than_bionic)" = "1" ]
+		then
+			AUTO_CONF="autoreconf"
+		fi
+
+		if [ "$(dpkg -l 'git' 2>&1 | grep 'no packages')" != "" ]        ||
+		[ "$(dpkg -l 'make' 2>&1 | grep 'no packages')" != "" ]       ||
+		[ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]        ||
+		[ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]        ||
+		[ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]       ||
+		[ "$(dpkg -l ${AUTO_CONF} 2>&1 | grep 'no packages')" != "" ]   ||
+		[ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ]   ||
+		[ "$(dpkg -l ${GCC_CPP} 2>&1 | grep 'no packages')" != "" ]
+		then
+			debug $LINENO ":" "A dependency is missing, setting flag!"
+			NEED_DEPS=1
+		fi
 	fi
-
-    if [ "$(dpkg -l 'git' 2>&1 | grep 'no packages')" != "" ]        ||
-       [ "$(dpkg -l 'make' 2>&1 | grep 'no packages')" != "" ]       ||
-       [ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]        ||
-       [ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]        ||
-       [ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]       ||
-       [ "$(dpkg -l ${AUTO_CONF} 2>&1 | grep 'no packages')" != "" ]   ||
-       [ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ]   ||
-       [ "$(dpkg -l ${GCC_CPP} 2>&1 | grep 'no packages')" != "" ]
-    then
-        debug $LINENO ":" "A dependency is missing, setting flag!"
-        NEED_DEPS=1
-    fi
-fi
-
+}
 
 fcomp()
 {
@@ -152,36 +162,40 @@ fcomp()
 	if [ -n "${1}" ] && [ -n "${2}" ]
 	then
 		debug $LINENO ":" "Both arguments are non-zero values."
-		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}"
-		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}"
+		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)   => ${1}"
+		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSION) => ${2}"
 
-		if [ "${1%.*}" \> "${2%.*}" ] && [ "${1#*.}" \> "${2#*.}" ] || [ "${1%.*}" \> "${2%.*}" ]
+		if [ "${1%.*}" -eq "${2%.*}" ] && [ "${1#*.}" -gt "${2#*.}" ]
 		then
 			debug $LINENO ":" "The system SSL version is new enough to use."
-			debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}"
-			debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}"
+			RETVAL=1
+		elif [ "${1%.*}" -gt "${2%.*}" ]
+		then
+			debug $LINENO ":" "The system SSL version is new enough to use."
 			RETVAL=1
 		fi
 	else
 		debug $LINENO ":" "An error occured while attempting to parse the SSL version number."
-		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)  => ${1}"
-		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIN) => ${2}"
+		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)   => ${1}"
+		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSIPN) => ${2}"
 	fi
 
-	return ${RETVAL}
+	echo ${RETVAL}
 }
 
 check_ssl()
 {
 	SSL_VERSION="1.1.0j"
 	ACCEPTED_SSL_VERSION="1.1.0"
-	ACCEPTED_SSL_VER_TRUNK=$(echo "${ACCEPTED_SSL_VERSION}" | sed 's/.\{2\}$//')
+	ACCEPTED_SSL_VER_TRUNK=$(echo "${ACCEPTED_SSL_VERSION}" | sed 's/.\{2\}$//')/
 	SYSTEM_SSL_VERSION=$(openssl version | awk '{print $2}' | sed "s/[a-zA-Z-]//g")
 	SYSTEM_SSL_VER_TRUNK=$(echo "${SYSTEM_SSL_VERSION}" | sed 's/.\{2\}$//')
 
 	CURRENT_DIR=$(pwd)
 
-	if [ "$(fcomp ${SYSTEM_SSL_VER_TRUNK} ${ACCEPTED_SSL_VER_TRUNK})" = "0" ] &&
+	FCOMP_RETURN=$(fcomp ${SYSTEM_SSL_VER_TRUNK} ${ACCEPTED_SSL_VER_TRUNK})
+
+	if [ "${FCOMP_RETURN}" = "0" ] &&
 	   [ ! -d ./openssl/ ]
 	then
 		debug $LINENO ":" "Local directory of openssl not detected..."
@@ -258,27 +272,35 @@ check_ssl()
 	fi
 }
 
-# Install dependencies if they are needed.
-if [ ${NEED_DEPS} -eq 1 ]
-then
-	echo   "One or more required software dependencies are missing on your system."
-	printf "Would you like to have them automatically installed? [y/N] "
-	read -r response
+main()
+{
+	check_dependencies
 
-	case ${response} in
-		[yY]*)
-			debug $LINENO ":" "User responded with YES."
-			debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
-				  "zip wget ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}\""
-			sudo ${INSTALLER} install -y git make gcc zip wget ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}
-			;;
-		*)
-			debug $LINENO ":" "User responded with no."
-			echo "You will need to make sure you manually install all required dependencies."
-			;;
-	esac
-fi
+	# Install dependencies if they are needed.
+	if [ ${NEED_DEPS} -eq 1 ]
+	then
+		echo   "One or more required software dependencies are missing on your system."
+		printf "Would you like to have them automatically installed? [y/N] "
+		read -r response
 
-check_ssl
+		case ${response} in
+			[yY]*)
+				debug $LINENO ":" "User responded with YES."
+				debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
+					"zip wget ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}\""
+				sudo ${INSTALLER} install -y git make gcc zip wget ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}
+				;;
+			*)
+				debug $LINENO ":" "User responded with no."
+				echo "You will need to make sure you manually install all required dependencies."
+				;;
+		esac
+	fi
 
-echo "With all dependencies met, you should be able to run \"autoreconf -if && ./configure && make\" to compile the sevtool."
+	check_ssl
+
+	echo "Once all dependencies are met, you should be able to run \"autoreconf -if && ./configure && make\" to compile the sevtool."
+
+}
+
+main
