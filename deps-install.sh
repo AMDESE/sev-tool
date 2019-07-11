@@ -165,7 +165,7 @@ fcomp()
 		debug $LINENO ":" "\${1} (SYSTEM_SSL_VERSION)   => ${1}"
 		debug $LINENO ":" "\${2} (ACCEPTED_SSL_VERSION) => ${2}"
 
-		if [ "${1%.*}" = "${2%.*}" ] && [ "${1#*.}" \> "${2#*.}" ]
+		if [ "${1%.*}" = "${2%.*}" ] && [ ! "${1#*.}" \< "${2#*.}" ]
 		then
 			debug $LINENO ":" "The system SSL version is new enough to use."
 			RETVAL=1
