@@ -24,7 +24,7 @@
 #include <fstream>
 #include <libvirt/libvirt.h>
 #include <libvirt/libvirt-qemu.h>
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 
 const std::string DEFAULT_SEV_DEVICE     = "/dev/sev";
@@ -71,16 +71,10 @@ const std::string SHELL_VM_XML_1 = "<domain type='kvm'>"
 "</features>";
 
 const std::string SHELL_VM_XML_2 = "<memtune>"
-"<hard_limit unit='KiB'>300000</hard_limit>"
-"<soft_limit unit='KiB'>300000</soft_limit>"
+"<hard_limit unit='KiB'>350000</hard_limit>"
+"<soft_limit unit='KiB'>350000</soft_limit>"
 "</memtune>"
 "</domain>";
-
-const std::string OVMF_VAR_FILE = "/tmp/sev_ovmf_file_test.fd";
-const std::string SEV_PIPE_FILE_1_IN = "/tmp/sev_pipe_1.in";
-const std::string SEV_PIPE_FILE_1_OUT = "/tmp/sev_pipe_1.out";
-const std::string SEV_PIPE_FILE_2_IN = "/tmp/sev_pipe_2.in";
-const std::string SEV_PIPE_FILE_2_OUT = "/tmp/sev_pipe_2.out";
 
 const std::string SHELL_VM_NAME_BASE = "fceac9812431d";
 
@@ -107,81 +101,84 @@ typedef union
 // Class to access the special SEV FW API test suite driver.
 class SEVDevice {
 private:
-    int mFd;
+	int mFd;
 	Deps dep_bits;
 
-    inline int get_fd(void) { return mFd; }
-    int sev_ioctl(int cmd, void *data, int *cmd_ret);
+	inline int get_fd(void) { return mFd; }
+	int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
-    bool validate_pek_csr(sev_cert *pek_csr);
-    std::string display_build_info(void);
-    void get_family_model(uint32_t *family, uint32_t *model);
+	bool validate_pek_csr(sev_cert *pek_csr);
+	std::string display_build_info(void);
+	void get_family_model(uint32_t *family, uint32_t *model);
 
 	bool kvm_amd_sev_enabled(void);
 	bool valid_qemu(virDomainPtr dom);
 	bool valid_libvirt(virConnectPtr con);
-	bool valid_ovmf(virDomainPtr dom, bool sev_enabled);
+	bool valid_ovmf(virDomainPtr dom, bool sev_enabled, char * sev_temp_dir);
 	bool dom_state_down(virDomainPtr dom);
 	virDomainPtr start_new_domain(virConnectPtr con,
 			std::string name,
 			bool sev_enable,
-			struct sev_dom_details dom_details);
-	void create_sev_pipe_files(void);
-	void create_ovmf_var_file(std::string ovmf_bin);
+			struct sev_dom_details dom_details,
+			char * sev_temp_dir,
+			char * ovmf_var_file);
+	void create_sev_temp_dir(char ** sev_temp_file);
+	void create_sev_pipe_files(char * sev_temp_dir);
+	void create_ovmf_var_file(std::string ovmf_bin, char * sev_temp_dir, char ** ovmf_var_file);
 	struct sev_dom_details find_sev_dom_details(virConnectPtr con);
 	std::string find_sev_ovmf_bin(char * capabilities);
 	std::string find_sev_c_bit_pos(char * capabilities);
 	std::string find_sev_reduced_phys_bits(char * capabilities);
 	std::string format_software_support_text(void);
 
-    // Do NOT create ANY other constructors or destructors of any kind.
-    SEVDevice(void)  = default;
+	// Do NOT create ANY other constructors or destructors of any kind.
+	SEVDevice(void)  = default;
 
-    // Delete the copy and assignment operators which
-    // may be automatically created by the compiler. The user
-    // should not be able to modify the SEVDevice, as it is unique.
-    SEVDevice(const SEVDevice&) = delete;
-    SEVDevice& operator=(const SEVDevice&) = delete;
+	// Delete the copy and assignment operators which
+	// may be automatically created by the compiler. The user
+	// should not be able to modify the SEVDevice, as it is unique.
+	SEVDevice(const SEVDevice&) = delete;
+	SEVDevice& operator=(const SEVDevice&) = delete;
 
 public:
-    // Singleton Constructor - Threadsafe in C++ 11 and greater.
-    static SEVDevice& get_sev_device(void);
+	// Singleton Constructor - Threadsafe in C++ 11 and greater.
+	static SEVDevice& get_sev_device(void);
 
-    // Do NOT create ANY other constructors or destructors of any kind.
-    ~SEVDevice(void);
+	// Do NOT create ANY other constructors or destructors of any kind.
+	~SEVDevice(void);
 
-    /*
-     * Format for below input variables:
-     * data is a uint8_t pointer to an empty buffer the size of the cmd_buffer
-     * All other variables are specific input/output variables for that command
-     * Each function sets the params in data to the input/output variables of
-     *   the function
-     */
-    int factory_reset(void);
-    int platform_status(uint8_t *data);
-    int pek_gen(void);
-    int pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr);
-    int pdh_gen(void);
-    int pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
-                        void *cert_chain_mem);
-    int pek_cert_import(uint8_t *data, sev_cert *pek_csr,
-                        const std::string oca_priv_key_file);
-    int get_id(void *data, void *id_mem, uint32_t id_length = 0);
+	/*
+	 * Format for below input variables:
+	 * data is a uint8_t pointer to an empty buffer the size of the cmd_buffer
+	 * All other variables are specific input/output variables for that command
+	 * Each function sets the params in data to the input/output variables of
+	 *   the function
+	 */
+	int factory_reset(void);
+	int platform_status(uint8_t *data);
+	int pek_gen(void);
+	int pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr);
+	int pdh_gen(void);
+	int pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
+						void *cert_chain_mem);
+	int pek_cert_import(uint8_t *data, sev_cert *pek_csr,
+						const std::string oca_priv_key_file);
+	int get_id(void *data, void *id_mem, uint32_t id_length = 0);
 
-    int sys_info();
-    int set_self_owned(void);
-    int get_platform_owner(void* data);
-    int get_platform_es(void* data);
-    int set_externally_owned(const std::string oca_priv_key_file);
-    int generate_cek_ask(const std::string output_folder,
-                         const std::string cert_file);
-    int get_ask_ark(const std::string output_folder,
-                    const std::string cert_file);
-    int zip_certs(const std::string output_folder,
-                  const std::string zip_name,
-                  const std::string files_to_zip);
+	int sys_info();
+	int set_self_owned(void);
+	int get_platform_owner(void* data);
+	int get_platform_es(void* data);
+	int set_externally_owned(const std::string oca_priv_key_file);
+	int generate_cek_ask(const std::string output_folder,
+						 const std::string cert_file);
+	int get_ask_ark(const std::string output_folder,
+					const std::string cert_file);
+	int zip_certs(const std::string output_folder,
+				  const std::string zip_name,
+				  const std::string files_to_zip);
 
-    void check_dependencies(void);
+	void check_dependencies(void);
 };
 
 #endif /* SEVCORE_H */

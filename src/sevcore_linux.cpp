@@ -21,10 +21,13 @@
 #include <sys/ioctl.h>      // for ioctl()
 #include <sys/mman.h>       // for mmap() and friends
 #include <cstdio>           // for std::rename
-#include <errno.h>          // for errorno
+#include <cerrno>          // for errorno
 #include <fcntl.h>          // for O_RDWR
 #include <unistd.h>         // for close()
+#include <uuid/uuid.h>
 #include <stdexcept>        // for std::runtime_error()
+
+char * SEV_PIPE_FILES[2];
 
 SEVDevice::~SEVDevice()
 {
@@ -483,42 +486,92 @@ std::string SEVDevice::find_sev_reduced_phys_bits(char * capabilities)
 /**
  * Creates a local pipe to the shell vm for validating OVMF.
  */
-void SEVDevice::create_sev_pipe_files(void)
+void SEVDevice::create_sev_pipe_files(char * sev_temp_dir)
 {
-	struct stat * pipe_details = new struct stat();
-
-	if (stat(SEV_PIPE_FILE_1_IN.c_str(), pipe_details) == 0)
+	if (sev_temp_dir)
 	{
-		remove(SEV_PIPE_FILE_1_IN.c_str());
-	}
+		for (uint8_t i = 0; i < 2; i++)
+		{
+			// Allocate just enough size for the UUID being generated.
+			SEV_PIPE_FILES[i] = (char *) malloc(37 * sizeof(char));
 
-	if (stat(SEV_PIPE_FILE_1_OUT.c_str(), pipe_details) == 0)
+			// create a new UUID
+			uuid_t temp_uuid;
+			uuid_generate(temp_uuid);
+
+			// store the UUID in the character pointer array.
+			uuid_unparse_upper(temp_uuid, (char *) SEV_PIPE_FILES[i]);
+
+			std::string in_file_name(std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[i]) + ".in");
+			std::string out_file_name(std::string(sev_temp_dir) + "/" +  std::string(SEV_PIPE_FILES[i]) + ".out");
+
+			if (mkfifo(in_file_name.c_str(), 0777) < 0)
+			{
+				if (errno == EEXIST)
+				{
+					fprintf(stderr, "CRITICAL: SEV pipe input file collision.\n");
+				}
+				else
+				{
+					fprintf(stderr, "Error: Unknown error with mkfifo occured.\n");
+				}
+				fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+				exit(1);
+			}
+			else if (mkfifo(out_file_name.c_str(), 0777) < 0)
+			{
+				if (errno == EEXIST)
+				{
+					fprintf(stderr, "CRITICAL: SEV pipe output file collision.\n");
+				}
+				else
+				{
+					fprintf(stderr, "Error: Unknown error with mkfifo occured.\n");
+				}
+				fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+				exit(1);
+			}
+
+			if(chmod(in_file_name.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) < 0)
+			{
+				fprintf(stderr, "CRITICAL: Unable to modify the file "
+						"permissions for the pipe files generated");
+				fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+				exit(1);
+			}
+
+			if(chmod(out_file_name.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) < 0)
+			{
+				fprintf(stderr, "CRITICAL: Unable to modify the file "
+						"permissions for the pipe files generated");
+				fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+				exit(1);
+			}
+		}
+	}
+}
+
+/**
+ *  Create the temp directory used for all SEV test files.
+ */
+
+void SEVDevice::create_sev_temp_dir(char ** sev_temp_file)
+{
+	char sev_file_template[] = "/tmp/SEVXXXXXX";
+	*sev_temp_file = strdup(mkdtemp(sev_file_template));
+	if(chmod(*sev_temp_file, S_IRWXU | S_IRWXG | S_IRWXO) < 0)
 	{
-		remove(SEV_PIPE_FILE_1_OUT.c_str());
+		fprintf(stderr, "CRITICAL: Unable to modify the sev temporary"
+				" directory");
+		fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+		exit(1);
 	}
-
-	if (stat(SEV_PIPE_FILE_2_IN.c_str(), pipe_details) == 0)
-	{
-		remove(SEV_PIPE_FILE_2_IN.c_str());
-	}
-
-	if (stat(SEV_PIPE_FILE_2_OUT.c_str(), pipe_details) == 0)
-	{
-		remove(SEV_PIPE_FILE_2_OUT.c_str());
-	}
-
-	delete pipe_details;
-
-	mkfifo(SEV_PIPE_FILE_1_IN.c_str(), 0777);
-	mkfifo(SEV_PIPE_FILE_1_OUT.c_str(), 0777);
-	mkfifo(SEV_PIPE_FILE_2_IN.c_str(), 0777);
-	mkfifo(SEV_PIPE_FILE_2_OUT.c_str(), 0777);
 }
 
 /**
  *  Creates an OVMF Variable file for validation of OVMF
  */
-void SEVDevice::create_ovmf_var_file(std::string ovmf_bin)
+void SEVDevice::create_ovmf_var_file(std::string ovmf_bin, char * sev_temp_dir, char ** ovmf_var_file)
 {
 	struct stat *ovmf_bin_details = new struct stat();
 	struct stat *ovmf_var_details = new struct stat();
@@ -537,15 +590,29 @@ void SEVDevice::create_ovmf_var_file(std::string ovmf_bin)
 	}
 
 	std::string null_bytes(byte_count, '\0');
+	strcpy(*ovmf_var_file, sev_temp_dir);
+	strcat(*ovmf_var_file, "/OVMF-XXXXXX");
 
-	if (stat(OVMF_VAR_FILE.c_str(), ovmf_var_details) == 0)
+	if (mkstemp(*ovmf_var_file) > 0)
 	{
-		// Remove it if it already exists.
-		remove(OVMF_VAR_FILE.c_str());
-
-		std::ofstream fout(OVMF_VAR_FILE);
+		std::ofstream fout(*ovmf_var_file);
 		fout << null_bytes;
 		fout.close();
+	}
+	else
+	{
+		if (errno == EEXIST)
+		{
+			fprintf(stderr, "CRITICAL: OVMF variable file collision!\n");
+			fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+		}
+		else
+		{
+			fprintf(stderr, "CRITICAL: An unforseen error has occured: %d\n", errno);
+			fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+		}
+
+		exit(1);
 	}
 
 	delete ovmf_bin_details;
@@ -580,16 +647,16 @@ bool SEVDevice::dom_state_down(virDomainPtr dom)
 virDomainPtr SEVDevice::start_new_domain(virConnectPtr con,
 		std::string name,
 		bool sev_enable,
-		struct sev_dom_details dom_details)
+		struct sev_dom_details dom_details,
+		char * sev_temp_dir,
+		char * ovmf_var_file)
 {
-	this->create_ovmf_var_file(dom_details.ovmf_bin_loc);
 
 	// OVMF is running successfully without SEV enabled.
 	std::string shell_vm_name = "<name>" + name + "</name>";
 
-	std::string sev_pipe_path = sev_enable ?
-		"<source path='/tmp/sev_pipe_2'/>" :
-		"<source path='/tmp/sev_pipe_1'/>";
+	std::string sev_pipe_path =
+		"<source path='" + std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[sev_enable ? 1 : 0]) + "'/>";
 
 	std::string sev_pipe = "<devices>"
 		"<serial type='pipe'>" +
@@ -604,7 +671,7 @@ virDomainPtr SEVDevice::start_new_domain(virConnectPtr con,
 		"</loader>";
 
 	std::string var_bin_path  = "<nvram>" +
-		OVMF_VAR_FILE +
+		std::string(ovmf_var_file) +
 		"</nvram>"
 		"<type arch='x86_64'"
 		" machine='q35'>hvm"
@@ -641,11 +708,16 @@ virDomainPtr SEVDevice::start_new_domain(virConnectPtr con,
  * Validates that OVMF is working properly with SEV by investigating memory
  * pages which are known to be zero, but now contain encrypted valus.
  */
-bool SEVDevice::valid_ovmf(virDomainPtr dom, bool sev_enabled)
+bool SEVDevice::valid_ovmf(virDomainPtr dom, bool sev_enabled, char * sev_temp_dir)
 {
 	bool ret_val = false;
-	std::ofstream pipe_in(sev_enabled ? SEV_PIPE_FILE_2_IN : SEV_PIPE_FILE_1_IN);
-	std::string pipe_output;
+
+	std::string file_name(sev_temp_dir);
+	file_name += "/";
+	file_name += SEV_PIPE_FILES[(sev_enabled ? 1 : 0)];
+	file_name += ".in";
+
+	std::ofstream pipe_in(file_name);
 
 	sleep(5);
 
@@ -662,7 +734,6 @@ bool SEVDevice::valid_ovmf(virDomainPtr dom, bool sev_enabled)
 		ret_val = true;
 	}
 
-	virDomainDestroy(dom);
 	virDomainUndefineFlags(dom, VIR_DOMAIN_UNDEFINE_NVRAM);
 	virDomainFree(dom);
 
@@ -718,14 +789,21 @@ void SEVDevice::check_dependencies(void)
 				if (! dom_details.ovmf_bin_loc.empty())
 				{
 					// Create the pipe files to interact with the shell VM.
-					this->create_sev_pipe_files();
+					char * sev_temp_dir = (char *) malloc(sizeof("/tmp/SEVXXXXXX\0"));
+					char * ovmf_var_file = (char *) malloc(sizeof(char) * 64);
+
+					this->create_sev_temp_dir(&sev_temp_dir);
+					this->create_sev_pipe_files(sev_temp_dir);
+					this->create_ovmf_var_file(dom_details.ovmf_bin_loc, sev_temp_dir, &ovmf_var_file);
 
 					// Create a shell VM with the XML specified
 					// (destroyed upon completion of testing).
 					virDomainPtr dom = this->start_new_domain(con,
 							SHELL_VM_NAME_BASE + "1",
 							false,
-							dom_details);
+							dom_details,
+							sev_temp_dir,
+							ovmf_var_file);
 
 					if (valid_qemu(dom))
 					{
@@ -737,32 +815,41 @@ void SEVDevice::check_dependencies(void)
 						{
 							this->dep_bits.libvirt = !!1;
 
-							printf("Verifying OVMF works without SEV disabled...\n");
+							printf("Verifying OVMF works with SEV disabled...\n");
 
-							if (this->valid_ovmf(dom, false))
+							if (this->valid_ovmf(dom, false, sev_temp_dir))
 							{
 								virDomainPtr sev_dom = start_new_domain(con,
 										SHELL_VM_NAME_BASE + "2",
 										true,
-										dom_details);
+										dom_details,
+										sev_temp_dir,
+										ovmf_var_file);
 
 								printf("Verifying OVMF works with SEV enabled...\n");
-								if (this->valid_ovmf(sev_dom, true))
+								if (this->valid_ovmf(sev_dom, true, sev_temp_dir))
 								{
 									this->dep_bits.ovmf = !!1;
 								}
 							}
 						}
 					}
+
+					for(uint8_t i = 0; i < 2; i++)
+					{
+						remove(std::string(std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[i]) + ".in").c_str());
+						remove(std::string(std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[i]) + ".out").c_str());
+					}
+
+					remove(ovmf_var_file);
+					remove(sev_temp_dir);
+
+					free(ovmf_var_file);
+					free(sev_temp_dir);
 				}
 
 				// Cleanup
 				virConnectClose(con);
-				remove(OVMF_VAR_FILE.c_str());
-				remove(SEV_PIPE_FILE_1_IN.c_str());
-				remove(SEV_PIPE_FILE_1_OUT.c_str());
-				remove(SEV_PIPE_FILE_2_IN.c_str());
-				remove(SEV_PIPE_FILE_2_OUT.c_str());
 			}
 		}
 	}

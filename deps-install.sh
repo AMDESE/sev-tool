@@ -21,6 +21,7 @@ NEED_DEPS=0
 INSTALLER=""
 SSL_DEV=""
 AUTO_CONF="autoconf"
+LIBVIRT_NAME="libvirt-devel"
 
 # Set to 1 to enable debugging or pass -d or --debug.
 if [ "$(echo $1 | grep -E '^\-{0,2}d(ebug)?$')" != "" ]
@@ -74,6 +75,7 @@ find_distribution_details()
 
 		INSTALLER="apt-get"
 		SSL_DEV="libssl-dev"
+		LIBVIRT_NAME="libvirt-dev"
 		GCC_CPP="g++"
 	elif [ "$(echo ${DIST_BASE} | grep 'fedora')" != "" ] ||
 		[ "$(echo ${DIST_BASE} | grep 'rhel')" != "" ]
@@ -87,13 +89,14 @@ find_distribution_details()
 	else
 		debug $LINENO ":" "Regular expression could not match: \n" "${OS_RELEASE}"
 		echo "Distribution not recognized. Please manually install "\
-			"libelf libraries, make, zip, gcc, g++, git, wget, autoconf, and libssl-dev." >&2
+			"libelf libraries, libvirt-devel, make, zip, gcc, g++, git, wget, autoconf, and libssl-dev." >&2
 		exit 1
 	fi
 
-	debug $LINENO ":" "INSTALLER => ${INSTALLER}"
-	debug $LINENO ":" "SSL_DEV   => ${SSL_DEV}"
-	debug $LINENO ":" "GCC_CPP   => ${GCC_CPP}"
+	debug $LINENO ":" "INSTALLER    => ${INSTALLER}"
+	debug $LINENO ":" "SSL_DEV      => ${SSL_DEV}"
+	debug $LINENO ":" "GCC_CPP      => ${GCC_CPP}"
+	debug $LINENO ":" "LIBVIRT_NAME => ${LIBVIRT_NAME}"
 }
 
 older_than_bionic()
@@ -119,13 +122,14 @@ check_dependencies()
 	# Check for all required dependancies
 	if [ "${INSTALLER}" = "zypper" ] || [ "${INSTALLER}" = "yum" ]
 	then
-		if [ "$(rpm -q 'git' 2>&1 | grep 'not installed')" != "" ]        ||
-		[ "$(rpm -q 'make' 2>&1 | grep 'not installed')" != "" ]       ||
-		[ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]        ||
-		[ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]        ||
-		[ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]       ||
-		[ "$(rpm -q ${AUTO_CONF} 2>&1 | grep 'not installed')" != "" ]   ||
-		[ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ]   ||
+		if [ "$(rpm -q 'git' 2>&1 | grep 'not installed')" != "" ]         ||
+		[ "$(rpm -q 'make' 2>&1 | grep 'not installed')" != "" ]           ||
+		[ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]            ||
+		[ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]            ||
+		[ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]           ||
+		[ "$(rpm -q ${LIBVIRT_NAME} 2>&1 | grep 'not installed')" != "" ]  ||
+		[ "$(rpm -q ${AUTO_CONF} 2>&1 | grep 'not installed')" != "" ]     ||
+		[ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ]       ||
 		[ "$(rpm -q ${GCC_CPP} 2>&1 | grep 'not installed')" != "" ]
 		then
 			debug $LINENO ":" "A dependency is missing, setting flag!"
@@ -139,13 +143,14 @@ check_dependencies()
 			AUTO_CONF="autoreconf"
 		fi
 
-		if [ "$(dpkg -l 'git' 2>&1 | grep 'no packages')" != "" ]        ||
-		[ "$(dpkg -l 'make' 2>&1 | grep 'no packages')" != "" ]       ||
-		[ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]        ||
-		[ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]        ||
-		[ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]       ||
-		[ "$(dpkg -l ${AUTO_CONF} 2>&1 | grep 'no packages')" != "" ]   ||
-		[ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ]   ||
+		if [ "$(dpkg -l 'git' 2>&1 | grep 'no packages')" != "" ]         ||
+		[ "$(dpkg -l 'make' 2>&1 | grep 'no packages')" != "" ]           ||
+		[ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]            ||
+		[ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]            ||
+		[ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]           ||
+		[ "$(dpkg -l ${LIBVIRT_NAME} 2>&1 | grep 'no packages')" != "" ]  ||
+		[ "$(dpkg -l ${AUTO_CONF} 2>&1 | grep 'no packages')" != "" ]     ||
+		[ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ]       ||
 		[ "$(dpkg -l ${GCC_CPP} 2>&1 | grep 'no packages')" != "" ]
 		then
 			debug $LINENO ":" "A dependency is missing, setting flag!"
@@ -240,7 +245,7 @@ check_ssl()
 
 				# Add local ssl libraries to the src Makefile.am
 				echo "SSL_DIR=../openssl" >> src/Makefile.am
-				echo "sevtool_LDADD = \$(SSL_DIR)/libcrypto.a -ldl" >> src/Makefile.am
+				echo "sevtool_LDADD = \$(SSL_DIR)/libcrypto.a -ldl -lvirt -lvirt-qemu -luuid" >> src/Makefile.am
 				echo "sevtool_CXXFLAGS += -isystem \$(SSL_DIR)/include -isystem \$(SSL_DIR)" >> src/Makefile.am
 				;;
 			*)
@@ -293,8 +298,8 @@ main()
 			[yY]*)
 				debug $LINENO ":" "User responded with YES."
 				debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
-					"zip wget ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}\""
-				sudo ${INSTALLER} install -y git make gcc zip wget ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}
+					"zip wget ${LIBVIRT_NAME} ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}\""
+				sudo ${INSTALLER} install -y git make gcc zip wget ${LIBVIRT_NAME} ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}
 				;;
 			*)
 				debug $LINENO ":" "User responded with no."
