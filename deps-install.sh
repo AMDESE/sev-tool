@@ -22,6 +22,7 @@ INSTALLER=""
 SSL_DEV=""
 AUTO_CONF="autoconf"
 LIBVIRT_NAME="libvirt-devel"
+UUID_NAME="libuuid-devel"
 
 # Set to 1 to enable debugging or pass -d or --debug.
 if [ "$(echo $1 | grep -E '^\-{0,2}d(ebug)?$')" != "" ]
@@ -76,6 +77,7 @@ find_distribution_details()
 		INSTALLER="apt-get"
 		SSL_DEV="libssl-dev"
 		LIBVIRT_NAME="libvirt-dev"
+		UUID_NAME="uuid-dev"
 		GCC_CPP="g++"
 	elif [ "$(echo ${DIST_BASE} | grep 'fedora')" != "" ] ||
 		[ "$(echo ${DIST_BASE} | grep 'rhel')" != "" ]
@@ -97,6 +99,7 @@ find_distribution_details()
 	debug $LINENO ":" "SSL_DEV      => ${SSL_DEV}"
 	debug $LINENO ":" "GCC_CPP      => ${GCC_CPP}"
 	debug $LINENO ":" "LIBVIRT_NAME => ${LIBVIRT_NAME}"
+	debug $LINENO ":" "UUID_NAME    => ${UUID_NAME}"
 }
 
 older_than_bionic()
@@ -128,6 +131,7 @@ check_dependencies()
 		[ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]            ||
 		[ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]           ||
 		[ "$(rpm -q ${LIBVIRT_NAME} 2>&1 | grep 'not installed')" != "" ]  ||
+		[ "$(rpm -q ${UUID_NAME} 2>&1 | grep 'not installed')" != "" ]  ||
 		[ "$(rpm -q ${AUTO_CONF} 2>&1 | grep 'not installed')" != "" ]     ||
 		[ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ]       ||
 		[ "$(rpm -q ${GCC_CPP} 2>&1 | grep 'not installed')" != "" ]
@@ -149,6 +153,7 @@ check_dependencies()
 		[ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]            ||
 		[ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]           ||
 		[ "$(dpkg -l ${LIBVIRT_NAME} 2>&1 | grep 'no packages')" != "" ]  ||
+		[ "$(dpkg -l ${UUID_NAME} 2>&1 | grep 'no packages')" != "" ]  ||
 		[ "$(dpkg -l ${AUTO_CONF} 2>&1 | grep 'no packages')" != "" ]     ||
 		[ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ]       ||
 		[ "$(dpkg -l ${GCC_CPP} 2>&1 | grep 'no packages')" != "" ]
@@ -298,8 +303,8 @@ main()
 			[yY]*)
 				debug $LINENO ":" "User responded with YES."
 				debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
-					"zip wget ${LIBVIRT_NAME} ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}\""
-				sudo ${INSTALLER} install -y git make gcc zip wget ${LIBVIRT_NAME} ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}
+					"zip wget ${LIBVIRT_NAME} ${UUID_NAME} ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}\""
+				sudo ${INSTALLER} install -y git make gcc zip wget ${UUID_NAME} ${LIBVIRT_NAME} ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}
 				;;
 			*)
 				debug $LINENO ":" "User responded with no."
