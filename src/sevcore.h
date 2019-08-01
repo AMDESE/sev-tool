@@ -70,10 +70,9 @@ const std::string SHELL_VM_XML_1 = "<domain type='kvm'>"
 "<acpi/>"
 "</features>";
 
-const std::string SHELL_VM_XML_2 = "<memtune>"
-"<hard_limit unit='KiB'>350000</hard_limit>"
-"<soft_limit unit='KiB'>350000</soft_limit>"
-"</memtune>"
+const std::string SHELL_VM_XML_2 = "<memoryBacking>"
+"<locked/>"
+"</memoryBacking>"
 "</domain>";
 
 const std::string SHELL_VM_NAME_BASE = "fceac9812431d";
