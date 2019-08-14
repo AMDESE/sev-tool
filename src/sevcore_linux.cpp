@@ -570,13 +570,13 @@ void SEVDevice::create_ovmf_var_file(std::string ovmf_bin, char * sev_temp_dir,
 
     if(stat(ovmf_bin.c_str(), ovmf_bin_details) == 0)
     {
-        if (ovmf_bin_details->st_size < 2097152)
+        if (ovmf_bin_details->st_size < 0x200000)
         {
-            byte_count = 2097152 - ovmf_bin_details->st_size;
+            byte_count = 0x200000 - ovmf_bin_details->st_size;
         }
         else
         {
-            byte_count = 4194304 - ovmf_bin_details->st_size;
+            byte_count = 0x400000 - ovmf_bin_details->st_size;
         }
     }
 
