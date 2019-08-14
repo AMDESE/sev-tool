@@ -101,7 +101,7 @@ static struct option long_options[] =
     {0, 0, 0, 0}
 };
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     int c = 0;
     int option_index = 0;   /* getopt_long stores the option index here. */

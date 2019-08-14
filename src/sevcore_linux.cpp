@@ -21,13 +21,13 @@
 #include <sys/ioctl.h>      // for ioctl()
 #include <sys/mman.h>       // for mmap() and friends
 #include <cstdio>           // for std::rename
-#include <cerrno>          // for errorno
+#include <cerrno>           // for errorno
 #include <fcntl.h>          // for O_RDWR
 #include <unistd.h>         // for close()
 #include <uuid/uuid.h>
 #include <stdexcept>        // for std::runtime_error()
 
-char * SEV_PIPE_FILES[2];
+char *SEV_PIPE_FILES[2];
 
 SEVDevice::~SEVDevice()
 {
@@ -41,7 +41,7 @@ SEVDevice& SEVDevice::get_sev_device(void)
 {
     static SEVDevice m_sev_device;
     m_sev_device.mFd = open(DEFAULT_SEV_DEVICE.c_str(), O_RDWR);
-	m_sev_device.dep_bits = {{false, false, false, false, false}};
+    m_sev_device.dep_bits = {{false, false, false, false, false}};
     if (m_sev_device.mFd < 0) {
         throw std::runtime_error("Can't open " + std::string(DEFAULT_SEV_DEVICE) + "!\n");
     }
@@ -99,12 +99,12 @@ int SEVDevice::factory_reset()
     return (int)cmd_ret;
 }
 
-int SEVDevice::get_platform_owner(void* data)
+int SEVDevice::get_platform_owner(void *data)
 {
     return ((sev_user_data_status *)data)->flags & PLAT_STAT_OWNER_MASK;
 }
 
-int SEVDevice::get_platform_es(void* data)
+int SEVDevice::get_platform_es(void *data)
 {
     return ((sev_user_data_status *)data)->flags & PLAT_STAT_ES_MASK;
 }
@@ -204,8 +204,7 @@ int SEVDevice::pdh_gen()
     return (int)cmd_ret;
 }
 
-int SEVDevice::pdh_cert_export(uint8_t *data,
-                               void *pdh_cert_mem,
+int SEVDevice::pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
                                void *cert_chain_mem)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
@@ -231,8 +230,7 @@ int SEVDevice::pdh_cert_export(uint8_t *data,
     return (int)cmd_ret;
 }
 
-int SEVDevice::pek_cert_import(uint8_t *data,
-                               sev_cert *pek_csr,
+int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *pek_csr,
                                const std::string oca_priv_key_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
@@ -380,16 +378,16 @@ void SEVDevice::get_family_model(uint32_t *family, uint32_t *model)
  */
 bool SEVDevice::kvm_amd_sev_enabled(void)
 {
-	uint8_t retval = 0;
-	std::ifstream fin(KVM_AND_SEV_PARAM);
+    uint8_t retval = 0;
+    std::ifstream fin(KVM_AND_SEV_PARAM);
 
-	if (fin.is_open())
-	{
-		retval = (uint8_t)fin.get();
-	}
+    if (fin.is_open())
+    {
+        retval = (uint8_t)fin.get();
+    }
 
-	fin.close();
-	return retval != '0';
+    fin.close();
+    return retval != '0';
 }
 
 /**
@@ -398,89 +396,83 @@ bool SEVDevice::kvm_amd_sev_enabled(void)
  */
 bool SEVDevice::valid_libvirt(virConnectPtr con)
 {
-	char * result = virConnectGetDomainCapabilities(con,
-			NULL,
-			"x86_64",
-			NULL,
-			"kvm",
-			0);
+    char *result = virConnectGetDomainCapabilities(con, NULL, "x86_64",
+                                                   NULL, "kvm", 0);
 
-	return std::strstr(result, LIBVIRT_SEV_SUPPORTED) ? true : false;
+    return std::strstr(result, LIBVIRT_SEV_SUPPORTED) ? true : false;
 }
 
-/*
+/**
  * Validates that qemu has the function query-sev-capabilities exists,
  * indicating that the correct SEV functionality has been backkported to the
  * running instance of QEMU.
  */
 bool SEVDevice::valid_qemu(virDomainPtr dom)
 {
-	char ** result = (char **) malloc(sizeof *result);
-	bool ret_val = false;
+    char **result = (char **) malloc(sizeof *result);
+    bool ret_val = false;
 
-	// Check that qemu has the functions required for SEV.
-	virDomainQemuMonitorCommand(dom,
-			QMP_SEV_CAPS_CMD,
-			result,
-			VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT);
+    // Check that qemu has the functions required for SEV.
+    virDomainQemuMonitorCommand(dom, QMP_SEV_CAPS_CMD, result,
+                                VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT);
 
-	ret_val = std::strstr(*result, COMMAND_NOT_FOUND) ? false : true;
+    ret_val = std::strstr(*result, COMMAND_NOT_FOUND) ? false : true;
 
-	free(result);
+    free(result);
 
-	return ret_val;
+    return ret_val;
 }
 
-std::string SEVDevice::find_sev_ovmf_bin(char * capabilities)
+std::string SEVDevice::find_sev_ovmf_bin(char *capabilities)
 {
-	char * ovmf_bin_loc = (char *) malloc(strlen(capabilities));
-	strncpy(ovmf_bin_loc, capabilities, strlen(capabilities));
+    char *ovmf_bin_loc = (char *) malloc(strlen(capabilities));
+    strncpy(ovmf_bin_loc, capabilities, strlen(capabilities));
 
-	char * p_val_end = strstr(ovmf_bin_loc, "</value>");
+    char *p_val_end = strstr(ovmf_bin_loc, "</value>");
 
-	if (p_val_end)
-	{
-		ovmf_bin_loc[p_val_end - ovmf_bin_loc] = '\0';
-		ovmf_bin_loc = strstr(ovmf_bin_loc, "<value>");
-		ovmf_bin_loc ? ovmf_bin_loc += sizeof("<value>") - 1 : "";
-	}
+    if (p_val_end)
+    {
+        ovmf_bin_loc[p_val_end - ovmf_bin_loc] = '\0';
+        ovmf_bin_loc = strstr(ovmf_bin_loc, "<value>");
+        ovmf_bin_loc ? ovmf_bin_loc += sizeof("<value>") - 1 : "";
+    }
 
-	return ovmf_bin_loc;
+    return ovmf_bin_loc;
 }
 
 std::string SEVDevice::find_sev_c_bit_pos(char * capabilities)
 {
-	char * c_bit_pos = (char *) malloc(strlen(capabilities));
-	strncpy(c_bit_pos, capabilities, strlen(capabilities));
+    char *c_bit_pos = (char *) malloc(strlen(capabilities));
+    strncpy(c_bit_pos, capabilities, strlen(capabilities));
 
-	char * p_c_bit_end = strstr(c_bit_pos, "</cbitpos>");
+    char *p_c_bit_end = strstr(c_bit_pos, "</cbitpos>");
 
-	if (p_c_bit_end)
-	{
-		c_bit_pos[p_c_bit_end - c_bit_pos] = '\0';
-		c_bit_pos = strstr(c_bit_pos, "<cbitpos>");
-		c_bit_pos ? c_bit_pos += sizeof("<cbitpos>") - 1 : "";
-	}
+    if (p_c_bit_end)
+    {
+        c_bit_pos[p_c_bit_end - c_bit_pos] = '\0';
+        c_bit_pos = strstr(c_bit_pos, "<cbitpos>");
+        c_bit_pos ? c_bit_pos += sizeof("<cbitpos>") - 1 : "";
+    }
 
-	return c_bit_pos;
+    return c_bit_pos;
 }
 
 std::string SEVDevice::find_sev_reduced_phys_bits(char * capabilities)
 {
-	char * reduced_phys_bits = (char *) malloc(strlen(capabilities));
-	strncpy(reduced_phys_bits, capabilities, strlen(capabilities));
+    char *reduced_phys_bits = (char *) malloc(strlen(capabilities));
+    strncpy(reduced_phys_bits, capabilities, strlen(capabilities));
 
-	char * p_reduced_phys_bit_end = strstr(reduced_phys_bits, "</reducedPhysBits>");
+    char *p_reduced_phys_bit_end = strstr(reduced_phys_bits, "</reducedPhysBits>");
 
-	if (p_reduced_phys_bit_end)
-	{
-		reduced_phys_bits[p_reduced_phys_bit_end - reduced_phys_bits] = '\0';
-		reduced_phys_bits = strstr(reduced_phys_bits, "<reducedPhysBits>");
-		reduced_phys_bits ?
-			reduced_phys_bits += sizeof("<reducedPhysBits>") - 1 : "";
-	}
+    if (p_reduced_phys_bit_end)
+    {
+        reduced_phys_bits[p_reduced_phys_bit_end - reduced_phys_bits] = '\0';
+        reduced_phys_bits = strstr(reduced_phys_bits, "<reducedPhysBits>");
+        reduced_phys_bits ?
+            reduced_phys_bits += sizeof("<reducedPhysBits>") - 1 : "";
+    }
 
-	return reduced_phys_bits;
+    return reduced_phys_bits;
 }
 
 /**
@@ -488,135 +480,134 @@ std::string SEVDevice::find_sev_reduced_phys_bits(char * capabilities)
  */
 void SEVDevice::create_sev_pipe_files(char * sev_temp_dir)
 {
-	if (sev_temp_dir)
-	{
-		for (uint8_t i = 0; i < 2; i++)
-		{
-			// Allocate just enough size for the UUID being generated.
-			SEV_PIPE_FILES[i] = (char *) malloc(37 * sizeof(char));
+    if (sev_temp_dir)
+    {
+        for (uint8_t i = 0; i < 2; i++)
+        {
+            // Allocate just enough size for the UUID being generated.
+            SEV_PIPE_FILES[i] = (char *) malloc(37 * sizeof(char));
 
-			// create a new UUID
-			uuid_t temp_uuid;
-			uuid_generate(temp_uuid);
+            // create a new UUID
+            uuid_t temp_uuid;
+            uuid_generate(temp_uuid);
 
-			// store the UUID in the character pointer array.
-			uuid_unparse_upper(temp_uuid, (char *) SEV_PIPE_FILES[i]);
+            // store the UUID in the character pointer array.
+            uuid_unparse_upper(temp_uuid, (char *) SEV_PIPE_FILES[i]);
 
-			std::string in_file_name(std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[i]) + ".in");
-			std::string out_file_name(std::string(sev_temp_dir) + "/" +  std::string(SEV_PIPE_FILES[i]) + ".out");
+            std::string in_file_name(std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[i]) + ".in");
+            std::string out_file_name(std::string(sev_temp_dir) + "/" +  std::string(SEV_PIPE_FILES[i]) + ".out");
 
-			if (mkfifo(in_file_name.c_str(), 0777) < 0)
-			{
-				if (errno == EEXIST)
-				{
-					fprintf(stderr, "CRITICAL: SEV pipe input file collision.\n");
-				}
-				else
-				{
-					fprintf(stderr, "Error: Unknown error with mkfifo occured.\n");
-				}
-				fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
-				exit(1);
-			}
-			else if (mkfifo(out_file_name.c_str(), 0777) < 0)
-			{
-				if (errno == EEXIST)
-				{
-					fprintf(stderr, "CRITICAL: SEV pipe output file collision.\n");
-				}
-				else
-				{
-					fprintf(stderr, "Error: Unknown error with mkfifo occured.\n");
-				}
-				fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
-				exit(1);
-			}
+            if (mkfifo(in_file_name.c_str(), 0777) < 0)
+            {
+                if (errno == EEXIST)
+                {
+                    fprintf(stderr, "CRITICAL: SEV pipe input file collision.\n");
+                }
+                else
+                {
+                    fprintf(stderr, "Error: Unknown error with mkfifo occured.\n");
+                }
+                fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+                exit(1);
+            }
+            else if (mkfifo(out_file_name.c_str(), 0777) < 0)
+            {
+                if (errno == EEXIST)
+                {
+                    fprintf(stderr, "CRITICAL: SEV pipe output file collision.\n");
+                }
+                else
+                {
+                    fprintf(stderr, "Error: Unknown error with mkfifo occured.\n");
+                }
+                fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+                exit(1);
+            }
 
-			if(chmod(in_file_name.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) < 0)
-			{
-				fprintf(stderr, "CRITICAL: Unable to modify the file "
-						"permissions for the pipe files generated");
-				fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
-				exit(1);
-			}
+            if(chmod(in_file_name.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) < 0)
+            {
+                fprintf(stderr, "CRITICAL: Unable to modify the file "
+                        "permissions for the pipe files generated");
+                fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+                exit(1);
+            }
 
-			if(chmod(out_file_name.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) < 0)
-			{
-				fprintf(stderr, "CRITICAL: Unable to modify the file "
-						"permissions for the pipe files generated");
-				fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
-				exit(1);
-			}
-		}
-	}
+            if(chmod(out_file_name.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) < 0)
+            {
+                fprintf(stderr, "CRITICAL: Unable to modify the file "
+                        "permissions for the pipe files generated");
+                fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+                exit(1);
+            }
+        }
+    }
 }
 
 /**
  *  Create the temp directory used for all SEV test files.
  */
-
 void SEVDevice::create_sev_temp_dir(char ** sev_temp_file)
 {
-	char sev_file_template[] = "/tmp/SEVXXXXXX";
-	*sev_temp_file = strdup(mkdtemp(sev_file_template));
-	if(chmod(*sev_temp_file, S_IRWXU | S_IRWXG | S_IRWXO) < 0)
-	{
-		fprintf(stderr, "CRITICAL: Unable to modify the sev temporary"
-				" directory");
-		fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
-		exit(1);
-	}
+    char sev_file_template[] = "/tmp/SEVXXXXXX";
+    *sev_temp_file = strdup(mkdtemp(sev_file_template));
+    if(chmod(*sev_temp_file, S_IRWXU | S_IRWXG | S_IRWXO) < 0)
+    {
+        fprintf(stderr, "CRITICAL: Unable to modify the sev temporary directory");
+        fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+        exit(1);
+    }
 }
 
 /**
  *  Creates an OVMF Variable file for validation of OVMF
  */
-void SEVDevice::create_ovmf_var_file(std::string ovmf_bin, char * sev_temp_dir, char ** ovmf_var_file)
+void SEVDevice::create_ovmf_var_file(std::string ovmf_bin, char * sev_temp_dir,
+                                     char ** ovmf_var_file)
 {
-	struct stat *ovmf_bin_details = new struct stat();
-	struct stat *ovmf_var_details = new struct stat();
-	uint64_t byte_count = 0;
+    struct stat *ovmf_bin_details = new struct stat();
+    struct stat *ovmf_var_details = new struct stat();
+    uint64_t byte_count = 0;
 
-	if(stat(ovmf_bin.c_str(), ovmf_bin_details) == 0)
-	{
-		if (ovmf_bin_details->st_size < 2097152)
-		{
-			byte_count = 2097152 - ovmf_bin_details->st_size;
-		}
-		else
-		{
-			byte_count = 4194304 - ovmf_bin_details->st_size;
-		}
-	}
+    if(stat(ovmf_bin.c_str(), ovmf_bin_details) == 0)
+    {
+        if (ovmf_bin_details->st_size < 2097152)
+        {
+            byte_count = 2097152 - ovmf_bin_details->st_size;
+        }
+        else
+        {
+            byte_count = 4194304 - ovmf_bin_details->st_size;
+        }
+    }
 
-	std::string null_bytes(byte_count, '\0');
-	strcpy(*ovmf_var_file, sev_temp_dir);
-	strcat(*ovmf_var_file, "/OVMF-XXXXXX");
+    std::string null_bytes(byte_count, '\0');
+    strcpy(*ovmf_var_file, sev_temp_dir);
+    strcat(*ovmf_var_file, "/OVMF-XXXXXX");
 
-	if (mkstemp(*ovmf_var_file) > 0)
-	{
-		std::ofstream fout(*ovmf_var_file);
-		fout << null_bytes;
-		fout.close();
-	}
-	else
-	{
-		if (errno == EEXIST)
-		{
-			fprintf(stderr, "CRITICAL: OVMF variable file collision!\n");
-			fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
-		}
-		else
-		{
-			fprintf(stderr, "CRITICAL: An unforseen error has occured: %d\n", errno);
-			fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
-		}
+    if (mkstemp(*ovmf_var_file) > 0)
+    {
+        std::ofstream fout(*ovmf_var_file);
+        fout << null_bytes;
+        fout.close();
+    }
+    else
+    {
+        if (errno == EEXIST)
+        {
+            fprintf(stderr, "CRITICAL: OVMF variable file collision!\n");
+            fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+        }
+        else
+        {
+            fprintf(stderr, "CRITICAL: An unforseen error has occured: %d\n", errno);
+            fprintf(stderr, "errno: %d - %s", errno, strerror(errno));
+        }
 
-		exit(1);
-	}
+        exit(1);
+    }
 
-	delete ovmf_bin_details;
-	delete ovmf_var_details;
+    delete ovmf_bin_details;
+    delete ovmf_var_details;
 }
 
 /**
@@ -624,84 +615,82 @@ void SEVDevice::create_ovmf_var_file(std::string ovmf_bin, char * sev_temp_dir, 
  */
 bool SEVDevice::dom_state_down(virDomainPtr dom)
 {
-	virDomainInfo * dom_info = new virDomainInfo();
-	bool ret_val = false;
+    virDomainInfo * dom_info = new virDomainInfo();
+    bool ret_val = false;
 
-	virDomainGetInfo(dom, dom_info);
+    virDomainGetInfo(dom, dom_info);
 
-	switch (dom_info->state)
-	{
-		case VIR_DOMAIN_NOSTATE:
-		case VIR_DOMAIN_SHUTDOWN:
-		case VIR_DOMAIN_SHUTOFF:
-			ret_val = true;
-			break;
-		default:
-			break;
-	}
+    switch (dom_info->state)
+    {
+        case VIR_DOMAIN_NOSTATE:
+        case VIR_DOMAIN_SHUTDOWN:
+        case VIR_DOMAIN_SHUTOFF:
+            ret_val = true;
+            break;
+        default:
+            break;
+    }
 
-	delete dom_info;
-	return ret_val;
+    delete dom_info;
+    return ret_val;
 }
 
 virDomainPtr SEVDevice::start_new_domain(virConnectPtr con,
-		std::string name,
-		bool sev_enable,
-		struct sev_dom_details dom_details,
-		char * sev_temp_dir,
-		char * ovmf_var_file)
+                                         std::string name,
+                                         bool sev_enable,
+                                         struct sev_dom_details dom_details,
+                                         char * sev_temp_dir,
+                                         char * ovmf_var_file)
 {
+    // OVMF is running successfully without SEV enabled.
+    std::string shell_vm_name = "<name>" + name + "</name>";
 
-	// OVMF is running successfully without SEV enabled.
-	std::string shell_vm_name = "<name>" + name + "</name>";
+    std::string sev_pipe_path = "<source path='" + std::string(sev_temp_dir) + "/" +
+                                std::string(SEV_PIPE_FILES[sev_enable ? 1 : 0]) + "'/>";
 
-	std::string sev_pipe_path =
-		"<source path='" + std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[sev_enable ? 1 : 0]) + "'/>";
+    std::string sev_pipe = "<devices>"
+                           "<serial type='pipe'>" +
+                           sev_pipe_path +
+                           "<target port='1'/>"
+                           "</serial>"
+                           "</devices>";
 
-	std::string sev_pipe = "<devices>"
-		"<serial type='pipe'>" +
-		sev_pipe_path +
-		"<target port='1'/>"
-		"</serial>"
-		"</devices>";
+    std::string code_bin_path = "<os><loader readonly='yes'"
+                                " type='pflash'>" +
+                                dom_details.ovmf_bin_loc +
+                                "</loader>";
 
-	std::string code_bin_path = "<os><loader readonly='yes'"
-		" type='pflash'>" +
-		dom_details.ovmf_bin_loc +
-		"</loader>";
+    std::string var_bin_path  = "<nvram>" +
+                                std::string(ovmf_var_file) +
+                                "</nvram>"
+                                "<type arch='x86_64'"
+                                " machine='q35'>hvm"
+                                "</type>"
+                                "</os>";
 
-	std::string var_bin_path  = "<nvram>" +
-		std::string(ovmf_var_file) +
-		"</nvram>"
-		"<type arch='x86_64'"
-		" machine='q35'>hvm"
-		"</type>"
-		"</os>";
-	std::string SHELL_VM_SEV_ENABLE = "<launchSecurity type='sev'>"
-		"<policy>0x0001</policy>"
-		"<cbitpos>" +
-		dom_details.c_bit_pos +
-		"</cbitpos>"
-		"<reducedPhysBits>" +
-		dom_details.reduced_phys_bits +
-		"</reducedPhysBits>"
-		"</launchSecurity>";
+    std::string SHELL_VM_SEV_ENABLE = "<launchSecurity type='sev'>"
+                                      "<policy>0x0001</policy>"
+                                      "<cbitpos>" +
+                                      dom_details.c_bit_pos +
+                                      "</cbitpos>"
+                                      "<reducedPhysBits>" +
+                                      dom_details.reduced_phys_bits +
+                                      "</reducedPhysBits>"
+                                      "</launchSecurity>";
 
-	std::string FINAL_XML = SHELL_VM_XML_1 		+
-		shell_vm_name 		+
-		sev_pipe 			+
-		code_bin_path 		+
-		var_bin_path 		+
-		(sev_enable ? SHELL_VM_SEV_ENABLE : "") +
-		SHELL_VM_XML_2;
+    std::string FINAL_XML = SHELL_VM_XML_1  +
+                            shell_vm_name   +
+                            sev_pipe        +
+                            code_bin_path   +
+                            var_bin_path    +
+                            (sev_enable ? SHELL_VM_SEV_ENABLE : "") +
+                            SHELL_VM_XML_2;
 
-	virDomainPtr dom = virDomainDefineXML(con,
-			FINAL_XML.c_str());
+    virDomainPtr dom = virDomainDefineXML(con, FINAL_XML.c_str());
 
-	virDomainCreate(dom);
+    virDomainCreate(dom);
 
-	return dom;
-
+    return dom;
 }
 
 /**
@@ -710,35 +699,35 @@ virDomainPtr SEVDevice::start_new_domain(virConnectPtr con,
  */
 bool SEVDevice::valid_ovmf(virDomainPtr dom, bool sev_enabled, char * sev_temp_dir)
 {
-	bool ret_val = false;
+    bool ret_val = false;
 
-	std::string file_name(sev_temp_dir);
-	file_name += "/";
-	file_name += SEV_PIPE_FILES[(sev_enabled ? 1 : 0)];
-	file_name += ".in";
+    std::string file_name(sev_temp_dir);
+    file_name += "/";
+    file_name += SEV_PIPE_FILES[(sev_enabled ? 1 : 0)];
+    file_name += ".in";
 
-	std::ofstream pipe_in(file_name);
+    std::ofstream pipe_in(file_name);
 
-	sleep(5);
+    sleep(5);
 
-	// Attempt to shutdown the machine via OVMF. This is a valid check because
-	// instances of OVMF without proper code will fail to respond.
-	pipe_in << "\rreset -s s\r";
-	pipe_in.close();
+    // Attempt to shutdown the machine via OVMF. This is a valid check because
+    // instances of OVMF without proper code will fail to respond.
+    pipe_in << "\rreset -s s\r";
+    pipe_in.close();
 
-	// Wait long enough for the VM to be shutdown.
-	sleep(5);
+    // Wait long enough for the VM to be shutdown.
+    sleep(5);
 
-	if (this->dom_state_down(dom))
-	{
-		ret_val = true;
-	}
+    if (this->dom_state_down(dom))
+    {
+        ret_val = true;
+    }
 
-	virDomainUndefineFlags(dom, VIR_DOMAIN_UNDEFINE_NVRAM);
-	virDomainFree(dom);
+    virDomainUndefineFlags(dom, VIR_DOMAIN_UNDEFINE_NVRAM);
+    virDomainFree(dom);
 
-	// Read the status of the domain.
-	return ret_val;
+    // Read the status of the domain.
+    return ret_val;
 }
 
 /**
@@ -755,161 +744,160 @@ bool SEVDevice::valid_ovmf(virDomainPtr dom, bool sev_enabled, char * sev_temp_d
  */
 void SEVDevice::check_dependencies(void)
 {
-	// Default everything to unsupported.
-	struct stat *file_details = new struct stat();
-	int cmd_ret = SEV_RET_UNSUPPORTED;
-	uint8_t *p_data = new uint8_t();
+    // Default everything to unsupported.
+    struct stat *file_details = new struct stat();
+    int cmd_ret = SEV_RET_UNSUPPORTED;
+    uint8_t *p_data = new uint8_t();
 
-	if (stat(LINUX_SEV_FILE, file_details) == 0)
-	{
-		this->dep_bits.kernel = !!1;
+    if (stat(LINUX_SEV_FILE, file_details) == 0)
+    {
+        this->dep_bits.kernel = !!1;
 
-		if (kvm_amd_sev_enabled())
-		{
+        if (kvm_amd_sev_enabled())
+        {
 
-			this->dep_bits.kvm = !!1;
+            this->dep_bits.kvm = !!1;
 
-			if (this->sev_ioctl(SEV_PLATFORM_STATUS, p_data, &cmd_ret) != -1)
-			{
-				// Open a connection to the hypervisor using the default
-				// connection.
-				virConnectPtr con = virConnectOpen(NULL);
+            if (this->sev_ioctl(SEV_PLATFORM_STATUS, p_data, &cmd_ret) != -1)
+            {
+                // Open a connection to the hypervisor using the default connection.
+                virConnectPtr con = virConnectOpen(NULL);
 
-				char * capabilities = virConnectGetDomainCapabilities(con,
-						NULL,
-						"x86_64",
-						NULL,
-						"kvm",
-						0);
+                char *capabilities = virConnectGetDomainCapabilities(con,
+                                                                     NULL,
+                                                                     "x86_64",
+                                                                     NULL,
+                                                                     "kvm",
+                                                                     0);
 
-				struct sev_dom_details dom_details = {find_sev_ovmf_bin(capabilities),
-					find_sev_c_bit_pos(capabilities),
-					find_sev_reduced_phys_bits(capabilities)};
+                struct sev_dom_details dom_details = {find_sev_ovmf_bin(capabilities),
+                                                      find_sev_c_bit_pos(capabilities),
+                                                      find_sev_reduced_phys_bits(capabilities)};
 
-				if (! dom_details.ovmf_bin_loc.empty())
-				{
-					// Create the pipe files to interact with the shell VM.
-					char * sev_temp_dir = (char *) malloc(sizeof("/tmp/SEVXXXXXX\0"));
-					char * ovmf_var_file = (char *) malloc(sizeof(char) * 64);
+                if (! dom_details.ovmf_bin_loc.empty())
+                {
+                    // Create the pipe files to interact with the shell VM.
+                    char *sev_temp_dir = (char *) malloc(sizeof("/tmp/SEVXXXXXX\0"));
+                    char *ovmf_var_file = (char *) malloc(sizeof(char) * 64);
 
-					this->create_sev_temp_dir(&sev_temp_dir);
-					this->create_sev_pipe_files(sev_temp_dir);
-					this->create_ovmf_var_file(dom_details.ovmf_bin_loc, sev_temp_dir, &ovmf_var_file);
+                    this->create_sev_temp_dir(&sev_temp_dir);
+                    this->create_sev_pipe_files(sev_temp_dir);
+                    this->create_ovmf_var_file(dom_details.ovmf_bin_loc, sev_temp_dir, &ovmf_var_file);
 
-					// Create a shell VM with the XML specified
-					// (destroyed upon completion of testing).
-					virDomainPtr dom = this->start_new_domain(con,
-							SHELL_VM_NAME_BASE + "1",
-							false,
-							dom_details,
-							sev_temp_dir,
-							ovmf_var_file);
+                    // Create a shell VM with the XML specified
+                    // (destroyed upon completion of testing).
+                    virDomainPtr dom = this->start_new_domain(con,
+                                                              SHELL_VM_NAME_BASE + "1",
+                                                              false,
+                                                              dom_details,
+                                                              sev_temp_dir,
+                                                              ovmf_var_file);
 
-					if (valid_qemu(dom))
-					{
-						this->dep_bits.qemu = !!1;
+                    if (valid_qemu(dom))
+                    {
+                        this->dep_bits.qemu = !!1;
 
-						// The libvirt check relies on QEMU to be successfully
-						// configured.
-						if (this->valid_libvirt(con))
-						{
-							this->dep_bits.libvirt = !!1;
+                        // The libvirt check relies on QEMU to be successfully
+                        // configured.
+                        if (this->valid_libvirt(con))
+                        {
+                            this->dep_bits.libvirt = !!1;
 
-							printf("Verifying OVMF works with SEV disabled...\n");
+                            printf("Verifying OVMF works with SEV disabled...\n");
 
-							if (this->valid_ovmf(dom, false, sev_temp_dir))
-							{
-								virDomainPtr sev_dom = start_new_domain(con,
-										SHELL_VM_NAME_BASE + "2",
-										true,
-										dom_details,
-										sev_temp_dir,
-										ovmf_var_file);
+                            if (this->valid_ovmf(dom, false, sev_temp_dir))
+                            {
+                                virDomainPtr sev_dom = start_new_domain(con,
+                                                                        SHELL_VM_NAME_BASE + "2",
+                                                                        true,
+                                                                        dom_details,
+                                                                        sev_temp_dir,
+                                                                        ovmf_var_file);
 
-								printf("Verifying OVMF works with SEV enabled...\n");
-								if (this->valid_ovmf(sev_dom, true, sev_temp_dir))
-								{
-									this->dep_bits.ovmf = !!1;
-								}
-							}
-						}
-					}
+                                printf("Verifying OVMF works with SEV enabled...\n");
+                                if (this->valid_ovmf(sev_dom, true, sev_temp_dir))
+                                {
+                                    this->dep_bits.ovmf = !!1;
+                                }
+                            }
+                        }
+                    }
 
-					for(uint8_t i = 0; i < 2; i++)
-					{
-						remove(std::string(std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[i]) + ".in").c_str());
-						remove(std::string(std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[i]) + ".out").c_str());
-					}
+                    for(uint8_t i = 0; i < 2; i++)
+                    {
+                        remove(std::string(std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[i]) + ".in").c_str());
+                        remove(std::string(std::string(sev_temp_dir) + "/" + std::string(SEV_PIPE_FILES[i]) + ".out").c_str());
+                    }
 
-					remove(ovmf_var_file);
-					remove(sev_temp_dir);
+                    remove(ovmf_var_file);
+                    remove(sev_temp_dir);
 
-					free(ovmf_var_file);
-					free(sev_temp_dir);
-				}
+                    free(ovmf_var_file);
+                    free(sev_temp_dir);
+                }
 
-				// Cleanup
-				virConnectClose(con);
-			}
-		}
-	}
+                // Cleanup
+                virConnectClose(con);
+            }
+        }
+    }
 
-	// Clean up all memory.
-	delete file_details;
-	delete p_data;
+    // Clean up all memory.
+    delete file_details;
+    delete p_data;
 }
 
 std::string SEVDevice::format_software_support_text(void)
 {
-	std::string ret_val = "";
+    std::string ret_val = "";
 
-	switch (this->dep_bits.raw)
-	{
-		case 0x1F:
-			ret_val = "  Kernel:  Supported\n"
-				"  KVM:     Supported\n"
-				"  QEMU:    Supported\n"
-				"  Libvirt: Supported\n"
-				"  OVMF:    Supported\n";
-			break;
-		case 0x0F:
-			ret_val = "  Kernel:  Supported\n"
-				"  KVM:     Supported\n"
-				"  QEMU:    Supported\n"
-				"  Libvirt: Supported\n"
-				"  OVMF:    Unsupported\n";
-			break;
-		case 0x07:
-			ret_val = "  Kernel:  Supported\n"
-				"  KVM:     Supported\n"
-				"  QEMU:    Supported\n"
-				"  Libvirt: Unsupported\n"
-				"  OVMF:    Undetermined\n";
-			break;
-		case 0x03:
-			ret_val = "  Kernel:  Supported\n"
-				"  KVM:     Supported\n"
-				"  QEMU:    Unsupported\n"
-				"  Libvirt: Undetermined\n"
-				"  OVMF:    Undetermined\n";
-			break;
-		case 0x01:
-			ret_val = "  Kernel:  Supported\n"
-				"  KVM:     Unsupported\n"
-				"  QEMU:    Undetermined\n"
-				"  Libvirt: Undetermined\n"
-				"  OVMF:    Undetermined\n";
-			break;
-		default:
-			ret_val = "  Kernel:  Unsupported\n"
-				"  KVM:     Undetermined\n"
-				"  QEMU:    Undetermined\n"
-				"  Libvirt: Undetermined\n"
-				"  OVMF:    Undetermined\n";
-			break;
-	}
+    switch (this->dep_bits.raw)
+    {
+        case 0x1F:
+            ret_val = "  Kernel:  Supported\n"
+                      "  KVM:     Supported\n"
+                      "  QEMU:    Supported\n"
+                      "  Libvirt: Supported\n"
+                      "  OVMF:    Supported\n";
+            break;
+        case 0x0F:
+            ret_val = "  Kernel:  Supported\n"
+                      "  KVM:     Supported\n"
+                      "  QEMU:    Supported\n"
+                      "  Libvirt: Supported\n"
+                      "  OVMF:    Unsupported\n";
+            break;
+        case 0x07:
+            ret_val = "  Kernel:  Supported\n"
+                      "  KVM:     Supported\n"
+                      "  QEMU:    Supported\n"
+                      "  Libvirt: Unsupported\n"
+                      "  OVMF:    Undetermined\n";
+            break;
+        case 0x03:
+            ret_val = "  Kernel:  Supported\n"
+                      "  KVM:     Supported\n"
+                      "  QEMU:    Unsupported\n"
+                      "  Libvirt: Undetermined\n"
+                      "  OVMF:    Undetermined\n";
+            break;
+        case 0x01:
+            ret_val = "  Kernel:  Supported\n"
+                      "  KVM:     Unsupported\n"
+                      "  QEMU:    Undetermined\n"
+                      "  Libvirt: Undetermined\n"
+                      "  OVMF:    Undetermined\n";
+            break;
+        default:
+            ret_val = "  Kernel:  Unsupported\n"
+                      "  KVM:     Undetermined\n"
+                      "  QEMU:    Undetermined\n"
+                      "  Libvirt: Undetermined\n"
+                      "  OVMF:    Undetermined\n";
+            break;
+    }
 
-	return ret_val;
+    return ret_val;
 }
 
 
@@ -949,18 +937,18 @@ int SEVDevice::sys_info()
     get_family_model(&family, &model);
     printf("Platform Family %02x, Model %02x\n", family, model);
 
-	printf("\n");
-	this->check_dependencies();
+    printf("\n");
+    this->check_dependencies();
 
-	printf("\nSoftware Support:\n");
-	printf("%s", format_software_support_text().c_str());
+    printf("\nSoftware Support:\n");
+    printf("%s", format_software_support_text().c_str());
 
     printf("-------------------------------------------------------------\n\n");
 
     return (int)cmd_ret;
 }
 
-/*
+/**
  * Note: You can not change the Platform Owner if Guests are running. That means
  *       the Platform cannot be in the WORKING state here. The ccp Kernel Driver
  *       will do its best to set the Platform state to whatever is required to

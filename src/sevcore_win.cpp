@@ -60,12 +60,12 @@ int SEVDevice::factory_reset()
     return cmd_ret;
 }
 
-int SEVDevice::get_platform_owner(void* data)
+int SEVDevice::get_platform_owner(void *data)
 {
     return 0;
 }
 
-int SEVDevice::get_platform_es(void* data)
+int SEVDevice::get_platform_es(void *data)
 {
     return 0;
 }
