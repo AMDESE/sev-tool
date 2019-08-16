@@ -131,7 +131,7 @@ check_dependencies()
 		[ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]            ||
 		[ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]           ||
 		[ "$(rpm -q ${LIBVIRT_NAME} 2>&1 | grep 'not installed')" != "" ]  ||
-		[ "$(rpm -q ${UUID_NAME} 2>&1 | grep 'not installed')" != "" ]  ||
+		[ "$(rpm -q ${UUID_NAME} 2>&1 | grep 'not installed')" != "" ]     ||
 		[ "$(rpm -q ${AUTO_CONF} 2>&1 | grep 'not installed')" != "" ]     ||
 		[ "$(rpm -q ${SSL_DEV} 2>&1 | grep 'not installed')" != "" ]       ||
 		[ "$(rpm -q ${GCC_CPP} 2>&1 | grep 'not installed')" != "" ]
@@ -153,7 +153,7 @@ check_dependencies()
 		[ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]            ||
 		[ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]           ||
 		[ "$(dpkg -l ${LIBVIRT_NAME} 2>&1 | grep 'no packages')" != "" ]  ||
-		[ "$(dpkg -l ${UUID_NAME} 2>&1 | grep 'no packages')" != "" ]  ||
+		[ "$(dpkg -l ${UUID_NAME} 2>&1 | grep 'no packages')" != "" ]     ||
 		[ "$(dpkg -l ${AUTO_CONF} 2>&1 | grep 'no packages')" != "" ]     ||
 		[ "$(dpkg -l ${SSL_DEV} 2>&1 | grep 'no packages')" != "" ]       ||
 		[ "$(dpkg -l ${GCC_CPP} 2>&1 | grep 'no packages')" != "" ]

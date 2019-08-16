@@ -995,9 +995,10 @@ bool Command::derive_master_secret(aes_128_key master_secret,
         return false;
 
     sev_cert dummy;
-    SEVCert tempObj(dummy);         // TODO. Hack b/c just want to call function later
+    memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
+    SEVCert tempObj(dummy);                 // TODO. Hack b/c just want to call function later
     bool ret = false;
-    EVP_PKEY *plat_owner_pub_key = NULL;     // Platform owner public key
+    EVP_PKEY *plat_owner_pub_key = NULL;    // Platform owner public key
     size_t shared_key_len = 0;
 
     do {

@@ -54,7 +54,8 @@ bool Tests::test_factory_reset()
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
     sev_cert dummy;
-    SEVCert cert(dummy);
+    memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
+    SEVCert cert(dummy);                    // TODO. Hack b/c just want to call function later
 
     do {
         printf("*Starting factory_reset tests\n");
@@ -337,7 +338,8 @@ bool Tests::test_pek_cert_import()
     sev_cert pdh_orig;
     sev_cert pdh_new;
     sev_cert dummy;
-    SEVCert cert(dummy);
+    memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
+    SEVCert cert(dummy);                    // TODO. Hack b/c just want to call function later
 
     do {
         printf("*Starting pek_cert_import tests\n");
@@ -434,7 +436,8 @@ bool Tests::test_set_self_owned()
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
     sev_cert dummy;
-    SEVCert cert(dummy);
+    memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
+    SEVCert cert(dummy);                    // TODO. Hack b/c just want to call function later
 
     do {
         printf("*Starting factory_reset tests\n");
@@ -487,7 +490,8 @@ bool Tests::test_set_externally_owned()
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
     sev_cert dummy;
-    SEVCert cert(dummy);
+    memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
+    SEVCert cert(dummy);                    // TODO. Hack b/c just want to call function later
 
     do {
         printf("*Starting set_externally_owned tests\n");
