@@ -1,7 +1,7 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v14
-Updated: 2019-07-11
+Version: v15
+Updated: 2019-09-19
 &nbsp;
 &nbsp;
 
@@ -93,20 +93,21 @@ Updated: 2019-07-11
 
 ## Proposed Provisioning Steps
 ##### Platform Owner
-1. Generate your OCA (example using openssl coming soon)
+1. Generate your OCA (example using openssl coming soon). Please see the API spec for key/certificate specifications
 2. Get Platform and connect to Internet
 3. Install SEV-supported operating system
 4. Confirm that SEV is supported (using steps in [OS Requirements](#os-requirements))
 5. Make a folder for the SEV-Tool to import/export certs/IDs from/to (pass into commands with the --ofolder flag)
 6. Run the get_id command. As a simple check if running when 2 processors, make sure the returned IDs are different by using the --verbose flag
 7. Get the CEK_ASK from the AMD KDS server by running the generate_cek_ask command
+   - Note: the CEK certificate will be different every time you pull it from the KDS sever. The server re-generates/re-signs the cert every time instead of storing a static cert
 8. Run the pek_csr command to generate a certificate signing request for your PEK. This will allow you to take ownership of the platform.
 9. Sign PEK with OCA (example using openssl coming soon)
 10. Run the pek_cert_import command
 11. Run the pdh_cert_export command
 12. Run the get_ask_ark command
 13. Run the export_cert_chain command to export the PDH down to the ARK (AMD root) and zip it up
-14. Save the complete cert chain for Guest Owners (GO's)
+14. Save the complete cert chain to send to the Guest Owners (GO's)
 15. Make available UEFI image for guests
 
 ##### Guest Owner
@@ -305,7 +306,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the blob file to
      - Outputs:
-        - If --[ofolder] flag used: The blob file and Guest Owner DH public key certificate will be exported to the folder specified. The Guest Owner DH public and private keys are also exported during the process and are only to be used by the SEV-Tool. Otherwise, all files will be exported to the same directory as the SEV-Tool executable. Files: launch_blob.txt, godh.cert, (ignore these: godh_pubkey.pem, godh_privkey.pem).
+        - If --[ofolder] flag used: The blob file and Guest Owner DH public key certificate will be exported to the folder specified. The Guest Owner DH public and private keys are also exported during the process and are only to be used by the SEV-Tool. Otherwise, all files will be exported to the same directory as the SEV-Tool executable. Files: launch_blob.txt, godh.cert, (ignore these: godh_pubkey.pem, godh_privkey.pem). Note that the output blob file is a binary file; to import to qemu, the file needs to be manually converted to base64.
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --generate_launch_blob 39
