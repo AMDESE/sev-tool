@@ -80,13 +80,13 @@ Updated: 2019-09-19
      ```sh
      $ sudo ./sevtool -h
      ```
-* The --sysinfo flag will display the system information to the user such as: BIOS version, BIOS release date, SMT status, processor frequency, OS, Kernel version, Git commit number of the SEV-Tool, etc
+* The --sys_info flag will display the system information to the user such as: BIOS version, BIOS release date, SMT status, processor frequency, OS, Kernel version, Git commit number of the SEV-Tool, etc
      ```sh
-     $ sudo ./sevtool --sysinfo --get_id
+     $ sudo ./sevtool --sys_info --get_id
      ```
 * The --verbose and --brief flags will turn on/off displaying the out certs/IDs/etc to the screen on commands such as pek_csr, pdh_cert_export, get_id, etc
      ```sh
-     $ sudo ./sevtool --verbose --sysinfo --get_id
+     $ sudo ./sevtool --verbose --sys_info --get_id
      $ sudo ./sevtool --brief --pek_csr
      ```
 * Certain commands support the --ofolder flag which will allow the user to select the output folder for the certs exported by the command. See specific command for details
