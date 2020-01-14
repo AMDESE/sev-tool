@@ -1158,9 +1158,6 @@ int SEVDevice::get_ask_ark(const std::string output_folder,
         else if(family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
             cmd += ASK_ARK_ROME_SITE;
             cert_w_path += ASK_ARK_ROME_FILE;
-            // TODO take printf out when Rome cert comes out
-            printf("Note: the Rome .cert is NOT publically available yet. "\
-                        "Please email your AMD rep to get the cert\n");
         }
         else {
             printf("Error: Unable to determine Platform type. " \
