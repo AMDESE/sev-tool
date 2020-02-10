@@ -611,6 +611,14 @@ void SEVDevice::create_ovmf_var_file(std::string ovmf_bin, char * sev_temp_dir,
 }
 
 /**
+ * Checks if the shell vm is currently running.
+ */
+bool SEVDevice::dom_state_up(virDomainPtr dom)
+{
+    return !this->dom_state_down(dom);
+}
+
+/**
  * Checks if the shell vm is currently listed as down or non-existent.
  */
 bool SEVDevice::dom_state_down(virDomainPtr dom)
@@ -700,6 +708,7 @@ virDomainPtr SEVDevice::start_new_domain(virConnectPtr con,
 bool SEVDevice::valid_ovmf(virDomainPtr dom, bool sev_enabled, char * sev_temp_dir)
 {
     bool ret_val = false;
+    uint8_t check = 0;
 
     std::string file_name(sev_temp_dir);
     file_name += "/";
@@ -708,7 +717,15 @@ bool SEVDevice::valid_ovmf(virDomainPtr dom, bool sev_enabled, char * sev_temp_d
 
     std::ofstream pipe_in(file_name);
 
-    sleep(5);
+    for (; check < 3; check++)
+    {
+        printf("Waiting for OVMF to come up...\n");
+        sleep(3);
+        if (this->dom_state_up(dom))
+        {
+            break;
+        }
+    }
 
     // Attempt to shutdown the machine via OVMF. This is a valid check because
     // instances of OVMF without proper code will fail to respond.
@@ -716,11 +733,21 @@ bool SEVDevice::valid_ovmf(virDomainPtr dom, bool sev_enabled, char * sev_temp_d
     pipe_in.close();
 
     // Wait long enough for the VM to be shutdown.
-    sleep(5);
-
-    if (this->dom_state_down(dom))
+    for (check = 0; check < 3; check++)
     {
-        ret_val = true;
+        printf("Waiting for OVMF to shutdown...\n");
+        if (this->dom_state_down(dom))
+        {
+            ret_val = true;
+            break;
+        }
+        sleep(3);
+    }
+
+    if (!ret_val)
+    {
+        fprintf(stderr, "OVMF found running after OVMF reset given! Destroying transient VM!\n");
+        virDomainDestroy(dom);
     }
 
     virDomainUndefineFlags(dom, VIR_DOMAIN_UNDEFINE_NVRAM);

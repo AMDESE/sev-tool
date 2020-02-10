@@ -114,6 +114,7 @@ private:
     bool valid_qemu(virDomainPtr dom);
     bool valid_libvirt(virConnectPtr con);
     bool valid_ovmf(virDomainPtr dom, bool sev_enabled, char *sev_temp_dir);
+    bool dom_state_up(virDomainPtr dom);
     bool dom_state_down(virDomainPtr dom);
     virDomainPtr start_new_domain(virConnectPtr con, std::string name,
                                   bool sev_enable, struct sev_dom_details dom_details,
