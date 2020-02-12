@@ -139,17 +139,17 @@ bool sev::str_to_array(const std::string in_string, uint8_t *array,
 {
     std::string substring = "";
 
-    if(array_size < in_string.size() / 2) {
+    if (array_size < in_string.size() / 2) {
         return false;
     }
 
-    for(size_t i = 0; i < in_string.size()/2; i++) {
+    for (size_t i = 0; i < in_string.size()/2; i++) {
         substring = in_string.substr(i*2, 2);
         array[i] = (uint8_t)strtol(substring.c_str(), NULL, 16);
     }
 
     // printf("\nSTRING TO ARRAY: ");
-    // for(size_t i = 0; i < array_size; i++) {
+    // for (size_t i = 0; i < array_size; i++) {
     //     printf("%02x", array[i]);
     // }
     // printf("\n");
@@ -161,7 +161,7 @@ void sev::ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len)
 {
     std::string temp;
 
-    for(size_t i = 0; i < len; i++)
+    for (size_t i = 0; i < len; i++)
     {
         temp = {in_bytes[i*2], in_bytes[(i*2)+1], '\0'};
         ((uint8_t *)out)[i] = (uint8_t)stoi(temp, NULL, 16);
@@ -186,4 +186,14 @@ bool sev::reverse_bytes(uint8_t *bytes, size_t size)
     }
 
     return true;
+}
+
+bool sev::is_zero(const uint8_t *ptr, size_t bytes)
+{
+    uint8_t val = 0;
+    for (size_t i = 0; i < bytes; i++)
+    {
+        val |= ptr[i];
+    }
+    return (val == 0);
 }

@@ -21,6 +21,27 @@
 
 namespace sev
 {
+    #define SEV_DEFAULT_DIR "/usr/psp-sev-assets/"
+
+    #define PAGE_SIZE               4096        // Todo remove this one?
+    #define PAGE_SIZE_4K            4096
+    #define PAGE_SIZE_2M            (512*PAGE_SIZE_4K)
+
+    #define IS_ALIGNED(e, x)            (0==(((uintptr_t)(e))%(x)))
+    #define IS_ALIGNED_TO_16_BYTES(e)   IS_ALIGNED((e), 16)         // 4 bits
+    #define IS_ALIGNED_TO_32_BYTES(e)   IS_ALIGNED((e), 32)         // 5 bits
+    #define IS_ALIGNED_TO_64_BYTES(e)   IS_ALIGNED((e), 64)         // 6 bits
+    #define IS_ALIGNED_TO_128_BYTES(e)  IS_ALIGNED((e), 128)        // 7 bits
+    #define IS_ALIGNED_TO_4KB(e)        IS_ALIGNED((e), 4096)       // 12 bits
+    #define IS_ALIGNED_TO_1MB(e)        IS_ALIGNED((e), 0x100000)   // 20 bits
+    #define IS_ALIGNED_TO_2MB(e)        IS_ALIGNED((e), 0x200000)   // 21 bits
+
+    #define ALIGN_TO_16_BYTES(e)        ((((uintptr_t)(e))+0xF)&(~(uintptr_t)0xF))
+    #define ALIGN_TO_32_BYTES(e)        ((((uintptr_t)(e))+0x1F)&(~(uintptr_t)0x1F))
+    #define ALIGN_TO_64_BYTES(e)        ((((uintptr_t)(e))+0x3F)&(~(uintptr_t)0x3F))
+
+    #define BITS_PER_BYTE    8
+
     static inline void native_cpuid(unsigned int *eax, unsigned int *ebx,
                                     unsigned int *ecx, unsigned int *edx)
     {
@@ -48,7 +69,7 @@ namespace sev
 
     /**
      * Read an entire file in to a buffer, or as much as will fit.
-     * Return length * of file or of buffer, whichever is smaller.
+     * Return length of file or of buffer, whichever is smaller.
      */
     size_t read_file(const std::string file_name, void *buffer, size_t len);
 
@@ -82,8 +103,7 @@ namespace sev
      * This function is expecting the input string to be an even number of
      *      elements not including the null terminator
      */
-    bool str_to_array(const std::string in_string, uint8_t *array,
-                      uint32_t array_size);
+    bool str_to_array(const std::string in_string, uint8_t *array, uint32_t array_size);
 
     /**
      * If you have a buffer (or read in input file) that's in AsciiHexBytes,
@@ -95,6 +115,11 @@ namespace sev
      * Reverses bytes in a section of memory. Used in validating cert signatures
      */
     bool reverse_bytes(uint8_t *bytes, size_t size);
+
+    /**
+     * Checks if memory is 0. Similar to memcmp but doesn't require a second object
+     */
+    bool is_zero(const uint8_t *ptr, size_t bytes);
 } // namespace
 
 #endif /* UTILITIES_H */

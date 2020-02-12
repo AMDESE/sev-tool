@@ -15,9 +15,9 @@
  **************************************************************************/
 
 #include "amdcert.h"
-#include <openssl/ts.h> // SHA256_CTX
 #include "utilities.h"  // reverse_bytes
 #include <cstring>      // memset
+#include <openssl/ts.h> // SHA256_CTX
 
 /**
  * If out_str is passed in, fill up the string, else prints to std::out
@@ -37,20 +37,20 @@ void print_amd_cert_readable(const amd_cert *cert, std::string &out_str)
     sprintf(out+strlen(out), "%-15s%08x\n", "pub_exp_size:", cert->pub_exp_size);         // uint32_t
     sprintf(out+strlen(out), "%-15s%08x\n", "modulus_size:", cert->modulus_size);         // uint32_t
     sprintf(out+strlen(out), "\nPubExp:\n");
-    for(size_t i = 0; i < (size_t)(cert->pub_exp_size/8); i++) {    // bytes to uint8
+    for (size_t i = 0; i < (size_t)(cert->pub_exp_size/8); i++) {    // bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->pub_exp)[i] );
     }
     sprintf(out+strlen(out), "\nModulus:\n");
-    for(size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
+    for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->modulus)[i] );
     }
     sprintf(out+strlen(out), "\nSig:\n");
-    for(size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
+    for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
         sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->sig)[i] );
     }
     sprintf(out+strlen(out), "\n");
 
-    if(out_str == "NULL") {
+    if (out_str == "NULL") {
         printf("%s\n", out);
     }
     else {
@@ -73,23 +73,23 @@ void print_amd_cert_hex(const amd_cert *cert, std::string &out_str)
     out[0] = '\0';       // Gotta get the sprintf started
 
     // Print fixed parameters
-    for(size_t i = 0; i < fixed_offset; i++) {
+    for (size_t i = 0; i < fixed_offset; i++) {
         sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->version)[i] );
     }
     // Print pub_exp
-    for(size_t i = 0; i < (size_t)(cert->pub_exp_size/8); i++) {    // bytes to uint8
+    for (size_t i = 0; i < (size_t)(cert->pub_exp_size/8); i++) {    // bytes to uint8
         sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->pub_exp)[i] );
     }
     // Print nModulus
-    for(size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
+    for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
         sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->modulus)[i] );
     }
     // Print Sig
-    for(size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
+    for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
         sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->sig)[i] );
     }
 
-    if(out_str == "NULL") {
+    if (out_str == "NULL") {
         printf("%s\n\n\n", out);
     }
     else {
@@ -136,25 +136,25 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
          * Calculate the digest of the certificate body. This includes the
          * fixed body data, the public exponent, and the modulus.
          */
-        if(SHA256_Init(&ctx) != 1)
+        if (SHA256_Init(&ctx) != 1)
             break;
 
-        if(SHA256_Update(&ctx, cert, fixed_offset) != 1)
+        if (SHA256_Update(&ctx, cert, fixed_offset) != 1)
             break;
 
-        if(SHA256_Update(&ctx, &cert->pub_exp, cert->pub_exp_size/8) != 1)
+        if (SHA256_Update(&ctx, &cert->pub_exp, cert->pub_exp_size/8) != 1)
             break;
 
-        if(SHA256_Update(&ctx, &cert->modulus, cert->modulus_size/8) != 1)
+        if (SHA256_Update(&ctx, &cert->modulus, cert->modulus_size/8) != 1)
             break;
 
-        if(SHA256_Final((uint8_t *)&msg_digest, &ctx) != 1)
+        if (SHA256_Final((uint8_t *)&msg_digest, &ctx) != 1)
             break;
 
         // Swap the bytes of the signature
         memcpy(signature, &cert->sig, parent->modulus_size/8);
 
-        if(!sev::reverse_bytes(signature, parent->modulus_size/8))
+        if (!sev::reverse_bytes(signature, parent->modulus_size/8))
             break;
 
         // Verify the signature
@@ -250,19 +250,19 @@ SEV_ERROR_CODE AMDCert::amd_cert_public_key_hash(const amd_cert *cert,
         memset(&tmp_hash, 0, sizeof(tmp_hash));
 
         // Calculate the hash of the public key
-        if(SHA256_Init(&ctx) != 1)
+        if (SHA256_Init(&ctx) != 1)
             break;
 
-        if(SHA256_Update(&ctx, cert, fixed_offset) != 1)
+        if (SHA256_Update(&ctx, cert, fixed_offset) != 1)
             break;
 
-        if(SHA256_Update(&ctx, &cert->pub_exp, cert->pub_exp_size/8) != 1)
+        if (SHA256_Update(&ctx, &cert->pub_exp, cert->pub_exp_size/8) != 1)
             break;
 
-        if(SHA256_Update(&ctx, &cert->modulus, cert->modulus_size/8) != 1)
+        if (SHA256_Update(&ctx, &cert->modulus, cert->modulus_size/8) != 1)
             break;
 
-        if(SHA256_Final((uint8_t *)&tmp_hash, &ctx) != 1)
+        if (SHA256_Final((uint8_t *)&tmp_hash, &ctx) != 1)
             break;
 
         // Copy the hash to the output
@@ -351,10 +351,10 @@ SEV_ERROR_CODE AMDCert::amd_cert_export_pub_key(const amd_cert *cert,
 
         // Todo. This has the potential for issues if we keep the key size
         //       4k and change the SHA type on the next gen
-        if(cert->modulus_size == AMD_CERT_KEY_BITS_2K) {        // Naples
+        if (cert->modulus_size == AMD_CERT_KEY_BITS_2K) {        // Naples
             pub_key_cert->pub_key_algo = SEV_SIG_ALGO_RSA_SHA256;
         }
-        else if(cert->modulus_size == AMD_CERT_KEY_BITS_4K) {   // Rome
+        else if (cert->modulus_size == AMD_CERT_KEY_BITS_4K) {   // Rome
             pub_key_cert->pub_key_algo = SEV_SIG_ALGO_RSA_SHA384;
         }
 

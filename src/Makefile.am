@@ -1,7 +1,7 @@
 # The name of the resulting application after it is build.
 bin_PROGRAMS = sevtool
 
-sevtool_SOURCES = amdcert.cpp commands.cpp\
+sevtool_SOURCES = amdcert.cpp commands.cpp crypto.cpp\
 				  main.cpp sevcert.cpp\
 				  utilities.cpp tests.cpp
 if LINUX

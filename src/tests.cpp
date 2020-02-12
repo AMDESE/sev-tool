@@ -16,6 +16,7 @@
 
 #include "amdcert.h"
 #include "commands.h"
+#include "crypto.h"
 #include "sevapi.h"
 #include "sevcert.h"
 #include "tests.h"
@@ -38,7 +39,7 @@ bool Tests::clear_output_folder()
     std::string cmd = "rm -rf " + m_output_folder + "*";
     // std::string cmd = "find " + m_output_folder + " -type f \\( -name \\*.cert -o -name \\*.txt -o -name \\*.pem -o -name \\*.bin \\) -delete";
     std::string output = "";
-    if(!sev::execute_system_command(cmd, &output))
+    if (!sev::execute_system_command(cmd, &output))
         return false;
     return true;
 }
@@ -53,16 +54,13 @@ bool Tests::test_factory_reset()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
-    sev_cert dummy;
-    memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-    SEVCert cert(dummy);                    // TODO. Hack b/c just want to call function later
 
     do {
         printf("*Starting factory_reset tests\n");
 
         // Generate a new random ECDH keypair
         EVP_PKEY *oca_key_pair = NULL;
-        if(!cert.generate_ecdh_key_pair(&oca_key_pair))
+        if (!generate_ecdh_key_pair(&oca_key_pair))
             break;
 
         // Export the priv key to a pem file
@@ -71,25 +69,25 @@ bool Tests::test_factory_reset()
 
         // The only way to go from externally owned to self-owned is to do a
         // factory reset, so that's the best way to tell factory_reset working
-        if(cmd.set_externally_owned(oca_priv_key_pem) != STATUS_SUCCESS) {
+        if (cmd.set_externally_owned(oca_priv_key_pem) != STATUS_SUCCESS) {
             printf("Error: Set Platform externally owned, failed\n");
             break;
         }
 
         // Confirm we're externally owned
-        if(cmd.get_platform_owner() != PLATFORM_STATUS_OWNER_EXTERNAL) {
+        if (cmd.get_platform_owner() != PLATFORM_STATUS_OWNER_EXTERNAL) {
             printf("Error: Platform not externally-owned after pek_cert_import\n");
             break;
         }
 
         // Could call set_self_owned here, but there's a separate test for that
-        if(cmd.factory_reset() != STATUS_SUCCESS) {
+        if (cmd.factory_reset() != STATUS_SUCCESS) {
             printf("Error: Factory reset, failed\n");
             break;
         }
 
         // Confirm we're self owned
-        if(cmd.get_platform_owner() != PLATFORM_STATUS_OWNER_SELF) {
+        if (cmd.get_platform_owner() != PLATFORM_STATUS_OWNER_SELF) {
             printf("Error: Platform not self-owned after factory_reset\n");
             break;
         }
@@ -111,7 +109,7 @@ bool Tests::test_platform_status()
     do {
         printf("*Starting platform_status tests\n");
 
-        if(cmd.platform_status() != STATUS_SUCCESS)
+        if (cmd.platform_status() != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -139,41 +137,41 @@ bool Tests::test_pek_gen()
         printf("*Starting pek_gen tests\n");
 
         // Export the original PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
+        if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export original PEK/PDH certificates\n");
             break;
         }
 
         // Read in the original PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
+        if (sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::read_file(pdh_cert_full, &pdh_orig, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Call pek_gen to generate a new PEK, which also generates a new PDH
-        if(cmd.pek_gen() != STATUS_SUCCESS) {
+        if (cmd.pek_gen() != STATUS_SUCCESS) {
             printf("Error: Failure in pek_gen command\n");
             break;
         }
 
         // Export the new PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
+        if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export new PEK/PDH certificates\n");
             break;
         }
 
         // Read in the new PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
+        if (sev::read_file(cert_chain_full, &cert_chain_new, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::read_file(pdh_cert_full, &pdh_new, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Make sure the original and new certs are different
-        if(memcmp(PEK_IN_CERT_CHAIN(&cert_chain_new), PEK_IN_CERT_CHAIN(&cert_chain_orig), sizeof(sev_cert)) == 0) {
+        if (memcmp(PEK_IN_CERT_CHAIN(&cert_chain_new), PEK_IN_CERT_CHAIN(&cert_chain_orig), sizeof(sev_cert)) == 0) {
             printf("Error: PEK cert did not change after pek_gen\n");
             break;
         }
-        if(memcmp(&pdh_new, &pdh_orig, sizeof(sev_cert)) == 0) {
+        if (memcmp(&pdh_new, &pdh_orig, sizeof(sev_cert)) == 0) {
             printf("Error: PDH cert did not change after pek_gen\n");
             break;
         }
@@ -197,15 +195,15 @@ bool Tests::test_pek_csr()
     do {
         printf("*Starting pek_csr tests\n");
 
-        if(cmd.pek_csr() != STATUS_SUCCESS)
+        if (cmd.pek_csr() != STATUS_SUCCESS)
             break;
 
         // Read in the CSR
-        if(sev::read_file(pekcsr_full, &pekcsr, sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::read_file(pekcsr_full, &pekcsr, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Check the usage of the CSR
-        if(pekcsr.pub_key_usage != SEV_USAGE_PEK) {
+        if (pekcsr.pub_key_usage != SEV_USAGE_PEK) {
             printf("Error: PEKCsr certificate Usage did not match expected value\n");
             break;
         }
@@ -235,41 +233,41 @@ bool Tests::test_pdh_gen()
         printf("*Starting pek_gen tests\n");
 
         // Export the original PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
+        if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export original PEK/PDH certificates\n");
             break;
         }
 
         // Read in the original PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
+        if (sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::read_file(pdh_cert_full, &pdh_orig, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Call pek_gen to generate a new PEK, which also generates a new PDH
-        if(cmd.pdh_gen() != STATUS_SUCCESS) {
+        if (cmd.pdh_gen() != STATUS_SUCCESS) {
             printf("Error: Failure in pek_gen command\n");
             break;
         }
 
         // Export the new PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
+        if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export new PEK/PDH certificates\n");
             break;
         }
 
         // Read in the new PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
+        if (sev::read_file(cert_chain_full, &cert_chain_new, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::read_file(pdh_cert_full, &pdh_new, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Make sure the PEK certs are the same and PDH certs are different
-        if(memcmp(PEK_IN_CERT_CHAIN(&cert_chain_new), PEK_IN_CERT_CHAIN(&cert_chain_orig), sizeof(sev_cert)) != 0) {
+        if (memcmp(PEK_IN_CERT_CHAIN(&cert_chain_new), PEK_IN_CERT_CHAIN(&cert_chain_orig), sizeof(sev_cert)) != 0) {
             printf("Error: PEK cert changed after pek_gen\n");
             break;
         }
-        if(memcmp(&pdh_new, &pdh_orig, sizeof(sev_cert)) == 0) {
+        if (memcmp(&pdh_new, &pdh_orig, sizeof(sev_cert)) == 0) {
             printf("Error: PDH cert did not change after pek_gen\n");
             break;
         }
@@ -297,19 +295,19 @@ bool Tests::test_pdh_cert_export()
         printf("*Starting pdh_cert_export tests\n");
 
         // Export the PDH cert and cert chain from the Platform
-        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
+        if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export PDH certificate/cert chain\n");
             break;
         }
 
         // Read in the PDH and cert chain
-        if(sev::read_file(cert_chain_full, &cert_chain, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
+        if (sev::read_file(cert_chain_full, &cert_chain, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh, sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::read_file(pdh_cert_full, &pdh, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Check the usage of all certs
-        if(pdh.pub_key_usage != SEV_USAGE_PDH ||
+        if (pdh.pub_key_usage != SEV_USAGE_PDH ||
            ((sev_cert *)PEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_PEK ||
            ((sev_cert *)OCA_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_OCA ||
            ((sev_cert *)CEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_CEK) {
@@ -337,34 +335,31 @@ bool Tests::test_pek_cert_import()
     sev_cert_chain_buf cert_chain_new;
     sev_cert pdh_orig;
     sev_cert pdh_new;
-    sev_cert dummy;
-    memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-    SEVCert cert(dummy);                    // TODO. Hack b/c just want to call function later
 
     do {
         printf("*Starting pek_cert_import tests\n");
 
         // Set Platform to self-owned
-        if(cmd.set_self_owned() != STATUS_SUCCESS) {
+        if (cmd.set_self_owned() != STATUS_SUCCESS) {
             printf("Error: Failed to set Platform to self-owned\n");
             break;
         }
 
         // Export the original PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
+        if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export original PEK/PDH certificates\n");
             break;
         }
 
         // Read in the original PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
+        if (sev::read_file(cert_chain_full, &cert_chain_orig, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_orig, sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::read_file(pdh_cert_full, &pdh_orig, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Generate a new random ECDH keypair
         EVP_PKEY *oca_key_pair = NULL;
-        if(!cert.generate_ecdh_key_pair(&oca_key_pair))
+        if (!generate_ecdh_key_pair(&oca_key_pair))
             break;
 
         // Export the priv key to a pem file
@@ -372,27 +367,27 @@ bool Tests::test_pek_cert_import()
         write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
 
         // Call pek_cert_import and pass in the pem file's location
-        if(cmd.pek_cert_import(oca_priv_key_pem) != STATUS_SUCCESS)
+        if (cmd.pek_cert_import(oca_priv_key_pem) != STATUS_SUCCESS)
             break;
 
         // Export the new PEK/PDH certs from the Platform
-        if(cmd.pdh_cert_export() != STATUS_SUCCESS) {
+        if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
             printf("Error: Failed to export new PEK/PDH certificates\n");
             break;
         }
 
         // Read in the new PEK/PDH certs
-        if(sev::read_file(cert_chain_full, &cert_chain_new, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
+        if (sev::read_file(cert_chain_full, &cert_chain_new, sizeof(sev_cert_chain_buf)) != sizeof(sev_cert_chain_buf))
             break;
-        if(sev::read_file(pdh_cert_full, &pdh_new, sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::read_file(pdh_cert_full, &pdh_new, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Make sure the original and new certs are different
-        if(memcmp(PEK_IN_CERT_CHAIN(&cert_chain_new), PEK_IN_CERT_CHAIN(&cert_chain_orig), sizeof(sev_cert)) == 0) {
+        if (memcmp(PEK_IN_CERT_CHAIN(&cert_chain_new), PEK_IN_CERT_CHAIN(&cert_chain_orig), sizeof(sev_cert)) == 0) {
             printf("Error: PEK cert did not change after pek_gen\n");
             break;
         }
-        if(memcmp(&pdh_new, &pdh_orig, sizeof(sev_cert)) == 0) {
+        if (memcmp(&pdh_new, &pdh_orig, sizeof(sev_cert)) == 0) {
             printf("Error: PDH cert did not change after pek_gen\n");
             break;
         }
@@ -416,7 +411,7 @@ bool Tests::test_get_id()
     do {
         printf("*Starting get_id tests\n");
 
-        if(cmd.get_id() != STATUS_SUCCESS)
+        if (cmd.get_id() != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -435,16 +430,13 @@ bool Tests::test_set_self_owned()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
-    sev_cert dummy;
-    memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-    SEVCert cert(dummy);                    // TODO. Hack b/c just want to call function later
 
     do {
         printf("*Starting factory_reset tests\n");
 
         // Generate a new random ECDH keypair
         EVP_PKEY *oca_key_pair = NULL;
-        if(!cert.generate_ecdh_key_pair(&oca_key_pair))
+        if (!generate_ecdh_key_pair(&oca_key_pair))
             break;
 
         // Export the priv key to a pem file
@@ -453,25 +445,25 @@ bool Tests::test_set_self_owned()
 
         // The only way to go from externally owned to self-owned is to do a
         // factory reset, so that's the best way to tell factory_reset working
-        if(cmd.set_externally_owned(oca_priv_key_pem) != STATUS_SUCCESS) {
+        if (cmd.set_externally_owned(oca_priv_key_pem) != STATUS_SUCCESS) {
             printf("Error: Set Platform externally owned, failed\n");
             break;
         }
 
         // Confirm we're externally owned
-        if(cmd.get_platform_owner() != PLATFORM_STATUS_OWNER_EXTERNAL) {
+        if (cmd.get_platform_owner() != PLATFORM_STATUS_OWNER_EXTERNAL) {
             printf("Error: Platform not externally-owned after pek_cert_import\n");
             break;
         }
 
         // Could call set_self_owned here, but there's a separate test for that
-        if(cmd.set_self_owned() != STATUS_SUCCESS) {
+        if (cmd.set_self_owned() != STATUS_SUCCESS) {
             printf("Error: Factory reset, failed\n");
             break;
         }
 
         // Confirm we're self owned
-        if(cmd.get_platform_owner() != PLATFORM_STATUS_OWNER_SELF) {
+        if (cmd.get_platform_owner() != PLATFORM_STATUS_OWNER_SELF) {
             printf("Error: Platform not self-owned after factory_reset\n");
             break;
         }
@@ -489,22 +481,19 @@ bool Tests::test_set_externally_owned()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
-    sev_cert dummy;
-    memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-    SEVCert cert(dummy);                    // TODO. Hack b/c just want to call function later
 
     do {
         printf("*Starting set_externally_owned tests\n");
 
         // Set Platform to self-owned
-        if(cmd.factory_reset() != STATUS_SUCCESS) {
+        if (cmd.factory_reset() != STATUS_SUCCESS) {
             printf("Error: Factory reset, failed\n");
             break;
         }
 
         // Generate a new random ECDH keypair
         EVP_PKEY *oca_key_pair = NULL;
-        if(!cert.generate_ecdh_key_pair(&oca_key_pair))
+        if (!generate_ecdh_key_pair(&oca_key_pair))
             break;
 
         //  Export the priv key to a pem file
@@ -513,11 +502,11 @@ bool Tests::test_set_externally_owned()
 
         // Call set_externally_owned which calls pek_cert_import (which needs
         //  the oca private key's pem file's location)
-        if(cmd.set_externally_owned(oca_priv_key_pem) != STATUS_SUCCESS)
+        if (cmd.set_externally_owned(oca_priv_key_pem) != STATUS_SUCCESS)
             break;
 
         // Confirm we're externally-owned
-        if(cmd.get_platform_owner() != PLATFORM_STATUS_OWNER_EXTERNAL) {
+        if (cmd.get_platform_owner() != PLATFORM_STATUS_OWNER_EXTERNAL) {
             printf("Error: Platform not externally-owned after pek_cert_import\n");
             break;
         }
@@ -541,15 +530,15 @@ bool Tests::test_generate_cek_ask()
     do {
         printf("*Starting generate_cek_ask tests\n");
 
-        if(cmd.generate_cek_ask() != STATUS_SUCCESS)
+        if (cmd.generate_cek_ask() != STATUS_SUCCESS)
             break;
 
         // Read in the CEK
-        if(sev::read_file(cek_full, &cek, sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::read_file(cek_full, &cek, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Check the usage of the CEK
-        if(cek.pub_key_usage != SEV_USAGE_CEK) {
+        if (cek.pub_key_usage != SEV_USAGE_CEK) {
             printf("Error: CEK certificate Usage did not match expected value\n");
             break;
         }
@@ -577,12 +566,12 @@ bool Tests::test_get_ask_ark()
     do {
         printf("*Starting get_ask_ark tests\n");
 
-        if(cmd.get_ask_ark() != STATUS_SUCCESS)
+        if (cmd.get_ask_ark() != STATUS_SUCCESS)
             break;
 
         // Read in the ask_ark so we can split it into 2 separate cert files
         uint8_t ask_ark_buf[sizeof(amd_cert)*2] = {0};
-        if(sev::read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0) {
+        if (sev::read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0) {
             printf("Error: Unable to read in ASK_ARK certificate\n");
             break;
         }
@@ -603,7 +592,7 @@ bool Tests::test_get_ask_ark()
         // print_amd_cert_readable(&ark);
 
         // Check the usage of the ASK and ARK
-        if(ask.key_usage != AMD_USAGE_ASK || ark.key_usage != AMD_USAGE_ARK ) {
+        if (ask.key_usage != AMD_USAGE_ASK || ark.key_usage != AMD_USAGE_ARK ) {
             printf("Error: Certificate Usage did not match expected value\n");
             break;
         }
@@ -622,7 +611,7 @@ bool Tests::test_export_cert_chain()
     do {
         printf("*Starting export_cert_chain tests\n");
 
-        if(cmd.export_cert_chain() != STATUS_SUCCESS)
+        if (cmd.export_cert_chain() != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -654,18 +643,18 @@ bool Tests::test_calc_measurement()
     do {
         printf("*Starting calc_measurement tests\n");
 
-        if(cmd.calc_measurement(&data) != STATUS_SUCCESS)
+        if (cmd.calc_measurement(&data) != STATUS_SUCCESS)
             break;
 
         // Read in the actual output
         uint8_t actual_output[2*sizeof(hmac_sha_256)];  // 2 chars per byte +1 for null term
         std::string meas_out_full = m_output_folder + CALC_MEASUREMENT_FILENAME;
-        if(sev::read_file(meas_out_full, actual_output, sizeof(actual_output)) != sizeof(actual_output))
+        if (sev::read_file(meas_out_full, actual_output, sizeof(actual_output)) != sizeof(actual_output))
             break;
 
         // Make sure the actual output is equal to the expected
         printf("Expected: %s\nActual  : %s\n", expected_output.c_str(), actual_output);
-        if(memcmp(expected_output.c_str(), actual_output, sizeof(hmac_sha_256)) != 0)
+        if (memcmp(expected_output.c_str(), actual_output, sizeof(hmac_sha_256)) != 0)
             break;
 
         ret = true;
@@ -682,7 +671,7 @@ bool Tests::test_validate_cert_chain()
     do {
         printf("*Starting validate_cert_chain tests\n");
 
-        if(cmd.validate_cert_chain() != STATUS_SUCCESS)
+        if (cmd.validate_cert_chain() != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -701,7 +690,7 @@ bool Tests::test_generate_launch_blob()
     do {
         printf("*Starting generate_launch_blob tests\n");
 
-        if(cmd.generate_launch_blob(policy) != STATUS_SUCCESS)
+        if (cmd.generate_launch_blob(policy) != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -722,38 +711,38 @@ bool Tests::test_package_secret()
         printf("*Starting package_secret tests\n");
 
         // Export the PDH cert to be read in during package_secret
-        if(cmd.pdh_cert_export() != STATUS_SUCCESS)
+        if (cmd.pdh_cert_export() != STATUS_SUCCESS)
             break;
 
         // Generate the launch start blob to be read in during package_secret
-        if(cmd.generate_launch_blob(policy) != STATUS_SUCCESS)
+        if (cmd.generate_launch_blob(policy) != STATUS_SUCCESS)
             break;
 
         // Export a 'calculated measurement' that package_secret can read in for the header
         sys_cmd = "echo 6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea > " + m_output_folder + CALC_MEASUREMENT_FILENAME;
-        if(!sev::execute_system_command(sys_cmd, &output))
+        if (!sev::execute_system_command(sys_cmd, &output))
             return false;
 
         // FAILURE test: Try a secrets file that's less than 8 bytes
         printf("Running a negative/failure test. Should print an 'Error'\n");
         sys_cmd = "echo HELLO > " + m_output_folder + SECRET_FILENAME;
-        if(!sev::execute_system_command(sys_cmd, &output))
+        if (!sev::execute_system_command(sys_cmd, &output))
             return false;
-        if(cmd.package_secret() == STATUS_SUCCESS)   // fail
+        if (cmd.package_secret() == STATUS_SUCCESS)   // fail
             break;
 
         // Try a secrets file of 8 bytes
         sys_cmd = "echo HELLOooo > " + m_output_folder + SECRET_FILENAME;
-        if(!sev::execute_system_command(sys_cmd, &output))
+        if (!sev::execute_system_command(sys_cmd, &output))
             return false;
-        if(cmd.package_secret() != STATUS_SUCCESS)
+        if (cmd.package_secret() != STATUS_SUCCESS)
             break;
 
         // Try a longer secrets file (use the readable cert_chain file from pdh_cert_export)
         sys_cmd = "cp " + m_output_folder + CERT_CHAIN_READABLE_FILENAME + " " + m_output_folder + SECRET_FILENAME;
-        if(!sev::execute_system_command(sys_cmd, &output))
+        if (!sev::execute_system_command(sys_cmd, &output))
             return false;
-        if(cmd.package_secret() != STATUS_SUCCESS)
+        if (cmd.package_secret() != STATUS_SUCCESS)
             break;
 
         ret = true;
@@ -776,55 +765,55 @@ bool Tests::test_all()
 
         clear_output_folder();
 
-        if(!test_factory_reset())
+        if (!test_factory_reset())
             break;
 
-        if(!test_platform_status())
+        if (!test_platform_status())
             break;
 
-        if(!test_pek_gen())
+        if (!test_pek_gen())
             break;
 
-        if(!test_pek_csr())
+        if (!test_pek_csr())
             break;
 
-        if(!test_pdh_gen())
+        if (!test_pdh_gen())
             break;
 
-        if(!test_pdh_cert_export())
+        if (!test_pdh_cert_export())
             break;
 
-        if(!test_pek_cert_import())
+        if (!test_pek_cert_import())
             break;
 
-        if(!test_get_id())
+        if (!test_get_id())
             break;
 
-        if(!test_set_self_owned())
+        if (!test_set_self_owned())
             break;
 
-        if(!test_set_externally_owned())
+        if (!test_set_externally_owned())
             break;
 
-        if(!test_generate_cek_ask())
+        if (!test_generate_cek_ask())
             break;
 
-        if(!test_get_ask_ark())
+        if (!test_get_ask_ark())
             break;
 
-        if(!test_export_cert_chain())
+        if (!test_export_cert_chain())
             break;
 
-        if(!test_calc_measurement())
+        if (!test_calc_measurement())
             break;
 
-        // if(!test_validate_cert_chain())
+        // if (!test_validate_cert_chain())
         //     break;
 
-        if(!test_generate_launch_blob())
+        if (!test_generate_launch_blob())
             break;
 
-        if(!test_package_secret())
+        if (!test_package_secret())
             break;
 
         printf("All tests Succeeded!\n");

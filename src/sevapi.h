@@ -38,7 +38,10 @@ typedef bool _Bool;
 // TMR (Trusted Memory Region) size required for INIT with SEV-ES enabled
 #define SEV_TMR_SIZE (1024*1024)
 
-// Invalid guest handle.
+// NV data size required for INIT_EX.
+#define SEV_NV_SIZE (32*1024)
+
+// Invalid Guest handle.
 #define INVALID_GUEST_HANDLE    0
 
 #define INVALID_ASID    0
@@ -48,54 +51,68 @@ typedef bool _Bool;
 /**
  * SEV commands (each entry stored in a byte).
  */
-typedef enum __attribute__((mode(HI))) SEV_API_COMMANDS
+typedef enum __attribute__((mode(HI))) SEV_API_COMMAND
 {
-    NO_COMMAND          = 0x0,
-    INIT                = 0x1,
-    SHUTDOWN            = 0x2,
-    PLATFORM_RESET      = 0x3,
-    PLATFORM_STATUS     = 0x4,
-    PEK_GEN             = 0x5,
-    PEK_CSR             = 0x6,
-    PEK_CERT_IMPORT     = 0x7,
-    PDH_CERT_EXPORT     = 0x8,
-    PDH_GEN             = 0x9,
-    DF_FLUSH            = 0xA,
-    DOWNLOAD_FIRMWARE   = 0xB,
-    GET_ID              = 0xC,
-    INIT_EX             = 0xD,
-    DECOMMISSION        = 0x20,
-    ACTIVATE            = 0x21,
-    DEACTIVATE          = 0x22,
-    GUEST_STATUS        = 0x23,
-    COPY                = 0x24,
-    ACTIVATE_EX         = 0x25,
-    LAUNCH_START        = 0x30,
-    LAUNCH_UPDATE_DATA  = 0x31,
-    LAUNCH_UPDATE_VMSA  = 0x32,
-    LAUNCH_MEASURE      = 0x33,
-    LAUNCH_SECRET       = 0x34,
-    LAUNCH_FINISH       = 0x35,
-    SEND_START          = 0x40,
-    SEND_UPDATE_DATA    = 0x41,
-    SEND_UPDATE_VMSA    = 0x42,
-    SEND_FINISH         = 0x43,
-    RECEIVE_START       = 0x50,
-    RECEIVE_UPDATE_DATA = 0x51,
-    RECEIVE_UPDATE_VMSA = 0x52,
-    RECEIVE_FINISH      = 0x53,
-    DBG_DECRYPT         = 0x60,
-    DBG_ENCRYPT         = 0x61,
-} SEV_API_COMMAND_CODE;
+    NO_COMMAND              = 0x0,
+
+    /* SEV Platform commands */
+    INIT                    = 0x01,     /* Initialize the Platform */
+    SHUTDOWN                = 0x02,     /* Shut down the Platform */
+    PLATFORM_RESET          = 0x03,     /* Delete the persistent Platform state */
+    PLATFORM_STATUS         = 0x04,     /* Return status of the Platform */
+    PEK_GEN                 = 0x05,     /* Generate a new PEK */
+    PEK_CSR                 = 0x06,     /* Generate a PEK certificate signing request */
+    PEK_CERT_IMPORT         = 0x07,     /* Import the signed PEK certificate */
+    PDH_CERT_EXPORT         = 0x08,     /* Export the PDH and its certificate chains */
+    PDH_GEN                 = 0x09,     /* Generate a new PDH and PEK signature */
+    DF_FLUSH                = 0x0A,     /* Flush the data fabric */
+    DOWNLOAD_FIRMWARE       = 0x0B,     /* Download new SEV FW */
+    GET_ID                  = 0x0C,     /* Get the Platform ID needed for KDS */
+    INIT_EX                 = 0x0D,     /* Initialize the Platform, extended */
+
+    /* SEV Guest commands */
+    DECOMMISSION            = 0x20,     /* Delete the Guest's SEV context */
+    ACTIVATE                = 0x21,     /* Load a Guest's key into the UMC */
+    DEACTIVATE              = 0x22,     /* Unload a Guest's key from the UMC */
+    GUEST_STATUS            = 0x23,     /* Query the status and metadata of a Guest */
+    COPY                    = 0x24,     /* Copy/move encrypted Guest page(s) */
+    ACTIVATE_EX             = 0x25,     /* the Guest is bound to a particular ASID and to CCX(s) which will be
+                                           allowed to run the Guest. Then Guest's key is loaded into the UMC */
+
+    /* SEV Guest launch commands */
+    LAUNCH_START            = 0x30,     /* Begin to launch a new SEV enabled Guest */
+    LAUNCH_UPDATE_DATA      = 0x31,     /* Encrypt Guest data for launch */
+    LAUNCH_UPDATE_VMSA      = 0x32,     /* Encrypt Guest VMCB save area for launch */
+    LAUNCH_MEASURE          = 0x33,     /* Output the launch measurement */
+    LAUNCH_SECRET           = 0x34,     /* Import a Guest secret sent from the Guest owner */
+    LAUNCH_FINISH           = 0x35,     /* Complete launch of Guest */
+
+    /* SEV Guest migration commands (outgoing) */
+    SEND_START              = 0x40,     /* Begin to send Guest to new remote Platform */
+    SEND_UPDATE_DATA        = 0x41,     /* Re-encrypt Guest data for transmission */
+    SEND_UPDATE_VMSA        = 0x42,     /* Re-encrypt Guest VMCB save area for transmission */
+    SEND_FINISH             = 0x43,     /* Complete sending Guest to remote Platform */
+
+    /* SEV Guest migration commands (incoming) */
+    RECEIVE_START           = 0x50,     /* Begin to receive Guest from remote Platform */
+    RECEIVE_UPDATE_DATA     = 0x51,     /* Re-encrypt Guest data from transmission */
+    RECEIVE_UPDATE_VMSA     = 0x52,     /* Re-encrypt Guest VMCB save area from transmission */
+    RECEIVE_FINISH          = 0x53,     /* Complete receiving Guest from remote Platform */
+
+    /* SEV Debugging commands */
+    DBG_DECRYPT             = 0x60,     /* Decrypt Guest memory region for debugging */
+    DBG_ENCRYPT             = 0x61,     /* Encrypt Guest memory region for debugging */
+
+    SEV_LIMIT,                          /* Invalid command ID */
+} SEV_API_COMMAND;
 
 // Chapter 5.1.2 - Platform State Machine
 /**
  * SEV Platform state (each entry stored in a byte).
  *
- * @UNINIT  - The platform is uninitialized.
- * @INIT    - The platform is initialized, but not currently managed by any
- *            guests.
- * @WORKING - The platform is initialized, and currently managing guests.
+ * @UNINIT  - The Platform is uninitialized.
+ * @INIT    - The Platform is initialized, but not currently managed by any guests.
+ * @WORKING - The Platform is initialized, and currently managing guests.
  *
  * Allowed Platform Commands:
  * @UNINIT  - INIT, PLATFORM_RESET, PLATFORM_STATUS, DOWNLOAD_FIRMWARE, GET_ID
@@ -106,9 +123,11 @@ typedef enum __attribute__((mode(HI))) SEV_API_COMMANDS
  */
 typedef enum __attribute__((mode(QI))) SEV_PLATFORM_STATE
 {
-    PLATFORM_UNINIT     = 0,
-    PLATFORM_INIT       = 1,
-    PLATFORM_WORKING    = 2,
+    SEV_PLATFORM_UNINIT  = 0,
+    SEV_PLATFORM_INIT    = 1,
+    SEV_PLATFORM_WORKING = 2,
+
+    SEV_PLATFORM_LIMIT,
 } SEV_PLATFORM_STATE;
 
 // Chapter 6.1.1 - GSTATE Finite State Machine
@@ -116,15 +135,15 @@ typedef enum __attribute__((mode(QI))) SEV_PLATFORM_STATE
  * GSTATE Finite State machine status'
  *
  * Description:
- * @UNINIT  - The guest is uninitialized.
- * @LUPDATE - The guest is currently being launched and plaintext data and VMCB
+ * @UNINIT  - The Guest is uninitialized.
+ * @LUPDATE - The Guest is currently being launched and plaintext data and VMCB
  *            save areas are being imported.
- * @LSECRET - The guest is currently being launched and ciphertext data are
+ * @LSECRET - The Guest is currently being launched and ciphertext data are
  *            is being imported.
- * @RUNNING - The guest is fully launched or migrated in, and not being
+ * @RUNNING - The Guest is fully launched or migrated in, and not being
  *            migrated out to another machine.
- * @SUPDATE - The guest is currently being migrated out to another machine.
- * @RUPDATE - The guest is currently being migrated from another machine.
+ * @SUPDATE - The Guest is currently being migrated out to another machine.
+ * @RUPDATE - The Guest is currently being migrated from another machine.
  *
  * Allowed Guest Commands:
  * @UNINIT  - LAUNCH_START, RECEIVE_START
@@ -140,12 +159,14 @@ typedef enum __attribute__((mode(QI))) SEV_PLATFORM_STATE
  */
 typedef enum __attribute__((mode(QI))) SEV_GUEST_STATE
 {
-    GUEST_UNINIT     = 0,
-    GUEST_LUPDATE    = 1,
-    GUEST_LSECRET    = 2,
-    GUEST_RUNNING    = 3,
-    GUEST_SUPDATE    = 4,
-    GUEST_RUPDATE    = 5,
+    SEV_GUEST_UNINIT    = 0,
+    SEV_GUEST_LUPDATE   = 1,
+    SEV_GUEST_LSECRET   = 2,
+    SEV_GUEST_RUNNING   = 3,
+    SEV_GUEST_SUPDATE   = 4,
+    SEV_GUEST_RUPDATE   = 5,
+    SEV_GUEST_SENT      = 6,
+    SEV_GUEST_STATE_LIMIT,
 } SEV_GUEST_STATE;
 
 // Chapter 4.4 - Status Codes
@@ -178,6 +199,9 @@ typedef enum __attribute__((mode(HI))) SEV_ERROR_CODE
     ERROR_UNSUPPORTED               = 0x15,
     ERROR_INVALID_PARAM             = 0x16,
     ERROR_RESOURCE_LIMIT            = 0x17,
+    ERROR_SECURE_DATA_INVALID       = 0x18,
+
+    ERROR_LIMIT,
 } SEV_ERROR_CODE;
 
 // ------------------------------------------------------------ //
@@ -187,8 +211,8 @@ typedef enum __attribute__((mode(HI))) SEV_ERROR_CODE
 // Chapter 2 - Summary of Keys
 typedef uint8_t aes_128_key[128/8];
 typedef uint8_t hmac_key_128[128/8];
-typedef uint8_t hmac_sha_256[256/8];
-typedef uint8_t hmac_sha_512[512/8];
+typedef uint8_t hmac_sha_256[256/8];  // 256
+typedef uint8_t hmac_sha_512[512/8];  // 384, 512
 typedef uint8_t nonce_128[128/8];
 typedef uint8_t iv_128[128/8];
 
@@ -463,17 +487,17 @@ enum __attribute__((mode(SI))) SEV_CONFIG
 /**
  * SEV Guest Policy bits (stored as a bit field struct).
  *
- * @nodbg     - Debugging of the guest is disallowed
+ * @nodbg     - Debugging of the Guest is disallowed
  * @noks      - Sharing keys with other guests is disallowed
  * @es        - SEV-ES is required
- * @nosend    - Disallow sending of guest to another platform
- * @domain    - Guest must not be transmitted to another platform
+ * @nosend    - Disallow sending of Guest to another Platform
+ * @domain    - Guest must not be transmitted to another Platform
  *              outside the domain
- * @sev       - The guest must not be transmitted to another platform
+ * @sev       - The Guest must not be transmitted to another Platform
  *              that is not SEV capable
- * @api_major - The guest must not be transmitted to another platform
+ * @api_major - The Guest must not be transmitted to another Platform
  *              lower than the specified major version
- * @api_minor - The guest must not be transmitted to another platform
+ * @api_minor - The Guest must not be transmitted to another Platform
  *              lower than the specified minor version
  * @raw       - The raw unsigned 32 bit value stored in memory at the
  *              specified location.
@@ -482,7 +506,7 @@ enum SEV_POLICY : uint32_t
 {
     SEV_POLICY_NODBG     = 1 << 0,      // 1 disables DBG commands
     SEV_POLICY_NOKS      = 1 << 1,      // 1 disables key sharing
-    SEV_POLICY_ES        = 1 << 2,      // 1 designates and SEV-ES guest
+    SEV_POLICY_ES        = 1 << 2,      // 1 designates an SEV-ES Guest
     SEV_POLICY_NOSEND    = 1 << 3,      // 1 disables all SEND operations
     SEV_POLICY_DOMAIN    = 1 << 4,      // 1 SEND only to machine with same OCA
     SEV_POLICY_SEV       = 1 << 5,      // 1 SEND only to AMD machine
@@ -490,22 +514,23 @@ enum SEV_POLICY : uint32_t
     SEV_POLICY_API_MINOR = (uint32_t)0xff << 24,  // API Minor bits
 };
 
-// Maximally restrictive guest policy
+// Maximally restrictive Guest policy
 #define SEV_POLICY_MAX ((SEV_POLICY)(SEV_POLICY_NODBG|SEV_POLICY_NOKS| \
-    SEV_POLICY_ES|SEV_POLICY_NOSEND))
-// Minimally restrictive guest policy
+                                     SEV_POLICY_ES|SEV_POLICY_NOSEND))
+// Minimally restrictive Guest policy
 #define SEV_POLICY_MIN ((SEV_POLICY)(0))
-// Recommended normal guest policy
+// Recommended normal Guest policy
 #define SEV_POLICY_NORM ((SEV_POLICY)(SEV_POLICY_NODBG|SEV_POLICY_NOKS| \
-    SEV_POLICY_ES|SEV_POLICY_DOMAIN|SEV_POLICY_SEV))
-// Recommended guest policy for debugging
-// Allows DBG ops, examination of guest state (ie, no SEV-ES)
+                                      SEV_POLICY_ES|SEV_POLICY_DOMAIN| \
+                                      SEV_POLICY_SEV))
+// Recommended Guest policy for debugging
+// Allows DBG ops, examination of Guest state (ie, no SEV-ES)
 #define SEV_POLICY_DEBUG ((SEV_POLICY)(SEV_POLICY_NOKS|SEV_POLICY_DOMAIN| \
-    SEV_POLICY_SEV))
+                                       SEV_POLICY_SEV))
 
 /**
  * PLATFORM_STATUS Command Sub-Buffer
- * Status of the owner of the platform (each entry stored in one byte).
+ * Status of the owner of the Platform (each entry stored in one byte).
  */
 enum SEV_PLATFORM_STATUS_OWNER
 {
@@ -664,10 +689,6 @@ typedef struct __attribute__ ((__packed__)) sev_pek_cert_import_cmd_buf_t
     uint32_t    oca_cert_length;
 } sev_pek_cert_import_cmd_buf;
 
-typedef struct __attribute__ ((__packed__)) sev_pdh_gen_cmd_buf_t
-{
-} sev_pdh_gen_cmd_buf;
-
 typedef struct __attribute__ ((__packed__)) sev_pdh_cert_export_cmd_buf_t
 {
     uint64_t    pdh_cert_p_addr;    // sev_cert
@@ -677,6 +698,15 @@ typedef struct __attribute__ ((__packed__)) sev_pdh_cert_export_cmd_buf_t
     uint32_t    certs_length;
 } sev_pdh_cert_export_cmd_buf;
 
+typedef struct __attribute__ ((__packed__)) sev_pdh_gen_cmd_buf_t
+{
+} sev_pdh_gen_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) sev_df_flush_cmd_buf_t
+{
+} sev_df_flush_cmd_buf;
+
+#define DLFW_IMAGE_MAX_LENGTH       64*1024     // 64KB Naples/Rome
 typedef struct __attribute__ ((__packed__)) sev_download_firmware_cmd_buf_t
 {
     uint64_t    fw_p_addr;
@@ -699,6 +729,47 @@ typedef struct __attribute__ ((__packed__)) sev_init_ex_cmd_buf_t
     uint64_t    nv_phys_addr;
     uint32_t    nv_length;          // Must be 32KB
 } sev_init_ex_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) sev_decommission_cmd_buf_t
+{
+    uint32_t    handle;
+} sev_decommission_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) sev_activate_cmd_buf_t
+{
+    uint32_t    handle;
+    uint32_t    asid;
+} sev_activate_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) sev_deactivate_cmd_buf_t
+{
+    uint32_t    handle;
+} sev_deactivate_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) sev_guest_status_cmd_buf_t
+{
+    uint32_t    handle;
+    SEV_POLICY  policy;         // SEV_POLICY
+    uint32_t    asid;
+    uint8_t     state;          // SEV_GUEST_STATE
+} sev_guest_status_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) sev_copy_cmd_buf_t
+{
+    uint32_t    handle;
+    uint32_t    length;
+    uint64_t    src_p_addr;
+    uint64_t    dst_p_addr;
+} sev_copy_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) sev_activate_ex_cmd_buf_t
+{
+    uint32_t    ex_len;
+    uint32_t    handle;
+    uint32_t    asid;
+    uint32_t    num_ids;
+    uint64_t    ids_p_addr;
+} sev_activate_ex_cmd_buf;
 
 // Chapter 6: Guest Management API
 typedef struct __attribute__ ((__packed__)) sev_launch_start_cmd_buf_t
@@ -848,51 +919,6 @@ typedef struct __attribute__ ((__packed__)) sev_receive_finish_cmd_buf_t
 {
     uint32_t    handle;
 } sev_receive_finish_cmd_buf;
-
-typedef struct __attribute__ ((__packed__)) sev_guest_status_cmd_buf_t
-{
-    uint32_t    handle;
-    SEV_POLICY  policy;         // SEV_POLICY
-    uint32_t    asid;
-    uint8_t     state;          // SEV_GUEST_STATE
-} sev_guest_status_cmd_buf;
-
-typedef struct __attribute__ ((__packed__)) sev_activate_cmd_buf_t
-{
-    uint32_t    handle;
-    uint32_t    asid;
-} sev_activate_cmd_buf;
-
-typedef struct __attribute__ ((__packed__)) sev_activate_ex_cmd_buf_t
-{
-    uint32_t    ex_len;
-    uint32_t    handle;
-    uint32_t    asid;
-    uint32_t    num_ids;
-    uint64_t    ids_p_addr;
-} sev_activate_ex_cmd_buf;
-
-typedef struct __attribute__ ((__packed__)) sev_deactivate_cmd_buf_t
-{
-    uint32_t    handle;
-} sev_deactivate_cmd_buf;
-
-typedef struct __attribute__ ((__packed__)) sev_df_flush_cmd_buf_t
-{
-} sev_df_flush_cmd_buf;
-
-typedef struct __attribute__ ((__packed__)) sev_decommission_cmd_buf_t
-{
-    uint32_t    handle;
-} sev_decommission_cmd_buf;
-
-typedef struct __attribute__ ((__packed__)) sev_copy_cmd_buf_t
-{
-    uint32_t    handle;
-    uint32_t    length;
-    uint64_t    src_p_addr;
-    uint64_t    dst_p_addr;
-} sev_copy_cmd_buf;
 
 // Chapter: Debugging API
 typedef struct __attribute__ ((__packed__)) sev_dbg_decrypt_cmd_buf_t
