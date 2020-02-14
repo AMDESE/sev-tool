@@ -373,6 +373,23 @@ void SEVDevice::get_family_model(uint32_t *family, uint32_t *model)
     *model = std::stoi(model_str, NULL, 10);
 }
 
+ePSP_DEVICE_TYPE SEVDevice::get_device_type(void)
+{
+    uint32_t family = 0;
+    uint32_t model = 0;
+
+    get_family_model(&family, &model);
+
+    if (family == NAPLES_FAMILY && (int)model >= (int)NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
+        return PSP_DEVICE_TYPE_NAPLES;
+    }
+    else if (family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
+        return PSP_DEVICE_TYPE_ROME;
+    }
+    else
+        return PSP_DEVICE_TYPE_INVALID;
+}
+
 /**
  * Verifies that the SEV kernel modules have been loaded successfully for KVM.
  */
@@ -1161,8 +1178,7 @@ int SEVDevice::get_ask_ark(const std::string output_folder,
     int cmd_ret = SEV_RET_UNSUPPORTED;
     std::string cmd = "wget ";
     std::string output = "";
-    uint32_t family = 0;
-    uint32_t model = 0;
+    ePSP_DEVICE_TYPE device_type = PSP_DEVICE_TYPE_INVALID;
     std::string cert_w_path = "";
     std::string to_cert_w_path = output_folder + cert_file;
 
@@ -1177,18 +1193,18 @@ int SEVDevice::get_ask_ark(const std::string output_folder,
             break;
         }
 
-        get_family_model(&family, &model);
-        if (family == NAPLES_FAMILY && (int)model >= (int)NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
+        device_type = get_device_type();
+        if (device_type == PSP_DEVICE_TYPE_NAPLES) {
             cmd += ASK_ARK_NAPLES_SITE;
             cert_w_path += ASK_ARK_NAPLES_FILE;
         }
-        else if (family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
+        else if (device_type == PSP_DEVICE_TYPE_ROME) {
             cmd += ASK_ARK_ROME_SITE;
             cert_w_path += ASK_ARK_ROME_FILE;
         }
         else {
             printf("Error: Unable to determine Platform type. " \
-                        "Detected Family %i, Model %i\n", family, model);
+                        "Detected %i\n", (uint32_t)device_type);
             break;
         }
 

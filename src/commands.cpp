@@ -664,7 +664,7 @@ int Command::validate_cert_chain(void)
         AMDCert tmp_amd;
 
         // Validate the ARK
-        cmd_ret = tmp_amd.amd_cert_validate_ark(&ark);
+        cmd_ret = tmp_amd.amd_cert_validate_ark(&ark, m_sev_device->get_device_type());
         if (cmd_ret != STATUS_SUCCESS)
             break;
 

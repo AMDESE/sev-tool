@@ -44,6 +44,12 @@ constexpr uint32_t ROME_FAMILY       = 0x17UL;      // 23
 constexpr uint32_t ROME_MODEL_LOW    = 0x30UL;
 constexpr uint32_t ROME_MODEL_HIGH   = 0x3FUL;
 
+enum __attribute__((mode(QI))) ePSP_DEVICE_TYPE {
+    PSP_DEVICE_TYPE_INVALID = 0,
+    PSP_DEVICE_TYPE_NAPLES  = 1,
+    PSP_DEVICE_TYPE_ROME    = 2,
+};
+
 constexpr char LINUX_SEV_FILE[]         = "/dev/sev";
 constexpr char QMP_SEV_CAPS_CMD[]       = "{\"execute\": \"query-sev-capabilities\"}";
 constexpr char KVM_AND_SEV_PARAM[]      = "/sys/module/kvm_amd/parameters/sev";
@@ -59,8 +65,8 @@ constexpr uint32_t BAD_DEVICE_TYPE  = ((uint32_t)~0);
 constexpr uint32_t BAD_FAMILY_MODEL = ((uint32_t)~0);
 
 // Platform Status Buffer flags param was split up into owner/ES in API v0.17
-constexpr uint8_t PLAT_STAT_OWNER_OFFSET    = 0;
-constexpr uint8_t PLAT_STAT_CONFIGES_OFFSET = 8;
+constexpr uint8_t  PLAT_STAT_OWNER_OFFSET    = 0;
+constexpr uint8_t  PLAT_STAT_CONFIGES_OFFSET = 8;
 constexpr uint32_t PLAT_STAT_OWNER_MASK      = (1U << PLAT_STAT_OWNER_OFFSET);
 constexpr uint32_t PLAT_STAT_ES_MASK         = (1U << PLAT_STAT_CONFIGES_OFFSET);
 
@@ -161,6 +167,9 @@ public:
     int pek_cert_import(uint8_t *data, sev_cert *pek_csr,
                         const std::string oca_priv_key_file);
     int get_id(void *data, void *id_mem, uint32_t id_length = 0);
+    ePSP_DEVICE_TYPE get_device_type(void);
+
+    void check_dependencies(void);
 
     int sys_info();
     int set_self_owned(void);
@@ -174,8 +183,6 @@ public:
     int zip_certs(const std::string output_folder,
                   const std::string zip_name,
                   const std::string files_to_zip);
-
-    void check_dependencies(void);
 };
 
 #endif /* SEVCORE_H */

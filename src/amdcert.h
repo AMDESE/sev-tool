@@ -18,6 +18,7 @@
 #define AMDCERT_H
 
 #include "sevapi.h"
+#include "sevcore.h"    // for ePSP_DEVICE_TYPE
 #include <string>
 
 constexpr uint32_t AMD_CERT_VERSION       = 0x01;
@@ -26,9 +27,13 @@ constexpr uint32_t AMD_CERT_KEY_BITS_2K   = 2048;
 constexpr uint32_t AMD_CERT_KEY_BITS_4K   = 4096;
 constexpr uint32_t AMD_CERT_KEY_BYTES_4K  = (AMD_CERT_KEY_BITS_4K/8);
 
-static constexpr uint8_t amd_root_key_id[AMD_CERT_ID_SIZE_BYTES] = {
+static constexpr uint8_t amd_root_key_id_naples[AMD_CERT_ID_SIZE_BYTES] = {
         0x1b, 0xb9, 0x87, 0xc3, 0x59, 0x49, 0x46, 0x06,
         0xb1, 0x74, 0x94, 0x56, 0x01, 0xc9, 0xea, 0x5b,
+};
+static constexpr uint8_t amd_root_key_id_rome[AMD_CERT_ID_SIZE_BYTES] = {
+		0xe6, 0x00, 0x21, 0x22, 0xfb, 0x58, 0x41, 0x93,
+		0x99, 0xd1, 0x5f, 0xee, 0x7b, 0x13, 0x13, 0x51
 };
 
 // Public global functions
@@ -53,7 +58,8 @@ public:
     ~AMDCert() {};
 
     bool key_size_is_valid(size_t size);
-    SEV_ERROR_CODE amd_cert_validate_ark(const amd_cert *ark);
+    SEV_ERROR_CODE amd_cert_validate_ark(const amd_cert *ark,
+                                         ePSP_DEVICE_TYPE device_type);
     SEV_ERROR_CODE amd_cert_validate_ask(const amd_cert *ask,
                                          const amd_cert *ark);
     size_t amd_cert_get_size(const amd_cert *cert);

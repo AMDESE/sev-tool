@@ -274,11 +274,13 @@ SEV_ERROR_CODE AMDCert::amd_cert_public_key_hash(const amd_cert *cert,
     return cmd_ret;
 }
 
-SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
+SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark,
+                                              ePSP_DEVICE_TYPE device_type)
 {
     SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;
     hmac_sha_256 hash;
     hmac_sha_256 fused_hash;
+    const uint8_t *amd_root_key_id = NULL;
 
     do {
         if (!ark) {
@@ -298,6 +300,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
                 break;
         }
 
+        amd_root_key_id = (device_type == PSP_DEVICE_TYPE_NAPLES) ? amd_root_key_id_naples : amd_root_key_id_rome;
         if (memcmp(&ark->key_id_0, amd_root_key_id, sizeof(ark->key_id_0 + ark->key_id_1)) != 0)
         {
             cmd_ret = ERROR_INVALID_CERTIFICATE;
