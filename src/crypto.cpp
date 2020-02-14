@@ -367,7 +367,8 @@ bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
     return ret;
 }
 
-static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *digest, size_t length)
+static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
+                     const uint8_t *digest, size_t length)
 {
     bool is_valid = false;
     RSA *priv_rsa_key = NULL;
@@ -396,7 +397,8 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *diges
     return is_valid;
 }
 
-static bool RSAVerify(/*sev_sig *sig, EVP_PKEY **pub_evp_key, const uint8_t *digest, size_t length*/)
+static bool rsa_verify(/*sev_sig *sig, EVP_PKEY **pub_evp_key,
+                       const uint8_t *digest, size_t length*/)
 {
     bool is_valid = false;
 
@@ -413,29 +415,30 @@ static bool RSAVerify(/*sev_sig *sig, EVP_PKEY **pub_evp_key, const uint8_t *dig
 /**
  * Call sign_verify_message and it will call this
  */
-static bool ECDSASign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *digest, size_t length)
+static bool ecdsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
+                       const uint8_t *digest, size_t length)
 {
     bool is_valid = false;
     EC_KEY *priv_ec_key = NULL;
     const BIGNUM *r = NULL;
     const BIGNUM *s = NULL;
-    ECDSA_SIG *ECDSA_sig = NULL;
+    ECDSA_SIG *ecdsa_sig = NULL;
 
     do {
         priv_ec_key = EVP_PKEY_get1_EC_KEY(*priv_evp_key);
         if (!priv_ec_key)
             break;
 
-        ECDSA_sig = ECDSA_do_sign(digest, (uint32_t)length, priv_ec_key); // Contains 2 bignums
-        if (!ECDSA_sig)
+        ecdsa_sig = ECDSA_do_sign(digest, (uint32_t)length, priv_ec_key); // Contains 2 bignums
+        if (!ecdsa_sig)
             break;
 
-        // Extract the bignums from ECDSA_sig and store the signature in sig
-        ECDSA_SIG_get0(ECDSA_sig, &r, &s);
+        // Extract the bignums from ecdsa_sig and store the signature in sig
+        ECDSA_SIG_get0(ecdsa_sig, &r, &s);
         BN_bn2lebinpad(r, sig->ecdsa.r, sizeof(sev_ecdsa_sig::r));    // LE to BE
         BN_bn2lebinpad(s, sig->ecdsa.s, sizeof(sev_ecdsa_sig::s));
 
-        ECDSA_SIG_free(ECDSA_sig);
+        ECDSA_SIG_free(ecdsa_sig);
 
         is_valid = true;
     } while (0);
@@ -448,7 +451,7 @@ static bool ECDSASign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *dige
 
 /**
  * It would be easier if we could just pass in the populated ECDSA_SIG from
- *  ECDSASign instead of using sev_sig to BigNums as the intermediary, but we
+ *  ecdsa_sign instead of using sev_sig to BigNums as the intermediary, but we
  *  do need to ecdsa_verify to verify something signed by firmware, so we
  *  wouldn't have the ECDSA_SIG
  */
@@ -458,7 +461,7 @@ bool ecdsa_verify(sev_sig *sig, EVP_PKEY **pub_evp_key, uint8_t *digest, size_t 
     EC_KEY *pub_ec_key = NULL;
     BIGNUM *r = NULL;
     BIGNUM *s = NULL;
-    ECDSA_SIG *ECDSA_sig = NULL;
+    ECDSA_SIG *ecdsa_sig = NULL;
 
     do {
         pub_ec_key = EVP_PKEY_get1_EC_KEY(*pub_evp_key);
@@ -470,16 +473,16 @@ bool ecdsa_verify(sev_sig *sig, EVP_PKEY **pub_evp_key, uint8_t *digest, size_t 
         r = BN_lebin2bn(sig->ecdsa.r, sizeof(sig->ecdsa.r), NULL);  // New's up BigNum
         s = BN_lebin2bn(sig->ecdsa.s, sizeof(sig->ecdsa.s), NULL);
 
-        // Create a ECDSA_sig from the bignums and store in sig
-        ECDSA_sig = ECDSA_SIG_new();
-        ECDSA_SIG_set0(ECDSA_sig, r, s);
+        // Create a ecdsa_sig from the bignums and store in sig
+        ecdsa_sig = ECDSA_SIG_new();
+        ECDSA_SIG_set0(ecdsa_sig, r, s);
 
         // Validation will also be done by the FW
-        if (ECDSA_do_verify(digest, (uint32_t)length, ECDSA_sig, pub_ec_key) != 1) {
-            ECDSA_SIG_free(ECDSA_sig);
+        if (ECDSA_do_verify(digest, (uint32_t)length, ecdsa_sig, pub_ec_key) != 1) {
+            ECDSA_SIG_free(ecdsa_sig);
             break;
         }
-        ECDSA_SIG_free(ECDSA_sig);
+        ECDSA_SIG_free(ecdsa_sig);
 
         is_valid = true;
     } while (0);
@@ -535,11 +538,11 @@ static bool sign_verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uin
         if ((algo == SEV_SIG_ALGO_RSA_SHA256) || (algo == SEV_SIG_ALGO_RSA_SHA384)) {
             if (sign && !rsa_sign(sig, evp_key_pair, sha_digest, sha_length))
                 break;
-            if (!RSAVerify())
+            if (!rsa_verify())
                 break;
         }
         else if ((algo == SEV_SIG_ALGO_ECDSA_SHA256) || (algo == SEV_SIG_ALGO_ECDSA_SHA384)) {
-            if (sign && !ECDSASign(sig, evp_key_pair, sha_digest, sha_length))
+            if (sign && !ecdsa_sign(sig, evp_key_pair, sha_digest, sha_length))
                 break;
             if (!ecdsa_verify(sig, evp_key_pair, sha_digest, sha_length))
                 break;

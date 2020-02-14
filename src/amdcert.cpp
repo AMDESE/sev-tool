@@ -300,7 +300,11 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark,
                 break;
         }
 
-        amd_root_key_id = (device_type == PSP_DEVICE_TYPE_NAPLES) ? amd_root_key_id_naples : amd_root_key_id_rome;
+        if (device_type == PSP_DEVICE_TYPE_NAPLES)
+            amd_root_key_id = amd_root_key_id_naples;
+        else //if (device_type == PSP_DEVICE_TYPE_ROME)
+            amd_root_key_id = amd_root_key_id_rome;
+
         if (memcmp(&ark->key_id_0, amd_root_key_id, sizeof(ark->key_id_0 + ark->key_id_1)) != 0)
         {
             cmd_ret = ERROR_INVALID_CERTIFICATE;
