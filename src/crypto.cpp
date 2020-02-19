@@ -347,7 +347,7 @@ bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
                 break;
             if (SHA256_Update(&context, (void *)msg, msg_len) != 1)
                 break;
-            if ( SHA256_Final(digest, &context) != 1)
+            if (SHA256_Final(digest, &context) != 1)
                 break;
         }
         else if (sha_type == SHA_TYPE_384) {
@@ -357,7 +357,7 @@ bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
                 break;
             if (SHA384_Update(&context, (void *)msg, msg_len) != 1)
                 break;
-            if ( SHA384_Final(digest, &context) != 1)
+            if (SHA384_Final(digest, &context) != 1)
                 break;
         }
 
@@ -397,7 +397,10 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
     return is_valid;
 }
 
-static bool rsa_verify(/*sev_sig *sig, EVP_PKEY **pub_evp_key,
+/**
+ * rsa_pss_verify
+ */
+bool rsa_verify(/*sev_sig *sig, EVP_PKEY **pub_evp_key,
                        const uint8_t *digest, size_t length*/)
 {
     bool is_valid = false;
@@ -530,6 +533,7 @@ static bool sign_verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uin
         {
             break;
         }
+        memset(sha_digest, 0, sha_length);
 
         // Calculate the hash digest
         if (!digest_sha(msg, length, sha_digest, sha_length, sha_type))
@@ -569,7 +573,7 @@ bool sign_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uint8_t *msg,
 }
 
 bool verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uint8_t *msg,
-                   size_t length, const SEV_SIG_ALGO algo)
+                    size_t length, const SEV_SIG_ALGO algo)
 {
     return sign_verify_message(sig, evp_key_pair, msg, length, algo, false);
 }

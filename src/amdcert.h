@@ -43,13 +43,14 @@ void print_amd_cert_hex(const amd_cert *cert, std::string &out_str = amd_empty);
 
 class AMDCert {
 private:
+    SEVDevice *m_sev_device;
     SEV_ERROR_CODE amd_cert_validate_sig(const amd_cert *cert,
                                          const amd_cert *parent);
     SEV_ERROR_CODE amd_cert_validate_common(const amd_cert *cert);
-    bool usage_is_valid(uint32_t usage);
+    bool usage_is_valid(AMD_SIG_USAGE usage);
     SEV_ERROR_CODE amd_cert_validate(const amd_cert *cert,
                                      const amd_cert *parent,
-                                     uint32_t expected_usage);
+                                     AMD_SIG_USAGE expected_usage);
     SEV_ERROR_CODE amd_cert_public_key_hash(const amd_cert *cert,
                                             hmac_sha_256 *hash);
 
@@ -58,8 +59,7 @@ public:
     ~AMDCert() {};
 
     bool key_size_is_valid(size_t size);
-    SEV_ERROR_CODE amd_cert_validate_ark(const amd_cert *ark,
-                                         ePSP_DEVICE_TYPE device_type);
+    SEV_ERROR_CODE amd_cert_validate_ark(const amd_cert *ark);
     SEV_ERROR_CODE amd_cert_validate_ask(const amd_cert *ask,
                                          const amd_cert *ark);
     size_t amd_cert_get_size(const amd_cert *cert);

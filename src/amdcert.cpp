@@ -109,11 +109,23 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
                                               const amd_cert *parent)
 {
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
-    SHA256_CTX ctx;
-    hmac_sha_256 msg_digest;
-    // size_t digest_len = 0;       // TODO
+    hmac_sha_256 sha_digest_256;
+    hmac_sha_512 sha_digest_384;
+    SEV_SIG_ALGO algo = SEV_SIG_ALGO_INVALID;
+    uint8_t *sha_digest = NULL;
+    size_t sha_length = 0;
+
+    RSA *rsa_pub_key = NULL;
+    BIGNUM *modulus = NULL;
+    BIGNUM *pub_exp = NULL;
+    EVP_MD_CTX* md_ctx = NULL;
+    uint32_t sig_len = cert->modulus_size/8;
+
+    uint32_t digest_len = 0;
+    uint8_t decrypted[AMD_CERT_KEY_BYTES_4K] = {0};
     uint8_t signature[AMD_CERT_KEY_BYTES_4K] = {0};
     uint32_t fixed_offset = offsetof(amd_cert, pub_exp);    // 64 bytes
+    ePSP_DEVICE_TYPE device_type = m_sev_device->get_device_type();
 
     do {
         if (!cert || !parent) {
@@ -121,49 +133,73 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
             break;
         }
 
-        // Validate the key sizes before using them
-        if (!key_size_is_valid(cert->pub_exp_size) ||   // bits
-            !key_size_is_valid(cert->modulus_size))     // bits
-        {
-            cmd_ret = ERROR_INVALID_CERTIFICATE;
+        // Set SHA_TYPE to 256 bit or 384 bit depending on device_type
+        if (device_type == PSP_DEVICE_TYPE_NAPLES) {
+            algo = SEV_SIG_ALGO_RSA_SHA256;
+            sha_digest = sha_digest_256;
+            sha_length = sizeof(hmac_sha_256);
+        }
+        else if (device_type == PSP_DEVICE_TYPE_ROME) {
+            algo = SEV_SIG_ALGO_RSA_SHA384;
+            sha_digest = sha_digest_384;
+            sha_length = sizeof(hmac_sha_512);
+        }
+        else {
             break;
         }
 
-        memset(&ctx, 0, sizeof(ctx));
-        memset(&msg_digest, 0, sizeof(msg_digest));
+        // Memzero all the buffers
+        memset(sha_digest, 0, sha_length);
+        memset(decrypted, 0, sizeof(decrypted));
+        memset(signature, 0, sizeof(signature));
 
-        /*
-         * Calculate the digest of the certificate body. This includes the
-         * fixed body data, the public exponent, and the modulus.
-         */
-        if (SHA256_Init(&ctx) != 1)
+        // New up the RSA key
+        rsa_pub_key = RSA_new();
+
+        // Convert the parent to an RSA key to pass into RSA_verify
+        modulus = BN_lebin2bn((uint8_t *)&parent->modulus, parent->modulus_size/8, NULL);  // n    // New's up BigNum
+        pub_exp = BN_lebin2bn((uint8_t *)&parent->pub_exp, parent->pub_exp_size/8, NULL);   // e
+        if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, NULL) != 1)
             break;
 
-        if (SHA256_Update(&ctx, cert, fixed_offset) != 1)
+        md_ctx = EVP_MD_CTX_create();
+        if (EVP_DigestInit(md_ctx, (algo == SEV_SIG_ALGO_RSA_SHA256) ? EVP_sha256() : EVP_sha384()) <= 0)
             break;
-
-        if (SHA256_Update(&ctx, &cert->pub_exp, cert->pub_exp_size/8) != 1)
+        if (EVP_DigestUpdate(md_ctx, cert, fixed_offset) <= 0)     // Calls SHA256_UPDATE
             break;
-
-        if (SHA256_Update(&ctx, &cert->modulus, cert->modulus_size/8) != 1)
+        if (EVP_DigestUpdate(md_ctx, &cert->pub_exp, cert->pub_exp_size/8) <= 0)
             break;
-
-        if (SHA256_Final((uint8_t *)&msg_digest, &ctx) != 1)
+        if (EVP_DigestUpdate(md_ctx, &cert->modulus, cert->modulus_size/8) <= 0)
             break;
+        EVP_DigestFinal(md_ctx, sha_digest, &digest_len);
 
         // Swap the bytes of the signature
         memcpy(signature, &cert->sig, parent->modulus_size/8);
-
         if (!sev::reverse_bytes(signature, parent->modulus_size/8))
             break;
 
-        // Verify the signature
-        // cmd_ret = rsa_pss_verify(msg_digest, digest_len,
-        //                         parent->modulus, parent->modulus_size/8,
-        //                         parent->pub_exp, parent->pub_exp_size/8,
-        //                         signature); // TODO
-        cmd_ret = STATUS_SUCCESS;   //TODO
+        // Now we will verify the signature. Start by a RAW decrypt of the signature
+        if (RSA_public_decrypt(sig_len, signature, decrypted, rsa_pub_key, RSA_NO_PADDING) == -1)
+            break;
+
+        // Verify the data
+        // SLen of -2 means salt length is recovered from the signature
+        if (RSA_verify_PKCS1_PSS(rsa_pub_key, sha_digest,
+                                (algo == SEV_SIG_ALGO_RSA_SHA256) ? EVP_sha256() : EVP_sha384(),
+                                decrypted, -2) != 1)
+        {
+            break;
+        }
+
+        cmd_ret = STATUS_SUCCESS;
     } while (0);
+
+    // Free the keys and contexts
+    if (rsa_pub_key)
+        RSA_free(rsa_pub_key);
+
+    if (md_ctx)
+        EVP_MD_CTX_free(md_ctx);
 
     return cmd_ret;
 }
@@ -189,14 +225,14 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_common(const amd_cert *cert)
     return cmd_ret;
 }
 
-bool AMDCert::usage_is_valid(uint32_t usage)
+bool AMDCert::usage_is_valid(AMD_SIG_USAGE usage)
 {
     return (usage == AMD_USAGE_ARK) || (usage == AMD_USAGE_ASK);    // ARK, ASK
 }
 
 SEV_ERROR_CODE AMDCert::amd_cert_validate(const amd_cert *cert,
                                           const amd_cert *parent,
-                                          uint32_t expected_usage)
+                                          AMD_SIG_USAGE expected_usage)
 {
     SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;
     const uint8_t *key_id = NULL;
@@ -274,13 +310,13 @@ SEV_ERROR_CODE AMDCert::amd_cert_public_key_hash(const amd_cert *cert,
     return cmd_ret;
 }
 
-SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark,
-                                              ePSP_DEVICE_TYPE device_type)
+SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
 {
     SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;
     hmac_sha_256 hash;
     hmac_sha_256 fused_hash;
     const uint8_t *amd_root_key_id = NULL;
+    ePSP_DEVICE_TYPE device_type = m_sev_device->get_device_type();
 
     do {
         if (!ark) {

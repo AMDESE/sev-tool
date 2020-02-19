@@ -493,15 +493,15 @@ SEV_ERROR_CODE SEVCert::validate_public_key(const sev_cert *cert, const EVP_PKEY
         if (validate_usage(cert->pub_key_usage) != STATUS_SUCCESS)
             break;
 
-        if ( (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
-            (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384) ) {
+        if ((cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
+            (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
             if (validate_rsa_pub_key(cert, PublicKey) != STATUS_SUCCESS)
                 break;
         }
         else if ((cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA384) ||
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA256)  ||
-                 (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384) )
+                 (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384))
             ;       // Are no invalid values for these cert types
         else
             break;
@@ -584,7 +584,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                     break;
                 }
 
-                uint32_t sig_len = sizeof(parent_cert->sig_1.rsa);
+                uint32_t sig_len = sizeof(parent_cert->sig_1.rsa);  // size is wrong. should be modulus_size
                 if (RSA_verify((sha_type == SHA_TYPE_256) ? NID_sha256 : NID_sha384,
                                 sha_digest, (uint32_t)sha_length, (uint8_t *)&parent_cert->sig_1.rsa, sig_len, rsa) != 1 ) {
                     RSA_free(rsa);
@@ -655,7 +655,7 @@ SEV_ERROR_CODE SEVCert::validate_body(const sev_cert *cert)
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
 
     do {
-        if ( (cert->version == 0) || (cert->version > SEV_CERT_MAX_VERSION) )
+        if ((cert->version == 0) || (cert->version > SEV_CERT_MAX_VERSION))
             break;
 
         cmd_ret = STATUS_SUCCESS;
@@ -689,8 +689,8 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
     BIGNUM *pub_exp = NULL;
 
     do {
-        if ( (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
-            (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384) ) {
+        if ((cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
+            (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
             // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
             printf("WARNING: You are using untested code in"
                    "compile_public_key_from_certificate for RSA cert type!\n");
@@ -791,16 +791,16 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
     EC_GROUP *ec_group = NULL;
 
     do {
-        if ( (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
-            (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384) ) {
+        if ((cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
+            (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
             // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
             printf("WARNING: You are using untested code in" \
                    "decompile_public_key_into_certificate for RSA cert type!\n");
         }
-        else if ( (cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
+        else if ((cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA384) ||
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA256)  ||
-                 (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384) ) {      // ecdsa.c -> sign_verify_msg
+                 (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384)) {      // ecdsa.c -> sign_verify_msg
 
             int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
             ec_group = EC_GROUP_new_by_curve_name(nid);
@@ -910,8 +910,8 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
         }
         else if (m_child_cert.pub_key_usage == SEV_USAGE_PEK) {
             // The PEK certificate must be signed by the CEK and the OCA
-            if ( ((parent_cert1->pub_key_usage != SEV_USAGE_OCA) && (parent_cert2->pub_key_usage != SEV_USAGE_CEK)) &&
-                ((parent_cert2->pub_key_usage != SEV_USAGE_OCA) && (parent_cert1->pub_key_usage != SEV_USAGE_CEK)) ) {
+            if (((parent_cert1->pub_key_usage != SEV_USAGE_OCA) && (parent_cert2->pub_key_usage != SEV_USAGE_CEK)) &&
+                ((parent_cert2->pub_key_usage != SEV_USAGE_OCA) && (parent_cert1->pub_key_usage != SEV_USAGE_CEK))) {
                 break;
             }
         }

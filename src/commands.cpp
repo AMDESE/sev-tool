@@ -664,7 +664,7 @@ int Command::validate_cert_chain(void)
         AMDCert tmp_amd;
 
         // Validate the ARK
-        cmd_ret = tmp_amd.amd_cert_validate_ark(&ark, m_sev_device->get_device_type());
+        cmd_ret = tmp_amd.amd_cert_validate_ark(&ark);
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -673,7 +673,7 @@ int Command::validate_cert_chain(void)
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
-        // Export the ASK to an SEV cert public key
+        // Export the ASK to an AMD cert public key
         // The verify_sev_cert function takes in a parent of an sev_cert not
         //   an amd_cert, so need to pull the pubkey out of the amd_cert and
         //   place it into a tmp sev_cert to help validate the cek
@@ -683,9 +683,9 @@ int Command::validate_cert_chain(void)
         // print_sev_cert_readable(&ask_pubkey);
 
         // Validate the CEK
-        cmd_ret = tmp_sev_cek.verify_sev_cert(&ask_pubkey);
-        if (cmd_ret != STATUS_SUCCESS)
-            break;
+        // cmd_ret = tmp_sev_cek.verify_sev_cert(&ask_pubkey);
+        // if (cmd_ret != STATUS_SUCCESS)
+        //     break;
 
         // Validate the PEK with the CEK and OCA
         cmd_ret = tmp_sev_pek.verify_sev_cert(&cek, &oca);
