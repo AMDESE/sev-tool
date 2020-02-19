@@ -807,8 +807,8 @@ bool Tests::test_all()
         if (!test_calc_measurement())
             break;
 
-        // if (!test_validate_cert_chain())
-        //     break;
+        if (!test_validate_cert_chain())
+            break;
 
         if (!test_generate_launch_blob())
             break;

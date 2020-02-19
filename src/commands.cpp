@@ -680,12 +680,11 @@ int Command::validate_cert_chain(void)
         cmd_ret = tmp_amd.amd_cert_export_pub_key(&ask, &ask_pubkey);
         if (cmd_ret != STATUS_SUCCESS)
             break;
-        // print_sev_cert_readable(&ask_pubkey);
 
         // Validate the CEK
-        // cmd_ret = tmp_sev_cek.verify_sev_cert(&ask_pubkey);
-        // if (cmd_ret != STATUS_SUCCESS)
-        //     break;
+        cmd_ret = tmp_sev_cek.verify_sev_cert(&ask_pubkey);
+        if (cmd_ret != STATUS_SUCCESS)
+            break;
 
         // Validate the PEK with the CEK and OCA
         cmd_ret = tmp_sev_pek.verify_sev_cert(&cek, &oca);

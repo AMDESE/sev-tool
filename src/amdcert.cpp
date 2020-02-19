@@ -122,7 +122,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
     uint32_t sig_len = cert->modulus_size/8;
 
     uint32_t digest_len = 0;
-    uint8_t decrypted[AMD_CERT_KEY_BYTES_4K] = {0};
+    uint8_t decrypted[AMD_CERT_KEY_BYTES_4K] = {0}; // TODO wrong length
     uint8_t signature[AMD_CERT_KEY_BYTES_4K] = {0};
     uint32_t fixed_offset = offsetof(amd_cert, pub_exp);    // 64 bytes
     ePSP_DEVICE_TYPE device_type = m_sev_device->get_device_type();
@@ -139,13 +139,10 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
             sha_digest = sha_digest_256;
             sha_length = sizeof(hmac_sha_256);
         }
-        else if (device_type == PSP_DEVICE_TYPE_ROME) {
+        else /*if (device_type == PSP_DEVICE_TYPE_ROME)*/ {
             algo = SEV_SIG_ALGO_RSA_SHA384;
             sha_digest = sha_digest_384;
             sha_length = sizeof(hmac_sha_512);
-        }
-        else {
-            break;
         }
 
         // Memzero all the buffers

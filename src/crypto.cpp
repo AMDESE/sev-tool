@@ -246,7 +246,7 @@ bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
             break;
 
         // Initialize the encryption operation. IMPORTANT - ensure you
-        // use a key and iv size appropriate for your cipher
+        // use a key and IV size appropriate for your cipher
         if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), NULL, key, iv) != 1)
             break;
 
@@ -612,11 +612,11 @@ SEV_ERROR_CODE aes_256_gcm_authenticated_encrypt(const uint8_t *p_key, size_t ke
         if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL))
             break;
 
-        // Sets the iv length: Can only be called before specifying an iv [Optional for GCM]
+        // Sets the IV length: Can only be called before specifying an IV [Optional for GCM]
         if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, (int)iv_size, NULL))
             break;
 
-        // Now initialize the context with key and iv
+        // Now initialize the context with key and IV
         if (!EVP_EncryptInit_ex(ctx, NULL, NULL, p_key, p_iv))
             break;
 
@@ -700,7 +700,7 @@ SEV_ERROR_CODE aes_256_gcm_authenticated_decrypt(const uint8_t *p_key, size_t ke
 
         EVP_CIPHER_CTX_set_padding(ctx, 0);
 
-        // Sets the iv length: Can only be called before specifying an iv [Optional for GCM]
+        // Sets the IV length: Can only be called before specifying an IV [Optional for GCM]
         if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, (int)iv_size, NULL))
             break;
 
@@ -708,7 +708,7 @@ SEV_ERROR_CODE aes_256_gcm_authenticated_decrypt(const uint8_t *p_key, size_t ke
         if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, tag_len, (uint8_t *)p_tag))
             break;
 
-        // Now initialize the context with key and iv
+        // Now initialize the context with key and IV
         if (!EVP_DecryptInit_ex(ctx, NULL, NULL, p_key, p_iv))
             break;
 

@@ -24,7 +24,7 @@
 #include <openssl/hmac.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
-#include <cstring>                  // memset
+#include <cstring>      // memset
 #include <fstream>
 #include <stdio.h>
 #include <stdexcept>
@@ -336,7 +336,7 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
 }
 
 /**
- * Description:   Populates an empty sev_cert using an existing ecdh keypair
+ * Description:   Populates an empty sev_cert using an existing ECDH keypair
  * Typical Usage: Used to generate the Guest Owner Diffie-Hellman cert used in
  *                LaunchStart
  * Parameters:    [oca_key_pair] the input pub/priv key pair used to populate
@@ -539,7 +539,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
     size_t sha_length = 0;
 
     do{
-        //todo should this be child cert? should prob combine this function anyway
+        //TODO should this be child cert? should prob combine this function anyway
         // Determine if SHA_TYPE is 256 bit or 384 bit
         if (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256 || parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256 ||
             parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA256)
@@ -575,24 +575,38 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
         {
             if ((parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
                 (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
-                // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                printf("TODO validate_signature segfaults on RSA_verify\n");
+                uint32_t sig_len = parent_cert->pub_key.rsa.modulus_size/8; // Should be child_cert but SEV_RSA_SIG doesn't have a size param
+                uint8_t decrypted[parent_cert->pub_key.rsa.modulus_size] = {0}; // TODO wrong length
+                uint8_t signature[parent_cert->pub_key.rsa.modulus_size] = {0};
 
-                RSA *rsa = EVP_PKEY_get1_RSA(parent_signing_key);     // Signer's (parent's) public key
-                if (!rsa) {
+                RSA *rsa_pub_key = EVP_PKEY_get1_RSA(parent_signing_key);   // Signer's (parent's) public key
+                if (!rsa_pub_key) {
                     printf("Error parent signing key is bad\n");
                     break;
                 }
 
-                uint32_t sig_len = sizeof(parent_cert->sig_1.rsa);  // size is wrong. should be modulus_size
-                if (RSA_verify((sha_type == SHA_TYPE_256) ? NID_sha256 : NID_sha384,
-                                sha_digest, (uint32_t)sha_length, (uint8_t *)&parent_cert->sig_1.rsa, sig_len, rsa) != 1 ) {
-                    RSA_free(rsa);
+                // Swap the bytes of the signature
+                memcpy(signature, &cert_sig[i].rsa, parent_cert->pub_key.rsa.modulus_size/8);
+                if (!sev::reverse_bytes(signature, parent_cert->pub_key.rsa.modulus_size/8))
                     break;
+
+                // Now we will verify the signature. Start by a RAW decrypt of the signature
+                if (RSA_public_decrypt(sig_len, signature, decrypted, rsa_pub_key, RSA_NO_PADDING) == -1)
+                    break;
+
+                // Verify the data
+                // SLen of -2 means salt length is recovered from the signature
+                if (RSA_verify_PKCS1_PSS(rsa_pub_key, sha_digest,
+                                        (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ? EVP_sha256() : EVP_sha384(),
+                                        decrypted, -2) != 1)
+                {
+                    RSA_free(rsa_pub_key);
+                    continue;
                 }
+
                 found_match = true;
-                RSA_free(rsa);
-                continue;
+                RSA_free(rsa_pub_key);
+                break;
             }
             else if ((parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                      (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA384) ||
@@ -617,12 +631,16 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                     continue;
                 }
                 EC_KEY *tmp_ec_key = EVP_PKEY_get1_EC_KEY(parent_signing_key); // Make a local key so you can free it later
-                if (ECDSA_do_verify(sha_digest, (uint32_t)sha_length, tmp_ecdsa_sig, tmp_ec_key) == 1)
-                    found_match = true;
+                if (ECDSA_do_verify(sha_digest, (uint32_t)sha_length, tmp_ecdsa_sig, tmp_ec_key) != 1) {
+                    EC_KEY_free(tmp_ec_key);
+                    ECDSA_SIG_free(tmp_ecdsa_sig);      // Frees BIGNUMs too
+                    continue;
+                }
 
+                found_match = true;
                 EC_KEY_free(tmp_ec_key);
                 ECDSA_SIG_free(tmp_ecdsa_sig);      // Frees BIGNUMs too
-                continue;
+                break;
             }
             else {       // Bad/unsupported signing key algorithm
                 printf("Unexpected algorithm! %x\n", parent_cert->pub_key_algo);
@@ -691,14 +709,14 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
     do {
         if ((cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
             (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
-            // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            printf("WARNING: You are using untested code in"
-                   "compile_public_key_from_certificate for RSA cert type!\n");
+            // New up the RSA key
             rsa_pub_key = RSA_new();
 
-            modulus = BN_lebin2bn(cert->pub_key.rsa.modulus, sizeof(cert->pub_key.rsa.modulus), NULL);  // New's up BigNum
-            pub_exp = BN_lebin2bn(cert->pub_key.rsa.pub_exp,  sizeof(cert->pub_key.rsa.pub_exp), NULL);
-            RSA_set0_key(rsa_pub_key, modulus, pub_exp, NULL);
+            // Convert the parent to an RSA key to pass into RSA_verify
+            modulus = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.modulus, cert->pub_key.rsa.modulus_size/8, NULL);  // n    // New's up BigNum
+            pub_exp = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.pub_exp, cert->pub_key.rsa.modulus_size/8, NULL);    // e
+            if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, NULL) != 1)
+                break;
 
             // Make sure the key is good.
             // TODO: This step fails because, from the openssl doc:
@@ -713,8 +731,8 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
              *  is freed, rsa_pub_key is freed. We don't want the user to have to
              *  manage 2 keys, so just return EVP_PKEY and make sure user free's it
              */
-            // if (EVP_PKEY_assign_RSA(evp_pub_key, rsa_pub_key) != 1)
-            //     break;
+            if (EVP_PKEY_assign_RSA(evp_pub_key, rsa_pub_key) != 1)
+                break;
         }
         else if ((cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA384) ||
@@ -763,10 +781,10 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
     } while (0);
 
     // Free memory if it was allocated
-    BN_free(y_big_num);       // If NULL, does nothing
+    BN_free(y_big_num);     // If NULL, does nothing
     BN_free(x_big_num);
-    BN_free(modulus);
-    BN_free(pub_exp);
+    // BN_free(modulus);    // Don't free here. RSA key is associated with these
+    // BN_free(pub_exp);
 
     return cmd_ret;
 }

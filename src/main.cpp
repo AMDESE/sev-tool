@@ -245,7 +245,6 @@ int main(int argc, char **argv)
                 break;
             }
             case 'u': {         // VALIDATE_CERT_CHAIN
-                printf("This command is not complete, do not trust the output\n");
                 Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.validate_cert_chain();
                 break;
