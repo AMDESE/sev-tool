@@ -817,7 +817,7 @@ int Command::package_secret(void)
 
         // Read in the unencrypted TK (TIK and TEK) created in build_session_buffer
         std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
-        if (sev::read_file(tmp_tk_file, &m_tk, sizeof(m_tk) != sizeof(m_tk))) {
+        if (sev::read_file(tmp_tk_file, &m_tk, sizeof(m_tk)) != sizeof(m_tk)) {
             printf("Error reading in %s\n", tmp_tk_file.c_str());
             break;
         }
