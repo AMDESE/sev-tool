@@ -569,7 +569,7 @@ int Command::calc_measurement(measurement_t *user_data)
         }
         if (m_output_folder != "") {     // Print the IDs to a text file
             std::string meas_path = m_output_folder+CALC_MEASUREMENT_FILENAME;
-            sev::write_file(meas_path, (void *)meas_str.c_str(), meas_str.size());
+            sev::write_file(meas_path, (void *)final_meas, sizeof(final_meas));
         }
     }
 
