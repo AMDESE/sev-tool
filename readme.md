@@ -281,7 +281,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Example
          ```sh
          $ sudo ./sevtool --calc_measurement [Context] [Api Major] [Api Minor] [Build ID] [Policy] [Digest] [MNonce] [TIK]
-         $ sudo ./sevtool --folder ./certs --calc_measurement 04 00 12 0f 00 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 4fbe0bedbad6c86ae8f68971d103e554 66320db73158a35a255d051758e95ed4
+         $ sudo ./sevtool --ofolder ./certs --calc_measurement 04 00 12 0f 00 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 4fbe0bedbad6c86ae8f68971d103e554 66320db73158a35a255d051758e95ed4
              You have entered 10 arguments
              Command: calc_measurement
              Input Arguments:
