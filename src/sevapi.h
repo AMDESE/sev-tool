@@ -32,9 +32,6 @@ typedef bool _Bool;
 // --- Miscellaneous constants --- //
 // ------------------------------- //
 
-// Maximum size of firmware image
-#define FW_MAX_SIZE 65536
-
 // TMR (Trusted Memory Region) size required for INIT with SEV-ES enabled
 #define SEV_TMR_SIZE (1024*1024)
 
@@ -69,6 +66,8 @@ typedef enum __attribute__((mode(HI))) SEV_API_COMMAND
     DOWNLOAD_FIRMWARE       = 0x0B,     /* Download new SEV FW */
     GET_ID                  = 0x0C,     /* Get the Platform ID needed for KDS */
     INIT_EX                 = 0x0D,     /* Initialize the Platform, extended */
+    NOP                     = 0x0E,     /* No operation */
+    RING_BUFFER             = 0x0F,     /* Enter ring buffer command mode */
 
     /* SEV Guest commands */
     DECOMMISSION            = 0x20,     /* Delete the Guest's SEV context */
@@ -86,12 +85,14 @@ typedef enum __attribute__((mode(HI))) SEV_API_COMMAND
     LAUNCH_MEASURE          = 0x33,     /* Output the launch measurement */
     LAUNCH_SECRET           = 0x34,     /* Import a Guest secret sent from the Guest owner */
     LAUNCH_FINISH           = 0x35,     /* Complete launch of Guest */
+    ATTESTATION             = 0x36,     /* Attestation report containing guest measurement */
 
     /* SEV Guest migration commands (outgoing) */
     SEND_START              = 0x40,     /* Begin to send Guest to new remote Platform */
     SEND_UPDATE_DATA        = 0x41,     /* Re-encrypt Guest data for transmission */
     SEND_UPDATE_VMSA        = 0x42,     /* Re-encrypt Guest VMCB save area for transmission */
     SEND_FINISH             = 0x43,     /* Complete sending Guest to remote Platform */
+    SEND_CANCEL             = 0x44,     /* Cancel sending Guest to remote Platform */
 
     /* SEV Guest migration commands (incoming) */
     RECEIVE_START           = 0x50,     /* Begin to receive Guest from remote Platform */
@@ -103,10 +104,16 @@ typedef enum __attribute__((mode(HI))) SEV_API_COMMAND
     DBG_DECRYPT             = 0x60,     /* Decrypt Guest memory region for debugging */
     DBG_ENCRYPT             = 0x61,     /* Encrypt Guest memory region for debugging */
 
+    /* SEV Page Migration Commands */
+    SWAP_OUT                = 0x70,     /* Encrypt Guest memory region for temporary storage */
+    SWAP_IN                 = 0x71,     /* Reverse of SWAP_OUT */
+
+    SEV_MAX_API_COMMAND     = SWAP_IN,
+
     SEV_LIMIT,                          /* Invalid command ID */
 } SEV_API_COMMAND;
 
-// Chapter 5.1.2 - Platform State Machine
+// Chapter 5.1.2 - Platform state Machine
 /**
  * SEV Platform state (each entry stored in a byte).
  *
@@ -152,8 +159,8 @@ typedef enum __attribute__((mode(QI))) SEV_PLATFORM_STATE
  * @LSECRET - LAUNCH_SECRET, LAUNCH_FINISH, ACTIVATE, DEACTIVATE, DECOMMISSION,
  *            GUEST_STATUS
  * @RUNNING - ACTIVATE, DEACTIVATE, DECOMMISSION, SEND_START, GUEST_STATUS
- * @SUPDATE - SEND_UPDATE_DATA, SEND_UPDATE_VMSA, SEND_FINISH, ACTIVATE,
- *            DEACTIVATE, DECOMMISSION, GUEST_STATUS
+ * @SUPDATE - SEND_UPDATE_DATA, SEND_UPDATE_VMSA, SEND_FINISH, SEND_CANCEL,
+ *            ACTIVATE, DEACTIVATE, DECOMMISSION, GUEST_STATUS
  * @RUPDATE - RECEIVE_UDPATE_DATA, RECEIVE_UDPATE_VMSA, RECEIVE_FINISH,
  *            ACTIVATE, DEACTIVATE, DECOMMISSION, GUEST_STATUS
  */
@@ -201,6 +208,7 @@ typedef enum __attribute__((mode(HI))) SEV_ERROR_CODE
     ERROR_RESOURCE_LIMIT            = 0x17,
     ERROR_SECURE_DATA_INVALID       = 0x18,
 
+    ERROR_RING_BUFFER_EXIT          = 0x1F,
     ERROR_LIMIT,
 } SEV_ERROR_CODE;
 
@@ -483,9 +491,9 @@ enum __attribute__((mode(SI))) SEV_CONFIG
 
 
 // Guest policy bits. Used in LAUNCH_START and GUEST_STATUS
-// Chapter 3: Guest Policy Structure
+// Chapter 3: Guest policy Structure
 /**
- * SEV Guest Policy bits (stored as a bit field struct).
+ * SEV Guest policy bits (stored as a bit field struct).
  *
  * @nodbg     - Debugging of the Guest is disallowed
  * @noks      - Sharing keys with other guests is disallowed
@@ -559,7 +567,7 @@ typedef struct __attribute__ ((__packed__)) tek_tik_t
  * @wrap_tk    - The SEV transport encryption and integrity keys.
  * @wrap_iv    - 128 bit initializer vector.
  * @wrap_mac   - Session hash message authentication code.
- * @policy_mac - Policy hash message authentication code.
+ * @policy_mac - policy hash message authentication code.
  */
 typedef struct __attribute__ ((__packed__)) sev_session_buf_t
 {
@@ -623,7 +631,7 @@ typedef struct __attribute__ ((__packed__)) amd_cert_chain_buf_t
  * SEV initialization command buffer
  *
  * @options     - An SEV_OPTIONS enum value
- * @reserved    - Reserved. Must be 0.
+ * @reserved    - reserved. Must be 0.
  * @tmr_phys_addr - System physical address to memory region donated by
  *                Hypervisor for SEV-ES operations. Ignored if SEV-ES
  *                is disabled.
@@ -654,7 +662,7 @@ typedef struct __attribute__ ((__packed__)) sev_platform_reset_cmd_buf_t
  * @owner                  - Defines the owner: 0=Self-owned; 1=Externally owned
  * @config                 - SEV-ES is initialized for the platform when set.
  *                           Disabled for all guests when not set.
- * @reserved               - Reserved. Set to zero.
+ * @reserved               - reserved. Set to zero.
  * @build_id               - Firmware Build ID for this API version.
  * @guest_count            - Number of valid guests maintained by the firmware.
  */
@@ -706,7 +714,7 @@ typedef struct __attribute__ ((__packed__)) sev_df_flush_cmd_buf_t
 {
 } sev_df_flush_cmd_buf;
 
-#define DLFW_IMAGE_MAX_LENGTH       64*1024     // 64KB Naples/Rome
+#define DLFW_IMAGE_MAX_LENGTH       (64*1024)     // 64KB Naples/Rome
 typedef struct __attribute__ ((__packed__)) sev_download_firmware_cmd_buf_t
 {
     uint64_t    fw_p_addr;
@@ -729,6 +737,24 @@ typedef struct __attribute__ ((__packed__)) sev_init_ex_cmd_buf_t
     uint64_t    nv_phys_addr;
     uint32_t    nv_length;          // Must be 32KB
 } sev_init_ex_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) sev_nop_cmd_buf_t
+{
+} sev_nop_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) sev_ring_buffer_cmd_buf_t
+{
+    uint64_t    q_lo_cmd_ptr;         // Low priority queue's CmdPtr ring buffer
+    uint64_t    q_lo_stat_val;        // Low priority queue's StatVal ring buffer
+    uint64_t    q_hi_cmd_ptr;         // High priority queue's CmdPtr ring buffer
+    uint64_t    q_hi_stat_val;        // High priority queue's StatVal ring buffer
+    uint8_t     q_lo_size;            // Size of the low priority queue in 4K pages. Must be 1.
+    uint8_t     q_hi_size;            // Size of the high priority queue in 4K pages
+    uint32_t    q_lo_threshold : 16;  // Queue size
+    uint32_t    q_hi_threshold : 16;  // Queue size
+    uint32_t    int_on_empty   : 1;   // Bit 0. Unconditionally interrupt when both queues are found empty
+    uint32_t    reserved       : 15;  // Bits 1 to 15
+} sev_ring_buffer_cmd_buf;
 
 typedef struct __attribute__ ((__packed__)) sev_decommission_cmd_buf_t
 {
@@ -826,6 +852,25 @@ typedef struct __attribute__ ((__packed__)) sev_launch_finish_cmd_buf_t
     uint32_t    handle;
 } sev_launch_finish_cmd_buf;
 
+typedef struct __attribute__ ((__packed__)) attestation_cmd_buf_t
+{
+    uint32_t    handle;
+    uint32_t    reserved;
+    uint64_t    p_addr;
+    nonce_128   m_nonce;
+    uint32_t    length;
+} attestation_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) attestation_report_t
+{
+    nonce_128   m_nonce;
+    uint8_t     launch_digest[32];
+    uint32_t    policy;
+    uint32_t    sig_usage;
+    uint32_t    sig_algo;
+    uint8_t     sig1[144];
+} attestation_report;
+
 typedef struct __attribute__ ((__packed__)) sev_send_start_cmd_buf_t
 {
     uint32_t    handle;
@@ -875,6 +920,11 @@ typedef struct __attribute__ ((__packed__)) sev_send_finish_cmd_buf_t
 {
     uint32_t    handle;
 } sev_send_finish_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) sev_cancel_finish_cmd_buf_t
+{
+    uint32_t    handle;
+} sev_cancel_finish_cmd_buf;
 
 typedef struct __attribute__ ((__packed__)) sev_receive_start_cmd_buf_t
 {
@@ -938,5 +988,51 @@ typedef struct __attribute__ ((__packed__)) sev_dbg_encrypt_cmd_buf_t
     uint64_t    dst_p_addr;
     uint32_t    length;
 } sev_dbg_encrypt_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) swap_out_cmd_buf_t
+{
+    uint32_t handle;
+    uint32_t page_size      : 1;    /* bit 0            0h is 4k page, 1h is 2MB page */
+    uint32_t page_type      : 2;    /* bits 1 to 2      0h is data page, 2h is VMSA page page */
+    uint32_t reserved       : 29;   /* bits 3 to 31 */
+    uint64_t src_p_addr;
+    uint64_t dst_p_addr;
+    uint64_t m_data_p_addr;
+    uint64_t software_data;
+} swap_out_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) swap_in_cmd_buf_t
+{
+    uint32_t handle;
+    uint32_t page_size      : 1;    /* bit 0            0h is 4k page, 1h is 2MB page */
+    uint32_t page_type      : 2;    /* bits 1 to 2      0h is data page, 2h is VMSA page page */
+    uint32_t swap_in_place  : 1;    /* bit 3            Indicates src and dst pAddr's are the same */
+    uint32_t reserved       : 28;   /* bits 4 to 63 */
+    uint64_t src_p_addr;
+    uint64_t dst_p_addr;
+    uint64_t m_data_p_addr;
+} swap_in_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) swap_io_metadata_entry_t
+{
+    uint64_t SoftwareData;    // Supplied by hypervisor
+    uint8_t  IV[8];         // AES_GCM_IV
+    uint8_t  AuthTag[16];
+    uint64_t reserved;
+    uint64_t reserved2;
+    uint32_t reserved3;
+    uint64_t reserved4;
+    uint32_t page_size      : 1;    /* bit 0            0h is 4k page, 1h is 2MB page */
+    uint32_t page_type      : 2;    /* bits 1 to 2      0h is data page, 2h is VMSA page page */
+    uint32_t reserved5      : 29;   /* bits 3 to 31 */
+} swap_io_metadata_entry;
+static_assert(sizeof(swap_io_metadata_entry) == 0x40, "Error, static assertion failed");
+typedef enum SWAP_IO_PAGE
+{
+    SWAP_IO_DATA_PAGE     = 0x0,
+    SWAP_IO_METADATA_PAGE = 0x1,
+    SWAP_IO_VMSA_PAGE     = 0x2,
+    SWAP_IO_INVALID,
+} SWAP_IO_PAGE;
 
 #endif /* SEVAPI_H */

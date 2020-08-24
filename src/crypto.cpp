@@ -60,7 +60,7 @@ bool kdf(uint8_t *key_out,       size_t key_out_length,
         // Calculate a chunk of random data from the PRF
         if (HMAC_Init_ex(ctx, key_in, (int)key_in_length, EVP_sha256(), NULL) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t*)&i, sizeof(i)) != 1)
+        if (HMAC_Update(ctx, (uint8_t *)&i, sizeof(i)) != 1)
             break;
         if (HMAC_Update(ctx, (unsigned char*)label, label_length) != 1)
             break;
@@ -70,7 +70,7 @@ bool kdf(uint8_t *key_out,       size_t key_out_length,
             if (HMAC_Update(ctx, (unsigned char*)context, context_length) != 1)
                 break;
         }
-        if (HMAC_Update(ctx, (uint8_t*)&l, sizeof(l)) != 1)
+        if (HMAC_Update(ctx, (uint8_t *)&l, sizeof(l)) != 1)
             break;
         if (HMAC_Final(ctx, prf_out, &out_len) != 1)
             break;
@@ -98,7 +98,7 @@ bool kdf(uint8_t *key_out,       size_t key_out_length,
  * uint8_t array using OPENSSL_malloc that must be freed
  * in the calling function using OPENSSL_FREE()
  */
-uint8_t* calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
+uint8_t *calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
                                  size_t& shared_key_len_out)
 {
     if (!priv_key || !peer_key)
@@ -186,7 +186,7 @@ bool derive_master_secret(aes_128_key master_secret,
 
         // Derive the master secret from the intermediate secret
         if (!kdf((unsigned char*)master_secret, sizeof(aes_128_key), shared_key,
-            shared_key_len, (uint8_t*)SEV_MASTER_SECRET_LABEL,
+            shared_key_len, (uint8_t *)SEV_MASTER_SECRET_LABEL,
             sizeof(SEV_MASTER_SECRET_LABEL)-1, nonce, sizeof(nonce_128))) // sizeof(nonce), bad?
             break;
 
@@ -204,14 +204,14 @@ bool derive_master_secret(aes_128_key master_secret,
 bool derive_kek(aes_128_key kek, const aes_128_key master_secret)
 {
     bool ret = kdf((unsigned char*)kek, sizeof(aes_128_key), master_secret, sizeof(aes_128_key),
-                   (uint8_t*)SEV_KEK_LABEL, sizeof(SEV_KEK_LABEL)-1, NULL, 0);
+                   (uint8_t *)SEV_KEK_LABEL, sizeof(SEV_KEK_LABEL)-1, NULL, 0);
     return ret;
 }
 
 bool derive_kik(hmac_key_128 kik, const aes_128_key master_secret)
 {
     bool ret = kdf((unsigned char*)kik, sizeof(aes_128_key), master_secret, sizeof(aes_128_key),
-                   (uint8_t*)SEV_KIK_LABEL, sizeof(SEV_KIK_LABEL)-1, NULL, 0);
+                   (uint8_t *)SEV_KIK_LABEL, sizeof(SEV_KIK_LABEL)-1, NULL, 0);
     return ret;
 }
 
@@ -222,7 +222,7 @@ bool gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len)
 
     unsigned int out_len = 0;
     HMAC(EVP_sha256(), key, sizeof(hmac_key_128), msg,    // Returns NULL or value of out
-         msg_len, (uint8_t*)out, &out_len);
+         msg_len, (uint8_t *)out, &out_len);
 
     if ((out != NULL) && (out_len == sizeof(hmac_sha_256)))
         return true;

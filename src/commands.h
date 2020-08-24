@@ -89,7 +89,7 @@ private:
     bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
              size_t key_in_length, const uint8_t *label, size_t label_length,
              const uint8_t *context, size_t context_length);
-    uint8_t* calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
+    uint8_t *calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
                                      size_t& shared_key_len_out);
     bool derive_master_secret(aes_128_key master_secret,
                               EVP_PKEY *godh_priv_key,

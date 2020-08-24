@@ -185,7 +185,6 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
         }
-
     } while (0);
 
     return (int)cmd_ret;
