@@ -730,12 +730,7 @@ int Command::generate_launch_blob(uint32_t policy)
         if (sev::write_file(godh_cert_file, &godh_pubkey_cert, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
-        // Write the unencrypted TK (TIK and TEK) to a tmp file so it can be
-        // read in during package_secret
-        std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
-
         cmd_ret = build_session_buffer(&session_data_buf, policy, godh_key_pair, &pdh);
-        sev::write_file(tmp_tk_file, &m_tk, sizeof(m_tk));
         if (cmd_ret == STATUS_SUCCESS) {
             if (m_verbose_flag) {
                 printf("Guest Policy (input): %08x\n", policy);
@@ -765,6 +760,12 @@ int Command::generate_launch_blob(uint32_t policy)
                 }
                 printf("\n");
             }
+
+            // Write the unencrypted TK (TIK and TEK) to a tmp file so it can be
+            // read in during package_secret
+            std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
+            sev::write_file(tmp_tk_file, &m_tk, sizeof(m_tk));
+
             sev::write_file(buf_file, (void *)&session_data_buf, sizeof(sev_session_buf));
         }
     } while (0);
@@ -930,7 +931,7 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
  * in the calling function using OPENSSL_FREE()
  */
 uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
-                                          size_t& shared_key_len_out)
+                                           size_t& shared_key_len_out)
 {
     if (!priv_key || !peer_key)
         return NULL;
