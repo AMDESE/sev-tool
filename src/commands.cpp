@@ -733,9 +733,9 @@ int Command::generate_launch_blob(uint32_t policy)
         // Write the unencrypted TK (TIK and TEK) to a tmp file so it can be
         // read in during package_secret
         std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
-        sev::write_file(tmp_tk_file, &m_tk, sizeof(m_tk));
 
         cmd_ret = build_session_buffer(&session_data_buf, policy, godh_key_pair, &pdh);
+        sev::write_file(tmp_tk_file, &m_tk, sizeof(m_tk));
         if (cmd_ret == STATUS_SUCCESS) {
             if (m_verbose_flag) {
                 printf("Guest Policy (input): %08x\n", policy);
