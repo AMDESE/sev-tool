@@ -500,19 +500,10 @@ int Command::calculate_measurement(measurement_t *user_data, hmac_sha_256 *final
     if (!(ctx = HMAC_CTX_new()))
         return ERROR_BAD_MEASUREMENT;
 
-    // Need platform_status to determine API version
-    uint8_t status_data[sizeof(sev_platform_status_cmd_buf)];
-    sev_platform_status_cmd_buf *status_data_buf = (sev_platform_status_cmd_buf *)&status_data;
-
     do {
-        // Need platform_status to determine API version
-        cmd_ret = m_sev_device->platform_status(status_data);
-        if (cmd_ret != STATUS_SUCCESS)
-            break;
-
         if (HMAC_Init_ex(ctx, user_data->tik, sizeof(user_data->tik), EVP_sha256(), NULL) != 1)
             break;
-        if (status_data_buf->api_minor >= 17) {
+        if (user_data->api_minor >= 17) {
             if (HMAC_Update(ctx, &user_data->meas_ctx, sizeof(user_data->meas_ctx)) != 1)
                 break;
             if (HMAC_Update(ctx, &user_data->api_major, sizeof(user_data->api_major)) != 1)
