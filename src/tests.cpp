@@ -557,7 +557,7 @@ bool Tests::test_generate_cek_ask()
 bool Tests::test_get_ask_ark()
 {
     bool ret = false;
-    Command cmd(m_output_folder, m_verbose_flag);
+    Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
     std::string ask_ark_full = m_output_folder + ASK_ARK_FILENAME;
     amd_cert ask;
     amd_cert ark;
@@ -626,7 +626,7 @@ bool Tests::test_export_cert_chain()
 bool Tests::test_calc_measurement()
 {
     bool ret = false;
-    Command cmd(m_output_folder, m_verbose_flag);
+    Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
 
     measurement_t data;
     data.meas_ctx  = 0x04;
@@ -666,7 +666,7 @@ bool Tests::test_calc_measurement()
 bool Tests::test_validate_cert_chain()
 {
     bool ret = false;
-    Command cmd(m_output_folder, m_verbose_flag);
+    Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
 
     do {
         printf("*Starting validate_cert_chain tests\n");

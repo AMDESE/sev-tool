@@ -74,6 +74,11 @@ struct measurement_t {
     aes_128_key tik;
 };
 
+enum ccp_required_t {
+    CCP_REQ     = 0,
+    CCP_NOT_REQ = 1,
+};
+
 class Command {
 private:
     SEVDevice *m_sev_device;
@@ -110,7 +115,7 @@ private:
 
 public:
     Command();
-    Command(std::string output_folder, int verbose_flag);
+    Command(std::string output_folder, int verbose_flag, ccp_required_t ccp = CCP_REQ);
     ~Command();
 
     int factory_reset(void);

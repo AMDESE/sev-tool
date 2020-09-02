@@ -215,7 +215,7 @@ int main(int argc, char **argv)
                 break;
             }
             case 'n': {         // GET_ASK_ARK
-                Command cmd(output_folder, verbose_flag);
+                Command cmd(output_folder, verbose_flag, CCP_NOT_REQ);
                 cmd_ret = cmd.get_ask_ark();
                 break;
             }
@@ -240,12 +240,12 @@ int main(int argc, char **argv)
                 sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.digest, sizeof(user_data.digest));
                 sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.mnonce, sizeof(user_data.mnonce));
                 sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.tik,    sizeof(user_data.tik));
-                Command cmd(output_folder, verbose_flag);
+                Command cmd(output_folder, verbose_flag, CCP_NOT_REQ);
                 cmd_ret = cmd.calc_measurement(&user_data);
                 break;
             }
             case 'u': {         // VALIDATE_CERT_CHAIN
-                Command cmd(output_folder, verbose_flag);
+                Command cmd(output_folder, verbose_flag, CCP_NOT_REQ);
                 cmd_ret = cmd.validate_cert_chain();
                 break;
             }

@@ -125,7 +125,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
     uint8_t decrypted[AMD_CERT_KEY_BYTES_4K] = {0}; // TODO wrong length
     uint8_t signature[AMD_CERT_KEY_BYTES_4K] = {0};
     uint32_t fixed_offset = offsetof(amd_cert, pub_exp);    // 64 bytes
-    ePSP_DEVICE_TYPE device_type = m_sev_device->get_device_type();
+    ePSP_DEVICE_TYPE device_type = sev::get_device_type();
 
     do {
         if (!cert || !parent) {
@@ -313,7 +313,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
     hmac_sha_256 hash;
     hmac_sha_256 fused_hash;
     const uint8_t *amd_root_key_id = NULL;
-    ePSP_DEVICE_TYPE device_type = m_sev_device->get_device_type();
+    ePSP_DEVICE_TYPE device_type = sev::get_device_type();
 
     do {
         if (!ark) {

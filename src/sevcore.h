@@ -103,6 +103,17 @@ typedef union
     uint8_t raw;
 } Deps;
 
+
+namespace sev
+{
+// Global Functions that don't require ioctls
+void get_family_model(uint32_t *family, uint32_t *model);
+ePSP_DEVICE_TYPE get_device_type(void);
+int get_ask_ark(const std::string output_folder, const std::string cert_file);
+int zip_certs(const std::string output_folder, const std::string zip_name,
+              const std::string files_to_zip);
+} // namespace
+
 // Class to access the special SEV FW API test suite driver.
 class SEVDevice {
 private:
@@ -114,7 +125,6 @@ private:
 
     bool validate_pek_csr(sev_cert *pek_csr);
     std::string display_build_info(void);
-    void get_family_model(uint32_t *family, uint32_t *model);
 
     bool kvm_amd_sev_enabled(void);
     bool valid_qemu(virDomainPtr dom);
@@ -167,7 +177,6 @@ public:
     int pek_cert_import(uint8_t *data, sev_cert *pek_csr,
                         const std::string oca_priv_key_file);
     int get_id(void *data, void *id_mem, uint32_t id_length = 0);
-    ePSP_DEVICE_TYPE get_device_type(void);
 
     void check_dependencies(void);
 
@@ -178,11 +187,6 @@ public:
     int set_externally_owned(const std::string oca_priv_key_file);
     int generate_cek_ask(const std::string output_folder,
                          const std::string cert_file);
-    int get_ask_ark(const std::string output_folder,
-                    const std::string cert_file);
-    int zip_certs(const std::string output_folder,
-                  const std::string zip_name,
-                  const std::string files_to_zip);
 };
 
 #endif /* SEVCORE_H */

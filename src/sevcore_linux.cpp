@@ -29,6 +29,121 @@
 
 char *SEV_PIPE_FILES[2];
 
+// -------------- Global Functions that don't require ioctls -------------- //
+void sev::get_family_model(uint32_t *family, uint32_t *model)
+{
+    std::string cmd = "";
+    std::string fam_str = "";
+    std::string model_str = "";
+
+    cmd = "lscpu | grep -E \"CPU family:\" | awk {'print $3'}";
+    sev::execute_system_command(cmd, &fam_str);
+    cmd = "lscpu | grep -E \"Model:\" | awk {'print $2'}";
+    sev::execute_system_command(cmd, &model_str);
+
+    *family = std::stoi(fam_str, NULL, 10);
+    *model = std::stoi(model_str, NULL, 10);
+}
+
+ePSP_DEVICE_TYPE sev::get_device_type(void)
+{
+    uint32_t family = 0;
+    uint32_t model = 0;
+
+    sev::get_family_model(&family, &model);
+
+    if (family == NAPLES_FAMILY && (int)model >= (int)NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
+        return PSP_DEVICE_TYPE_NAPLES;
+    }
+    else if (family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
+        return PSP_DEVICE_TYPE_ROME;
+    }
+    else
+        return PSP_DEVICE_TYPE_INVALID;
+}
+
+int sev::get_ask_ark(const std::string output_folder, const std::string cert_file)
+{
+    int cmd_ret = SEV_RET_UNSUPPORTED;
+    std::string cmd = "wget ";
+    std::string output = "";
+    ePSP_DEVICE_TYPE device_type = PSP_DEVICE_TYPE_INVALID;
+    std::string cert_w_path = "";
+    std::string to_cert_w_path = output_folder + cert_file;
+
+    do {
+        cmd += "-P " + output_folder + " ";
+        cert_w_path = output_folder;
+
+        // Don't re-download the CEK from the KDS server if you already have it
+        if (sev::get_file_size(to_cert_w_path) != 0) {
+            // printf("ASK_ARK already exists, not re-downloading\n");
+            cmd_ret = SEV_RET_SUCCESS;
+            break;
+        }
+
+        device_type = get_device_type();
+        if (device_type == PSP_DEVICE_TYPE_NAPLES) {
+            cmd += ASK_ARK_NAPLES_SITE;
+            cert_w_path += ASK_ARK_NAPLES_FILE;
+        }
+        else if (device_type == PSP_DEVICE_TYPE_ROME) {
+            cmd += ASK_ARK_ROME_SITE;
+            cert_w_path += ASK_ARK_ROME_FILE;
+        }
+        else {
+            printf("Error: Unable to determine Platform type. " \
+                        "Detected %i\n", (uint32_t)device_type);
+            break;
+        }
+
+        // Download the certificate from the AMD server
+        if (!sev::execute_system_command(cmd, &output)) {
+            printf("Error: pipe not opened for system command\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+
+        // Check if the file got downloaded
+        char tmp_buf[100] = {0};  // Just try to read some amount of chars
+        if (sev::read_file(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
+            printf("Error: command to get ask_ark cert failed\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+
+        // Rename the file (_PlatformType) to something known (cert_file)
+        if (std::rename(cert_w_path.c_str(), to_cert_w_path.c_str()) != 0) {
+            printf("Error: renaming ask_ark cert file\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+        cmd_ret = SEV_RET_SUCCESS;
+    } while (0);
+
+    return cmd_ret;
+}
+
+int sev::zip_certs(const std::string output_folder, const std::string zip_name,
+                   const std::string files_to_zip)
+{
+    int cmd_ret = SEV_RET_SUCCESS;
+    std::string cmd = "";
+    std::string output = "";
+    std::string error = "zip error";
+
+    cmd = "zip " + output_folder + zip_name + " " + files_to_zip;
+    sev::execute_system_command(cmd, &output);
+
+    if (output.find(error) != std::string::npos) {
+        printf("Error when zipping up files!");
+        cmd_ret = -1;
+    }
+
+    return cmd_ret;
+}
+
+// -------------------------- SEVDevice Functions -------------------------- //
 SEVDevice::~SEVDevice()
 {
     if (mFd >= 0) {
@@ -355,38 +470,6 @@ std::string SEVDevice::display_build_info(void)
     build_id_ver.replace(9, 3, build_id_buf);
 
     return api_major_ver + ", " + api_minor_ver + ", " + build_id_ver;
-}
-
-void SEVDevice::get_family_model(uint32_t *family, uint32_t *model)
-{
-    std::string cmd = "";
-    std::string fam_str = "";
-    std::string model_str = "";
-
-    cmd = "lscpu | grep -E \"CPU family:\" | awk {'print $3'}";
-    sev::execute_system_command(cmd, &fam_str);
-    cmd = "lscpu | grep -E \"Model:\" | awk {'print $2'}";
-    sev::execute_system_command(cmd, &model_str);
-
-    *family = std::stoi(fam_str, NULL, 10);
-    *model = std::stoi(model_str, NULL, 10);
-}
-
-ePSP_DEVICE_TYPE SEVDevice::get_device_type(void)
-{
-    uint32_t family = 0;
-    uint32_t model = 0;
-
-    get_family_model(&family, &model);
-
-    if (family == NAPLES_FAMILY && (int)model >= (int)NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
-        return PSP_DEVICE_TYPE_NAPLES;
-    }
-    else if (family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
-        return PSP_DEVICE_TYPE_ROME;
-    }
-    else
-        return PSP_DEVICE_TYPE_INVALID;
 }
 
 /**
@@ -943,7 +1026,6 @@ std::string SEVDevice::format_software_support_text(void)
     return ret_val;
 }
 
-
 int SEVDevice::sys_info()
 {
     int cmd_ret = SEV_RET_SUCCESS;
@@ -977,7 +1059,7 @@ int SEVDevice::sys_info()
     std::string build_info = display_build_info();
     printf("Firmware Version: %s\n", build_info.c_str());
 
-    get_family_model(&family, &model);
+    sev::get_family_model(&family, &model);
     printf("Platform Family %02x, Model %02x\n", family, model);
 
     printf("\n");
@@ -1167,89 +1249,6 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
             break;
         }
     } while (0);
-
-    return cmd_ret;
-}
-
-int SEVDevice::get_ask_ark(const std::string output_folder,
-                           const std::string cert_file)
-{
-    int cmd_ret = SEV_RET_UNSUPPORTED;
-    std::string cmd = "wget ";
-    std::string output = "";
-    ePSP_DEVICE_TYPE device_type = PSP_DEVICE_TYPE_INVALID;
-    std::string cert_w_path = "";
-    std::string to_cert_w_path = output_folder + cert_file;
-
-    do {
-        cmd += "-P " + output_folder + " ";
-        cert_w_path = output_folder;
-
-        // Don't re-download the CEK from the KDS server if you already have it
-        if (sev::get_file_size(to_cert_w_path) != 0) {
-            // printf("ASK_ARK already exists, not re-downloading\n");
-            cmd_ret = SEV_RET_SUCCESS;
-            break;
-        }
-
-        device_type = get_device_type();
-        if (device_type == PSP_DEVICE_TYPE_NAPLES) {
-            cmd += ASK_ARK_NAPLES_SITE;
-            cert_w_path += ASK_ARK_NAPLES_FILE;
-        }
-        else if (device_type == PSP_DEVICE_TYPE_ROME) {
-            cmd += ASK_ARK_ROME_SITE;
-            cert_w_path += ASK_ARK_ROME_FILE;
-        }
-        else {
-            printf("Error: Unable to determine Platform type. " \
-                        "Detected %i\n", (uint32_t)device_type);
-            break;
-        }
-
-        // Download the certificate from the AMD server
-        if (!sev::execute_system_command(cmd, &output)) {
-            printf("Error: pipe not opened for system command\n");
-            cmd_ret = SEV_RET_UNSUPPORTED;
-            break;
-        }
-
-        // Check if the file got downloaded
-        char tmp_buf[100] = {0};  // Just try to read some amount of chars
-        if (sev::read_file(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
-            printf("Error: command to get ask_ark cert failed\n");
-            cmd_ret = SEV_RET_UNSUPPORTED;
-            break;
-        }
-
-        // Rename the file (_PlatformType) to something known (cert_file)
-        if (std::rename(cert_w_path.c_str(), to_cert_w_path.c_str()) != 0) {
-            printf("Error: renaming ask_ark cert file\n");
-            cmd_ret = SEV_RET_UNSUPPORTED;
-            break;
-        }
-        cmd_ret = SEV_RET_SUCCESS;
-    } while (0);
-
-    return cmd_ret;
-}
-
-int SEVDevice::zip_certs(const std::string output_folder,
-                         const std::string zip_name,
-                         const std::string files_to_zip)
-{
-    int cmd_ret = SEV_RET_SUCCESS;
-    std::string cmd = "";
-    std::string output = "";
-    std::string error = "zip error";
-
-    cmd = "zip " + output_folder + zip_name + " " + files_to_zip;
-    sev::execute_system_command(cmd, &output);
-
-    if (output.find(error) != std::string::npos) {
-        printf("Error when zipping up files!");
-        cmd_ret = -1;
-    }
 
     return cmd_ret;
 }

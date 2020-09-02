@@ -29,8 +29,8 @@ Command::Command(void)
     // Intentionally Empty
 }
 
-Command::Command(std::string output_folder, int verbose_flag)
-       : m_sev_device(&SEVDevice::get_sev_device()),
+Command::Command(std::string output_folder, int verbose_flag, ccp_required_t ccp)
+       : m_sev_device((ccp == CCP_REQ) ? &SEVDevice::get_sev_device() : NULL),
          m_output_folder(output_folder),
          m_verbose_flag(verbose_flag)
 {
@@ -372,7 +372,7 @@ int Command::get_ask_ark(void)
 
     std::string cert_file = ASK_ARK_FILENAME;
 
-    cmd_ret = m_sev_device->get_ask_ark(m_output_folder, cert_file);
+    cmd_ret = sev::get_ask_ark(m_output_folder, cert_file);
 
     return (int)cmd_ret;
 }
@@ -411,7 +411,7 @@ int Command::generate_all_certs(void)
             break;
 
         // Get the ask_ark from AMD dev site
-        cmd_ret = m_sev_device->get_ask_ark(m_output_folder, ask_ark_file);
+        cmd_ret = sev::get_ask_ark(m_output_folder, ask_ark_file);
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -482,7 +482,7 @@ int Command::export_cert_chain(void)
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
-        cmd_ret = m_sev_device->zip_certs(m_output_folder, zip_name, cert_names);
+        cmd_ret = sev::zip_certs(m_output_folder, zip_name, cert_names);
     } while (0);
     return (int)cmd_ret;
 }
