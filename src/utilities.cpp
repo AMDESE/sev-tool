@@ -20,6 +20,8 @@
 #include <stdio.h>
 #include <cstring>      // memcpy
 
+#include <sys/random.h>
+
 bool sev::execute_system_command(const std::string cmd, std::string *log)
 {
     FILE *pipe = popen(cmd.c_str(), "r");
@@ -118,10 +120,7 @@ size_t sev::get_file_size(const std::string file_name)
 
 void sev::gen_random_bytes(void *bytes, size_t num_bytes)
 {
-    uint8_t *addr = (uint8_t *)bytes;
-    while (num_bytes--) {
-        *addr++ = (uint8_t)(rand() & 0xff);
-    }
+    getrandom(bytes, num_bytes, 0);
 }
 
 bool sev::verify_access(uint8_t *buf, size_t len)
