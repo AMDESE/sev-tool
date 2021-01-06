@@ -52,8 +52,7 @@ bool kdf(uint8_t *key_out,       size_t key_out_length,
     if (!(ctx = HMAC_CTX_new()))
         return ret_val;
 
-    for (unsigned int i = 1; i <= n; i++)
-    {
+    for (unsigned int i = 1; i <= n; i++) {
         if (HMAC_CTX_reset(ctx) != 1)
             break;
 
@@ -274,16 +273,18 @@ bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
  *                (Elliptic Curve Diffie Hellman (ECDH)) P-384 key pair
  * Parameters:    [evp_key_pair] the output EVP_PKEY to which the keypair gets
  *                  set
+ *                [curve] P-384 (default) or P-256 (only for negative testing)
  * Note:          This key must be initialized (with EVP_PKEY_new())
  *                before passing in
  */
-bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair)
+bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair, SEV_EC curve)
 {
     if (!evp_key_pair)
         return false;
 
     bool ret = false;
-    EC_KEY *ec_keypair = NULL;
+    int nid = 0;
+    EC_KEY *ec_key_pair = NULL;
 
     do {
         // New up the Guest Owner's private EVP_PKEY
@@ -291,24 +292,83 @@ bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair)
             break;
 
         // New up the EC_KEY with the EC_GROUP
-        int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
-        ec_keypair = EC_KEY_new_by_curve_name(nid);
+        if (curve == SEV_EC_P256)
+            nid = EC_curve_nist2nid("P-256");   // NID_secp256r1
+        else
+            nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
+        ec_key_pair = EC_KEY_new_by_curve_name(nid);
 
         // Create the new public/private EC key pair. EC_key must have a group
         // associated with it before calling this function
-        if (EC_KEY_generate_key(ec_keypair) != 1)
+        if (EC_KEY_generate_key(ec_key_pair) != 1)
             break;
 
         /*
          * Convert EC key to EVP_PKEY
-         * This function links evp_key_pair to ec_keypair, so when evp_key_pair is
-         *  freed, ec_keypair is freed. We don't want the user to have to manage 2
+         * This function links evp_key_pair to ec_key_pair, so when evp_key_pair is
+         *  freed, ec_key_pair is freed. We don't want the user to have to manage 2
          *  keys, so just return EVP_PKEY and make sure user free's it
          */
-        if (EVP_PKEY_assign_EC_KEY(*evp_key_pair, ec_keypair) != 1)
+        if (EVP_PKEY_assign_EC_KEY(*evp_key_pair, ec_key_pair) != 1)
             break;
 
         if (!evp_key_pair)
+            break;
+
+        ret = true;
+    } while (0);
+
+    return ret;
+}
+
+/**
+ * Description:   Generates a new RSA key pair with salt
+ * Typical Usage: Used to create a new OCA cert
+ * Parameters:    [evp_key_pair] the output EVP_PKEY to which the keypair gets
+ *                  set
+ * Note:          This key must be initialized (with EVP_PKEY_new())
+ *                before passing in
+ */
+bool GenerateRSAKeypair(EVP_PKEY **evp_key_pair)
+{
+    if (!evp_key_pair)
+        return false;
+
+    bool ret = false;
+    RSA *rsa_key_pair = NULL;
+    BIGNUM *bne = NULL;
+    int bits = 4096;    // Modulus size in bits
+    unsigned long e = RSA_F4;       // 65537
+
+    do {
+        // New up the Guest Owner's private EVP_PKEY
+        if (!(*evp_key_pair = EVP_PKEY_new()))
+            break;
+
+        // Generate RSA key
+        bne = BN_new();
+        if (BN_set_word(bne, e) != 1)
+           break;
+
+        // New up the RSA key
+        if (!(rsa_key_pair = RSA_new()))
+            break;
+
+        // Create the new public/private EC key pair. EC_key must have a group
+        // associated with it before calling this function
+        if (RSA_generate_key_ex(rsa_key_pair, bits, bne, NULL) != 1)
+            break;
+
+        /*
+         * Convert RSA key to EVP_PKEY
+         * This function links EVP_PKEY to rsa_key_pair, so when EVP_PKEY is
+         *  freed, rsa_key_pair is freed. We don't want the user to have to manage 2
+         *  keys, so just return EVP_PKEY and make sure user free's it
+         */
+        if (EVP_PKEY_assign_RSA(*evp_key_pair, rsa_key_pair) != 1)
+            break;
+
+        if (!rsa_key_pair)
             break;
 
         ret = true;
@@ -323,12 +383,12 @@ bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair)
  * Formerly called CalcHashDigest
  *
  * msg       : message buffer to hash.
- * msg_len   : Length of the input message.
+ * msg_len   : length of the input message.
  *             - For SEV_CERTs, use PubKeyOffset (number of bytes to be hashed,
  *               from the top of the sev_cert until the first signature.
  *               Version through and including pub_key)
  * digest    : output buffer for the final digest.
- * digest_len: Length of the output buffer.
+ * digest_len: length of the output buffer.
  */
 bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
                 size_t digest_len, SHA_TYPE sha_type)
@@ -367,32 +427,65 @@ bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
     return ret;
 }
 
-static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
-                     const uint8_t *digest, size_t length)
+static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *digest,
+                     size_t length, SHA_TYPE sha_type, bool pss)
 {
     bool is_valid = false;
     RSA *priv_rsa_key = NULL;
-    uint32_t sig_len = sizeof(sev_sig);
+    uint32_t sig_len = 0;
 
     do {
-        printf("Error: RSA signing untested!");
-        // This code probably does not work!
-
-        // Allocates a new RSA private key which is freed at the bottom of this function
-        priv_rsa_key = RSA_new();
+        // Pull the RSA key from the EVP_PKEY
         priv_rsa_key = EVP_PKEY_get1_RSA(*priv_evp_key);
         if (!priv_rsa_key)
             break;
 
-        if (RSA_sign((length == DIGEST_SHA256_SIZE_BYTES) ? NID_sha256 : NID_sha384, digest,
-                    (uint32_t)length, (uint8_t *)&sig->rsa, &sig_len, priv_rsa_key) != 1)
+        if ((size_t)RSA_size(priv_rsa_key) > sizeof(sev_sig::rsa)) {
+            printf("rsa_sign buffer too small\n");
             break;
+        }
+
+        if (pss) {
+            uint8_t encrypted[4096/BITS_PER_BYTE] = {0};
+            uint8_t signature[4096/BITS_PER_BYTE] = {0};
+
+            // Memzero all the buffers
+            memset(encrypted, 0, sizeof(encrypted));
+            memset(signature, 0, sizeof(signature));
+
+            // Compute the pss padded data
+            if (RSA_padding_add_PKCS1_PSS(priv_rsa_key, encrypted, digest,
+                                         (sha_type == SHA_TYPE_256) ? EVP_sha256() : EVP_sha384(),
+                                         -2) != 1) // maximum salt length
+            {
+                break;
+            }
+
+            // Perform digital signature
+            if (RSA_private_encrypt(sizeof(encrypted), encrypted, signature, priv_rsa_key, RSA_NO_PADDING) == -1)
+                break;
+
+            // Swap the bytes of the signature
+            if (!sev::reverse_bytes(signature, 4096/BITS_PER_BYTE))
+                break;
+            memcpy(sig->rsa.s, signature, 4096/BITS_PER_BYTE);
+        }
+        else {
+            if (RSA_sign((sha_type == SHA_TYPE_256) ? NID_sha256 : NID_sha384, digest,
+                        (uint32_t)length, (uint8_t *)&sig->rsa, &sig_len, priv_rsa_key) != 1)
+                break;
+        }
+
+        if (sig_len > sizeof(sev_sig::rsa)) {
+            printf("rsa_sign buffer too small\n");
+            break;
+        }
 
         is_valid = true;
     } while (0);
 
     // Free memory
-    RSA_free(priv_rsa_key);
+    // RSA_free(priv_rsa_key);
 
     return is_valid;
 }
@@ -400,17 +493,67 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
 /**
  * rsa_pss_verify
  */
-bool rsa_verify(/*sev_sig *sig, EVP_PKEY **pub_evp_key,
-                       const uint8_t *digest, size_t length*/)
+static bool rsa_verify(sev_sig *sig, EVP_PKEY **evp_pub_key, const uint8_t *sha_digest,
+                       size_t sha_length, SHA_TYPE sha_type, bool pss)
 {
     bool is_valid = false;
+    RSA *rsa_pub_key = NULL;
+    uint32_t sig_len = 0;
 
     do {
-        printf("Error: RSA verification untested!");
-        // This code probably does not work!
+        // Pull the RSA key from the EVP_PKEY
+        rsa_pub_key = EVP_PKEY_get1_RSA(*evp_pub_key);
+        if (!rsa_pub_key)
+            break;
+
+        sig_len = RSA_size(rsa_pub_key);
+
+        if (pss) {
+            uint8_t decrypted[4096/BITS_PER_BYTE] = {0}; // TODO wrong length
+            uint8_t signature[4096/BITS_PER_BYTE] = {0};
+
+            // Memzero all the buffers
+            memset(decrypted, 0, sizeof(decrypted));
+            memset(signature, 0, sizeof(signature));
+
+            // Swap the bytes of the signature
+            memcpy(signature, sig->rsa.s, 4096/BITS_PER_BYTE);
+            if (!sev::reverse_bytes(signature, 4096/BITS_PER_BYTE))
+                break;
+
+            // Now we will verify the signature. Start by a RAW decrypt of the signature
+            if (RSA_public_decrypt(sig_len, signature, decrypted, rsa_pub_key, RSA_NO_PADDING) == -1)
+                break;
+
+            // Verify the data
+            // SLen of -2 means salt length is recovered from the signature
+            if (RSA_verify_PKCS1_PSS(rsa_pub_key, sha_digest,
+                                     (sha_type == SHA_TYPE_256) ? EVP_sha256() : EVP_sha384(),
+                                     decrypted, -2) != 1)
+            {
+                printf("Error: rsa_verify with pss Failed\n");
+                break;
+            }
+        }
+        else {
+            // Verify the data
+            if (RSA_verify((sha_type == SHA_TYPE_256) ? NID_sha256 : NID_sha384,
+                            sha_digest, (uint32_t)sha_length, sig->rsa.s, sig_len, rsa_pub_key) != 1)
+            {
+                printf("Error: rsa_verify without pss Failed\n");
+                break;
+            }
+        }
 
         is_valid = true;
     } while (0);
+
+    // Free the keys and contexts
+    // if (rsa_pub_key)
+    //     RSA_free(rsa_pub_key);
+
+    // if (md_ctx)
+    //     EVP_MD_CTX_free(md_ctx);
 
     return is_valid;
 }
@@ -512,6 +655,7 @@ static bool sign_verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uin
     SHA_TYPE sha_type;
     uint8_t *sha_digest = NULL;
     size_t sha_length;
+    const bool pss = true;
 
     do {
         // Determine if SHA_TYPE is 256 bit or 384 bit
@@ -540,9 +684,9 @@ static bool sign_verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uin
             break;
 
         if ((algo == SEV_SIG_ALGO_RSA_SHA256) || (algo == SEV_SIG_ALGO_RSA_SHA384)) {
-            if (sign && !rsa_sign(sig, evp_key_pair, sha_digest, sha_length))
+            if (sign && !rsa_sign(sig, evp_key_pair, sha_digest, sha_length, sha_type, pss))
                 break;
-            if (!rsa_verify())
+            if (!rsa_verify(sig, evp_key_pair, sha_digest, sha_length, sha_type, pss))
                 break;
         }
         else if ((algo == SEV_SIG_ALGO_ECDSA_SHA256) || (algo == SEV_SIG_ALGO_ECDSA_SHA384)) {

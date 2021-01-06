@@ -15,6 +15,7 @@
  **************************************************************************/
 
 #include "amdcert.h"
+#include "crypto.h"
 #include "utilities.h"  // reverse_bytes
 #include <cstring>      // memset
 #include <openssl/ts.h> // SHA256_CTX
@@ -111,7 +112,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
     hmac_sha_256 sha_digest_256;
     hmac_sha_512 sha_digest_384;
-    SEV_SIG_ALGO algo = SEV_SIG_ALGO_INVALID;
+    SHA_TYPE algo = SHA_TYPE_256;
     uint8_t *sha_digest = NULL;
     size_t sha_length = 0;
 
@@ -135,12 +136,12 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
 
         // Set SHA_TYPE to 256 bit or 384 bit depending on device_type
         if (device_type == PSP_DEVICE_TYPE_NAPLES) {
-            algo = SEV_SIG_ALGO_RSA_SHA256;
+            algo = SHA_TYPE_256;
             sha_digest = sha_digest_256;
             sha_length = sizeof(hmac_sha_256);
         }
         else /*if (device_type == PSP_DEVICE_TYPE_ROME)*/ {
-            algo = SEV_SIG_ALGO_RSA_SHA384;
+            algo = SHA_TYPE_384;
             sha_digest = sha_digest_384;
             sha_length = sizeof(hmac_sha_512);
         }
@@ -160,7 +161,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
             break;
 
         md_ctx = EVP_MD_CTX_create();
-        if (EVP_DigestInit(md_ctx, (algo == SEV_SIG_ALGO_RSA_SHA256) ? EVP_sha256() : EVP_sha384()) <= 0)
+        if (EVP_DigestInit(md_ctx, (algo == SHA_TYPE_256) ? EVP_sha256() : EVP_sha384()) <= 0)
             break;
         if (EVP_DigestUpdate(md_ctx, cert, fixed_offset) <= 0)     // Calls SHA256_UPDATE
             break;
@@ -182,7 +183,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
         // Verify the data
         // SLen of -2 means salt length is recovered from the signature
         if (RSA_verify_PKCS1_PSS(rsa_pub_key, sha_digest,
-                                (algo == SEV_SIG_ALGO_RSA_SHA256) ? EVP_sha256() : EVP_sha384(),
+                                (algo == SHA_TYPE_256) ? EVP_sha256() : EVP_sha384(),
                                 decrypted, -2) != 1)
         {
             break;
@@ -338,8 +339,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
         else //if (device_type == PSP_DEVICE_TYPE_ROME)
             amd_root_key_id = amd_root_key_id_rome;
 
-        if (memcmp(&ark->key_id_0, amd_root_key_id, sizeof(ark->key_id_0 + ark->key_id_1)) != 0)
-        {
+        if (memcmp(&ark->key_id_0, amd_root_key_id, sizeof(ark->key_id_0 + ark->key_id_1)) != 0) {
             cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
         }

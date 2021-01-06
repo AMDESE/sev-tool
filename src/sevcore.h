@@ -29,9 +29,9 @@
 
 const std::string DEFAULT_SEV_DEVICE     = "/dev/sev";
 
-const std::string KDS_CERT_SITE          = "https://kdsintf.amd.com/cek/id/";
-const std::string AMD_SEV_DEVELOPER_SITE = "https://developer.amd.com/sev/";
-const std::string ASK_ARK_PATH_SITE      = "https://developer.amd.com/wp-content/resources/";
+#define AMD_SEV_DEVELOPER_SITE    "https://developer.amd.com/sev/"
+#define ASK_ARK_PATH_SITE         "https://developer.amd.com/wp-content/resources/"
+
 const std::string ASK_ARK_NAPLES_FILE    = "ask_ark_naples.cert";
 const std::string ASK_ARK_ROME_FILE      = "ask_ark_rome.cert";
 const std::string ASK_ARK_NAPLES_SITE    = ASK_ARK_PATH_SITE + ASK_ARK_NAPLES_FILE;

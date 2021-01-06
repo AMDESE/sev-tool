@@ -21,7 +21,10 @@
 
 namespace sev
 {
-    #define SEV_DEFAULT_DIR "/usr/psp-sev-assets/"
+    #define SEV_DEFAULT_DIR       "/usr/psp-sev-assets/"
+    #define KDS_CERT_SITE         "https://kdsintf.amd.com"
+    #define KDS_DEV_CERT_SITE     "https://kdsintfdev.amd.com"
+    #define KDS_CEK               KDS_CERT_SITE "/cek/id/"
 
     #define PAGE_SIZE               4096        // Todo remove this one?
     #define PAGE_SIZE_4K            4096
@@ -56,7 +59,7 @@ namespace sev
 
     static inline unsigned int cpuid_ebx(unsigned int op)
     {
-        unsigned int eax = op, ebx, ecx = 0, edx;
+        unsigned int eax = op, ebx = 0, ecx = 0, edx = 0;
 
         native_cpuid(&eax, &ebx, &ecx, &edx);
         return ebx;

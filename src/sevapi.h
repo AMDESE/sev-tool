@@ -113,7 +113,7 @@ typedef enum __attribute__((mode(HI))) SEV_API_COMMAND
     SEV_LIMIT,                          /* Invalid command ID */
 } SEV_API_COMMAND;
 
-// Chapter 5.1.2 - Platform state Machine
+// Chapter 5.1.2 - Platform State Machine
 /**
  * SEV Platform state (each entry stored in a byte).
  *
@@ -197,7 +197,7 @@ typedef enum __attribute__((mode(HI))) SEV_ERROR_CODE
     ERROR_ASID_OWNED                = 0x0C,
     ERROR_INVALID_ASID              = 0x0D,
     ERROR_WBINVD_REQUIRED           = 0x0E,
-    ERROR_DFFLUSH_REQUIRED          = 0x0F,
+    ERROR_DF_FLUSH_REQUIRED         = 0x0F,
     ERROR_INVALID_GUEST             = 0x10,
     ERROR_INVALID_COMMAND           = 0x11,
     ERROR_ACTIVE                    = 0x12,
@@ -491,7 +491,7 @@ enum __attribute__((mode(SI))) SEV_CONFIG
 
 
 // Guest policy bits. Used in LAUNCH_START and GUEST_STATUS
-// Chapter 3: Guest policy Structure
+// Chapter 3: Guest Policy Structure
 /**
  * SEV Guest policy bits (stored as a bit field struct).
  *
@@ -1015,8 +1015,8 @@ typedef struct __attribute__ ((__packed__)) swap_in_cmd_buf_t
 
 typedef struct __attribute__ ((__packed__)) swap_io_metadata_entry_t
 {
-    uint64_t SoftwareData;    // Supplied by hypervisor
-    uint8_t  IV[8];         // AES_GCM_IV
+    uint64_t SoftwareData;  // Supplied by hypervisor
+    uint8_t  IV[8];         // OEKIVCount
     uint8_t  AuthTag[16];
     uint64_t reserved;
     uint64_t reserved2;

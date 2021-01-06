@@ -47,6 +47,10 @@
  */
 #define DIGEST_SHA256_SIZE_BYTES    (256/8) // 32
 #define DIGEST_SHA384_SIZE_BYTES    (384/8) // 48
+#define DIGEST_SHA512_SIZE_BYTES    (512/8) // 64
+typedef uint8_t DIGESTSHA256[DIGEST_SHA256_SIZE_BYTES];
+// typedef uint8_t DIGESTSHA384[DIGEST_SHA384_SIZE_BYTES];
+typedef uint8_t DIGESTSHA512[DIGEST_SHA512_SIZE_BYTES];
 
 
 /**
@@ -97,7 +101,8 @@ bool gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len)
 bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
              const aes_128_key key, const uint8_t iv[128/8]);
 
-bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair);
+bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair, SEV_EC curve = SEV_EC_P384);
+bool generate_rsa_keypair(EVP_PKEY **evp_key_pair);
 
 bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
                 size_t digest_len, SHA_TYPE sha_type);

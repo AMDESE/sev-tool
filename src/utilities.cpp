@@ -176,8 +176,7 @@ bool sev::reverse_bytes(uint8_t *bytes, size_t size)
     if (!bytes)
         return false;
 
-    while (start < end)
-    {
+    while (start < end) {
         uint8_t byte = *start;
         *start = *end;
         *end = byte;
@@ -191,8 +190,7 @@ bool sev::reverse_bytes(uint8_t *bytes, size_t size)
 bool sev::is_zero(const uint8_t *ptr, size_t bytes)
 {
     uint8_t val = 0;
-    for (size_t i = 0; i < bytes; i++)
-    {
+    for (size_t i = 0; i < bytes; i++) {
         val |= ptr[i];
     }
     return (val == 0);

@@ -347,7 +347,7 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
  *                  command as input to this function, to help populate the cert
  */
 bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
-                              uint8_t api_minor)
+                              uint8_t api_minor, SEV_SIG_ALGO algo)
 {
     bool cmd_ret = false;
 
@@ -361,9 +361,9 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
         m_child_cert.api_major = api_major;
         m_child_cert.api_minor = api_minor;
         m_child_cert.pub_key_usage = SEV_USAGE_OCA;
-        m_child_cert.pub_key_algo = SEV_SIG_ALGO_ECDSA_SHA256;
+        m_child_cert.pub_key_algo = algo;
         m_child_cert.sig_1_usage = SEV_USAGE_OCA;
-        m_child_cert.sig_1_algo = SEV_SIG_ALGO_ECDSA_SHA256;
+        m_child_cert.sig_1_algo = algo;         // OCA is self-signed (sig algo is algo from OCA's keypair)
         m_child_cert.sig_2_usage = SEV_USAGE_INVALID;
         m_child_cert.sig_2_algo = SEV_SIG_ALGO_INVALID;
 
@@ -377,8 +377,8 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
          * Technically this step is not necessary, as the firmware doesn't
          * validate the GODH signature
          */
-        if (!sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256,
-                        oca_key_pair, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256))
+        if (!sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_OCA, algo,
+                        oca_key_pair, SEV_USAGE_OCA, algo))
             break;
 
         cmd_ret = true;
@@ -699,7 +699,7 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
-    struct rsa_st *rsa_pub_key = NULL;
+    RSA *rsa_pub_key = NULL;
     EC_KEY *ec_pub_key = NULL;
     BIGNUM *x_big_num = NULL;
     BIGNUM *y_big_num = NULL;
@@ -714,7 +714,7 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
 
             // Convert the parent to an RSA key to pass into RSA_verify
             modulus = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.modulus, cert->pub_key.rsa.modulus_size/8, NULL);  // n    // New's up BigNum
-            pub_exp = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.pub_exp, cert->pub_key.rsa.modulus_size/8, NULL);    // e
+            pub_exp = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.pub_exp, cert->pub_key.rsa.modulus_size/8, NULL);  // e
             if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, NULL) != 1)
                 break;
 
@@ -804,6 +804,9 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
     EC_KEY *ec_pubkey = NULL;
+    RSA *rsa_pubkey = NULL;
+    const BIGNUM *exponent = NULL;
+    const BIGNUM *modulus = NULL;
     BIGNUM *x_bignum = NULL;
     BIGNUM *y_bignum = NULL;
     EC_GROUP *ec_group = NULL;
@@ -811,20 +814,25 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
     do {
         if ((cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
             (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
-            // TODO: THIS CODE IS UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            printf("WARNING: You are using untested code in" \
-                   "decompile_public_key_into_certificate for RSA cert type!\n");
+            // Pull the RSA key from the EVP_PKEY
+            rsa_pubkey = EVP_PKEY_get1_RSA(evp_pubkey);
+            if (!rsa_pubkey)
+                break;
+
+            // Extract the exponent and modulus (RSA_get0_factors() would also work)
+            exponent = RSA_get0_e(rsa_pubkey);   // Exponent
+            modulus = RSA_get0_n(rsa_pubkey);    // Modulus
+
+            cert->pub_key.rsa.modulus_size = 4096;    // Bits
+            if (BN_bn2lebinpad(exponent, (unsigned char *)cert->pub_key.rsa.pub_exp, sizeof(cert->pub_key.rsa.pub_exp)) <= 0)
+                break;
+            if (BN_bn2lebinpad(modulus, (unsigned char *)cert->pub_key.rsa.modulus, sizeof(cert->pub_key.rsa.modulus)) <= 0)
+                break;
         }
         else if ((cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA384) ||
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA256)  ||
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384)) {      // ecdsa.c -> sign_verify_msg
-
-            int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
-            ec_group = EC_GROUP_new_by_curve_name(nid);
-
-            // Set the curve parameter of the cert's pubkey
-            cert->pub_key.ecdh.curve = SEV_EC_P384;
 
             // Pull the EC_KEY from the EVP_PKEY
             ec_pubkey = EVP_PKEY_get1_EC_KEY(evp_pubkey);
@@ -832,6 +840,16 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
             // Make sure the key is good
             if (EC_KEY_check_key(ec_pubkey) != 1)
                 break;
+
+            // Get the group and nid of the curve
+            const EC_GROUP *ec_group = EC_KEY_get0_group(ec_pubkey);
+            int nid = EC_GROUP_get_curve_name(ec_group);
+
+            // Set the curve parameter of the cert's pubkey
+            if (nid == EC_curve_nist2nid("P-256"))
+                cert->pub_key.ecdh.curve = SEV_EC_P256;
+            else // if (EC_curve_nist2nid("P-384"))
+                cert->pub_key.ecdh.curve = SEV_EC_P384;
 
             // Get the EC_POINT from the public key
             const EC_POINT *pub = EC_KEY_get0_public_key(ec_pubkey);
@@ -864,6 +882,7 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
     BN_free(x_bignum);
     EC_GROUP_free(ec_group);
     EC_KEY_free(ec_pubkey);
+    RSA_free(rsa_pubkey);
 
     return cmd_ret;
 }
@@ -890,8 +909,7 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
         // Get the public key from parent certs
         int numSigs = (parent_cert1 && parent_cert2) ? 2 : 1;   // Run the loop for 1 or 2 signatures
         int i = 0;
-        for (i = 0; i < numSigs; i++)
-        {
+        for (i = 0; i < numSigs; i++) {
             // New up the EVP_PKEY
             if (!(parent_pub_key[i] = EVP_PKEY_new()))
                 break;
