@@ -16,9 +16,11 @@
 
 #include "utilities.h"
 #include <climits>
+#include <cstring>      // memcpy
 #include <fstream>
 #include <stdio.h>
-#include <cstring>      // memcpy
+#include <time.h>
+#include <sys/random.h>
 
 bool sev::execute_system_command(const std::string cmd, std::string *log)
 {
@@ -118,9 +120,16 @@ size_t sev::get_file_size(const std::string file_name)
 
 void sev::gen_random_bytes(void *bytes, size_t num_bytes)
 {
-    uint8_t *addr = (uint8_t *)bytes;
-    while (num_bytes--) {
-        *addr++ = (uint8_t)(rand() & 0xff);
+    ssize_t num_gen_bytes = 0;
+    num_gen_bytes = getrandom(bytes, num_bytes, 0);
+    if (num_gen_bytes != (ssize_t)num_bytes) {
+        printf("Warning: getrandom failed. Generating random bytes manually\n");
+        // Do it manually
+        uint8_t *addr = (uint8_t *)bytes;
+        srand((unsigned int)time(NULL));
+        while (num_bytes--) {
+            *addr++ = (uint8_t)(rand() & 0xff);
+        }
     }
 }
 
