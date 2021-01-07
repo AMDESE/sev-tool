@@ -111,7 +111,8 @@ private:
                          size_t secret_mem_size, const iv_128 iv);
     bool create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
                                      uint8_t *buf, size_t buffer_len,
-                                     uint32_t hdr_flags);
+                                     uint32_t hdr_flags, uint8_t api_major,
+                                     uint8_t api_minor);
 
 public:
     Command();

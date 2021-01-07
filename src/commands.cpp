@@ -703,7 +703,7 @@ int Command::generate_launch_blob(uint32_t policy)
     memset(&session_data_buf, 0, sizeof(sev_session_buf));
 
     do {
-        // Read in the PDH (Platform Owner Diffie-Hellman Public Key)
+        // Read in the PDH (Platform Diffie-Hellman Public Key)
         std::string pdh_full = m_output_folder+PDH_FILENAME;
         if (sev::read_file(pdh_full, &pdh, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
@@ -776,12 +776,12 @@ int Command::generate_launch_blob(uint32_t policy)
 int Command::package_secret(void)
 {
     int cmd_ret = ERROR_UNSUPPORTED;
-    sev_session_buf session_data_buf;
     sev_hdr_buf packaged_secret_header;
     std::string secret_file = m_output_folder + SECRET_FILENAME;
-    std::string launch_blob_file = m_output_folder + LAUNCH_BLOB_FILENAME;
+    std::string pek_file = m_output_folder + PEK_FILENAME;
     std::string packaged_secret_file = m_output_folder + PACKAGED_SECRET_FILENAME;
     std::string packaged_secret_header_file = m_output_folder + PACKAGED_SECRET_HEADER_FILENAME;
+    sev_cert pek;
 
     uint32_t flags = 0;
     iv_128 iv;
@@ -804,7 +804,7 @@ int Command::package_secret(void)
 
         // Read in the blob to import the TEK
         // printf("Attempting to read in LaunchBlob file to import TEK\n");
-        if (sev::read_file(launch_blob_file, &session_data_buf, sizeof(sev_session_buf)) != sizeof(sev_session_buf))
+        if (sev::read_file(pek_file, &pek, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Read in the unencrypted TK (TIK and TEK) created in build_session_buffer
@@ -837,7 +837,7 @@ int Command::package_secret(void)
 
         // Set up the Launch_Secret packet header
         if (!create_launch_secret_header(&packaged_secret_header, &iv, encrypted_mem,
-                                        sizeof(encrypted_mem), flags)) {
+                                        sizeof(encrypted_mem), flags, pek.api_major, pek.api_minor)) {
             break;
         }
 
@@ -990,25 +990,25 @@ bool Command::derive_master_secret(aes_128_key master_secret,
     memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
     SEVCert temp_obj(dummy);                // TODO. Hack b/c just want to call function later
     bool ret = false;
-    EVP_PKEY *plat_owner_pub_key = NULL;    // Platform owner public key
+    EVP_PKEY *plat_pub_key = NULL;    // Platform public key
     size_t shared_key_len = 0;
 
     do {
-        // New up the Platform Owner's public EVP_PKEY
-        if (!(plat_owner_pub_key = EVP_PKEY_new()))
+        // New up the Platform's public EVP_PKEY
+        if (!(plat_pub_key = EVP_PKEY_new()))
             break;
 
         // Get the friend's Public EVP_PKEY from the certificate
         // This function allocates memory and attaches an EC_Key
         //  to your EVP_PKEY so, to prevent mem leaks, make sure
         //  the EVP_PKEY is freed at the end of this function
-        if (temp_obj.compile_public_key_from_certificate(pdh_public, plat_owner_pub_key) != STATUS_SUCCESS)
+        if (temp_obj.compile_public_key_from_certificate(pdh_public, plat_pub_key) != STATUS_SUCCESS)
             break;
 
         // Calculate the shared secret
         // This function is allocating memory for this uint8_t[],
         //  must free it at the end of this function
-        uint8_t *shared_key = calculate_shared_secret(godh_priv_key, plat_owner_pub_key, shared_key_len);
+        uint8_t *shared_key = calculate_shared_secret(godh_priv_key, plat_pub_key, shared_key_len);
         if (!shared_key)
             break;
 
@@ -1025,7 +1025,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
     } while (0);
 
     // Free memory
-    EVP_PKEY_free(plat_owner_pub_key);
+    EVP_PKEY_free(plat_pub_key);
 
     return ret;
 }
@@ -1173,7 +1173,7 @@ int Command::encrypt_with_tek(uint8_t *encrypted_mem, const uint8_t *secret_mem,
 
 bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
                                           uint8_t *buf, size_t buffer_len,
-                                          uint32_t hdr_flags)
+                                          uint32_t hdr_flags, uint8_t api_major, uint8_t api_minor)
 {
     bool ret = false;
 
@@ -1191,16 +1191,7 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
     if (!(ctx = HMAC_CTX_new()))
         return ret;
 
-    // Need platform_status to determine API version
-    uint8_t status_data[sizeof(sev_platform_status_cmd_buf)];
-    sev_platform_status_cmd_buf *status_data_buf = (sev_platform_status_cmd_buf *)&status_data;
-    int cmd_ret = -1;
-
     do {
-        cmd_ret = m_sev_device->platform_status(status_data);
-        if (cmd_ret != STATUS_SUCCESS)
-            break;
-
         if (HMAC_Init_ex(ctx, m_tk.tik, sizeof(m_tk.tik), EVP_sha256(), NULL) != 1)
             break;
         if (HMAC_Update(ctx, &meas_ctx, sizeof(meas_ctx)) != 1)
@@ -1215,7 +1206,7 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
             break;
         if (HMAC_Update(ctx, buf, buf_len) != 1)                        // Data
             break;
-        if (sev::min_api_version(status_data_buf->api_major, status_data_buf->api_minor, 0, 17)) {
+        if (sev::min_api_version(api_major, api_minor, 0, 17)) {
             if (HMAC_Update(ctx, m_measurement, sizeof(m_measurement)) != 1) // Measure
                 break;
         }
