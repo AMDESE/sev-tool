@@ -64,7 +64,7 @@ int Command::platform_status(void)
         printf("api_major:\t%d\n", data_buf->api_major);
         printf("api_minor:\t%d\n", data_buf->api_minor);
         printf("platform_state:\t%d\n", data_buf->current_platform_state);
-        if (data_buf->api_minor >= 17) {
+        if (sev::min_api_version(data_buf->api_major, data_buf->api_minor, 0, 17)) {
             printf("owner:\t\t%d\n", data_buf->owner);
             printf("config:\t\t%d\n", data_buf->config);
         }
@@ -503,7 +503,7 @@ int Command::calculate_measurement(measurement_t *user_data, hmac_sha_256 *final
     do {
         if (HMAC_Init_ex(ctx, user_data->tik, sizeof(user_data->tik), EVP_sha256(), NULL) != 1)
             break;
-        if (user_data->api_minor >= 17) {
+        if (sev::min_api_version(user_data->api_major, user_data->api_minor, 0, 17)) {
             if (HMAC_Update(ctx, &user_data->meas_ctx, sizeof(user_data->meas_ctx)) != 1)
                 break;
             if (HMAC_Update(ctx, &user_data->api_major, sizeof(user_data->api_major)) != 1)
@@ -1215,7 +1215,7 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
             break;
         if (HMAC_Update(ctx, buf, buf_len) != 1)                        // Data
             break;
-        if (status_data_buf->api_minor >= 17) {
+        if (sev::min_api_version(status_data_buf->api_major, status_data_buf->api_minor, 0, 17)) {
             if (HMAC_Update(ctx, m_measurement, sizeof(m_measurement)) != 1) // Measure
                 break;
         }

@@ -62,6 +62,22 @@ ePSP_DEVICE_TYPE sev::get_device_type(void)
         return PSP_DEVICE_TYPE_INVALID;
 }
 
+/**
+ * Verify current FW is >= API version major.minor
+ * Returns true if the firmware API version is at least major.minor
+ * Has to be an offline comparison (can't call platform_status itself because
+ *   it needs to be used in calc_measurement)
+ */
+bool sev::min_api_version(unsigned platform_major, unsigned platform_minor,
+                          unsigned api_major, unsigned api_minor)
+{
+    if ((platform_major < api_major) ||
+        (platform_major == api_major && platform_minor < api_minor))
+        return false;
+    else
+        return true;
+}
+
 int sev::get_ask_ark(const std::string output_folder, const std::string cert_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
@@ -185,7 +201,7 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
             return ioctl_ret;
 
         if (status_data.api_major == 0 && status_data.api_minor <= 17 &&
-           status_data.build < 19) {
+            status_data.build < 19) {
             printf("Adding a 5 second delay to account for Naples GetID bug...\n");
             ioctl_ret = ioctl(get_fd(), SEV_ISSUE_CMD, &arg);
             usleep(5000000);    // 5 seconds

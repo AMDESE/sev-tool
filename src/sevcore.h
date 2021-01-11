@@ -109,6 +109,8 @@ namespace sev
 // Global Functions that don't require ioctls
 void get_family_model(uint32_t *family, uint32_t *model);
 ePSP_DEVICE_TYPE get_device_type(void);
+bool min_api_version(unsigned platform_major, unsigned platform_minor,
+                     unsigned api_major, unsigned api_minor);
 int get_ask_ark(const std::string output_folder, const std::string cert_file);
 int zip_certs(const std::string output_folder, const std::string zip_name,
               const std::string files_to_zip);
