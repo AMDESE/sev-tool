@@ -109,7 +109,11 @@ Updated: 2019-10-03
 
 ## Proposed Provisioning Steps
 ##### Platform Owner
-1. Generate your OCA (example using openssl coming soon). Please see the API spec for key/certificate specifications
+1. Generate your OCA. Please see the API spec for key/certificate specifications.
+     ```sh
+     $ openssl ecparam -genkey -name secp384r1 -noout -out ec384-key-pair.pem
+     $ openssl ec -in ec384-key-pair.pem -pubout -out ec384pub.pem
+     ```
 2. Get Platform and connect to Internet
 3. Install SEV-supported operating system
 4. Confirm that SEV is supported (using steps in [OS Requirements](#os-requirements))
