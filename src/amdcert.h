@@ -45,15 +45,18 @@ class AMDCert {
 private:
     SEVDevice *m_sev_device;
     SEV_ERROR_CODE amd_cert_validate_sig(const amd_cert *cert,
-                                         const amd_cert *parent);
+                                         const amd_cert *parent,
+                                         ePSP_DEVICE_TYPE device_type);
     SEV_ERROR_CODE amd_cert_validate_common(const amd_cert *cert);
     bool usage_is_valid(AMD_SIG_USAGE usage);
     SEV_ERROR_CODE amd_cert_validate(const amd_cert *cert,
                                      const amd_cert *parent,
-                                     AMD_SIG_USAGE expected_usage);
+                                     AMD_SIG_USAGE expected_usage,
+                                     ePSP_DEVICE_TYPE device_type);
     SEV_ERROR_CODE amd_cert_public_key_hash(const amd_cert *cert,
                                             hmac_sha_256 *hash);
-
+    // Retrieves information on device type (naples/rome) based on key id
+    ePSP_DEVICE_TYPE get_device_type(const amd_cert *ark);
 public:
     AMDCert() {}
     ~AMDCert() {};

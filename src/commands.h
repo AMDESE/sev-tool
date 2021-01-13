@@ -40,6 +40,7 @@ const std::string CERTS_ZIP_FILENAME              = "certs_export";             
 const std::string ASK_ARK_FILENAME                = "ask_ark.cert";             // get_ask_ark
 const std::string PEK_CSR_HEX_FILENAME            = "pek_csr.cert";             // pek_csr
 const std::string PEK_CSR_READABLE_FILENAME       = "pek_csr_readable.txt";     // pek_csr
+const std::string SIGNED_PEK_CSR_FILENAME         = "pek_csr.signed.cert";      // sign_pek_csr
 const std::string CERT_CHAIN_HEX_FILENAME         = "cert_chain.cert";          // pdh_cert_export
 const std::string CERT_CHAIN_READABLE_FILENAME    = "cert_chain_readable.txt";  // pdh_cert_export
 const std::string GET_ID_S0_FILENAME              = "getid_s0_out.txt";         // get_id
@@ -125,7 +126,7 @@ public:
     int pek_csr(void);
     int pdh_gen(void);
     int pdh_cert_export(void);
-    int pek_cert_import(std::string oca_priv_key_file);
+    int pek_cert_import(std::string signed_pek_csr_file, std::string oca_cert_file);
     int get_id(void);
 
     // Non-ioctl (custom) commands
@@ -141,6 +142,7 @@ public:
     int validate_cert_chain(void);
     int generate_launch_blob(uint32_t policy);
     int package_secret(void);
+    int sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_file);
 };
 
 #endif /* COMMANDS_H */

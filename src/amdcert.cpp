@@ -98,6 +98,21 @@ void print_amd_cert_hex(const amd_cert *cert, std::string &out_str)
     }
 }
 
+// Obtain information on device type from provided Root certificate. Not optimal, but no better options
+ePSP_DEVICE_TYPE AMDCert::get_device_type(const amd_cert *ark)
+{
+    ePSP_DEVICE_TYPE ret = PSP_DEVICE_TYPE_INVALID;
+    if(!ark) return ret;
+    if(memcmp(&ark->key_id_0, amd_root_key_id_rome, sizeof(ark->key_id_0 + ark->key_id_1)) == 0) {
+        return PSP_DEVICE_TYPE_ROME;
+    }
+    if(memcmp(&ark->key_id_0, amd_root_key_id_naples, sizeof(ark->key_id_0 + ark->key_id_1)) == 0) {
+        return PSP_DEVICE_TYPE_NAPLES;
+    }
+    return ret;
+}
+
+
 /**
  * This function takes Bits, NOT Bytes
  */
@@ -107,7 +122,7 @@ bool AMDCert::key_size_is_valid(size_t size)
 }
 
 SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
-                                              const amd_cert *parent)
+                                              const amd_cert *parent, ePSP_DEVICE_TYPE device_type)
 {
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
     hmac_sha_256 sha_digest_256;
@@ -126,7 +141,6 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
     uint8_t decrypted[AMD_CERT_KEY_BYTES_4K] = {0}; // TODO wrong length
     uint8_t signature[AMD_CERT_KEY_BYTES_4K] = {0};
     uint32_t fixed_offset = offsetof(amd_cert, pub_exp);    // 64 bytes
-    ePSP_DEVICE_TYPE device_type = sev::get_device_type();
 
     do {
         if (!cert || !parent) {
@@ -230,7 +244,8 @@ bool AMDCert::usage_is_valid(AMD_SIG_USAGE usage)
 
 SEV_ERROR_CODE AMDCert::amd_cert_validate(const amd_cert *cert,
                                           const amd_cert *parent,
-                                          AMD_SIG_USAGE expected_usage)
+                                          AMD_SIG_USAGE expected_usage,
+                                          ePSP_DEVICE_TYPE device_type)
 {
     SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;
     const uint8_t *key_id = NULL;
@@ -243,7 +258,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate(const amd_cert *cert,
 
         // Validate the signature before using any certificate fields
         if (parent) {
-            cmd_ret = amd_cert_validate_sig(cert, parent);
+            cmd_ret = amd_cert_validate_sig(cert, parent, device_type);
             if (cmd_ret != STATUS_SUCCESS)
                 break;
         }
@@ -314,7 +329,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
     hmac_sha_256 hash;
     hmac_sha_256 fused_hash;
     const uint8_t *amd_root_key_id = NULL;
-    ePSP_DEVICE_TYPE device_type = sev::get_device_type();
+    ePSP_DEVICE_TYPE device_type = get_device_type(ark);
 
     do {
         if (!ark) {
@@ -326,12 +341,15 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
         memset(&fused_hash, 0, sizeof(fused_hash));
 
         // Validate the certificate. Check for self-signed ARK
-        cmd_ret = amd_cert_validate(ark, ark, AMD_USAGE_ARK);       // Rome
-        if (cmd_ret != STATUS_SUCCESS) {
+        if (device_type == PSP_DEVICE_TYPE_ROME) {
+            cmd_ret = amd_cert_validate(ark, ark, AMD_USAGE_ARK, device_type);   // Rome
+
+        } else {
             // Not a self-signed ARK. Check the ARK without a signature
-            cmd_ret = amd_cert_validate(ark, NULL, AMD_USAGE_ARK);  // Naples
-            if (cmd_ret != STATUS_SUCCESS)
-                break;
+            cmd_ret = amd_cert_validate(ark, NULL, AMD_USAGE_ARK, device_type);  // Naples
+        }
+        if (cmd_ret != STATUS_SUCCESS) {
+            break;
         }
 
         if (device_type == PSP_DEVICE_TYPE_NAPLES)
@@ -354,7 +372,8 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
 
 SEV_ERROR_CODE AMDCert::amd_cert_validate_ask(const amd_cert *ask, const amd_cert *ark)
 {
-    return amd_cert_validate(ask, ark, AMD_USAGE_ASK);      // ASK
+    ePSP_DEVICE_TYPE device_type = get_device_type(ark);
+    return amd_cert_validate(ask, ark, AMD_USAGE_ASK, device_type);      // ASK
 }
 
 /**

@@ -84,22 +84,6 @@ int SEVDevice::pek_gen()
     return cmd_ret;
 }
 
-bool SEVDevice::validate_pek_csr(sev_cert *pek_csr)
-{
-    if (pek_csr->version       == 1                         &&
-        pek_csr->pub_key_usage == SEV_USAGE_PEK             &&
-        pek_csr->pub_key_algo  == SEV_SIG_ALGO_ECDSA_SHA256 &&
-        pek_csr->sig_1_usage   == SEV_USAGE_INVALID         &&
-        pek_csr->sig_1_algo    == SEV_SIG_ALGO_INVALID      &&
-        pek_csr->sig_2_usage   == SEV_USAGE_INVALID         &&
-        pek_csr->sig_2_algo    == SEV_SIG_ALGO_INVALID) {
-        return true;
-    }
-    else {
-        return false;
-    }
-}
-
 int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 {
     int cmd_ret = -1;
@@ -124,9 +108,18 @@ int SEVDevice::pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
 
 // todo. dont want to be reading from a file. use openssl to generate
 int SEVDevice::pek_cert_import(uint8_t *data,
-                               sev_cert *pek_csr,
-                               std::string &oca_priv_key_file,
-                               std::string &oca_cert_file)
+                               sev_cert *signed_pek_csr,
+                               sev_cert *oca_cert)
+{
+    int cmd_ret = -1;
+
+    return cmd_ret;
+}
+
+// todo. dont want to be reading from a file. use openssl to generate
+int SEVDevice::pek_csr_sign( sev_cert *pek_csr,
+                             const std::string oca_priv_key_file,
+                             sev_cert *oca_cert_out)
 {
     int cmd_ret = -1;
 

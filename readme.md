@@ -122,7 +122,7 @@ Updated: 2019-10-03
 7. Get the CEK_ASK from the AMD KDS server by running the generate_cek_ask command
    - Note: the CEK certificate will be different every time you pull it from the KDS sever. The server re-generates/re-signs the cert every time instead of storing a static cert
 8. Run the pek_csr command to generate a certificate signing request for your PEK. This will allow you to take ownership of the platform.
-9. Sign PEK with OCA (example using openssl coming soon)
+9. Run the sign_pek_csr command to sign the generated CSR with the OCA private key.
 10. Run the pek_cert_import command
 11. Run the pdh_cert_export command
 12. Run the get_ask_ark command
@@ -136,7 +136,18 @@ Updated: 2019-10-03
 3. (Out of scope) Confirm the UEFI image is trustable.
 4. Get cert chain (PDH through ARK) from the Platform Owner (PO) and unzip them into a local folder
 5. Run the validate_cert_chain command to verify the cert chain from the PDH down to the ARK (AMD root)
-   - TODO. Wouldn't we want the GO to download the ASK_ARK, otherwise, the PO can make up the entire chain and we'd validate it and it'd pass?
+   - Download certificate and extract the respective ARK and ASK and compare these to the certificates provided by the platform owner. Example below:
+   ```
+   echo -n -e '\x1b\xb9\x87\xc3\x59\x49\x46\x06\xb1\x74\x94\x56\x01\xc9\xea\x5b' > naples_key_id
+   # ark.cert obtained from certs_export.zip
+    if [[ $(cmp -b -i 4:0 -n 16 ark.cert naples_key_id) == "" ]]; then device_type=naples; ask_size=832; else device_type=rome; ask_size=1600; fi
+    wget https://developer.amd.com/wp-content/resources/ask_ark_$device_type.cert
+    head -c $ask_size ask_ark_$device_type.cert > ask_$device_type.cert
+    dd < /dev/zero bs=$ask_size count=1 > ark_$device_type.cert
+    dd conv=notrunc if=ask_ark_$device_type.cert of=ark_$device_type.cert skip=$ask_size iflag=skip_bytes
+    if [[ $(cmp ark_$device_type.cert ark.cert 2>&1) == "" ]]; then echo "ARK Match!"; else echo "Failed."; fi
+    if [[ $(cmp ask_$device_type.cert ask.cert 2>&1) == "" ]]; then echo "ASK Match!"; else echo "Failed."; fi
+   ```
 6. (Out of scope) Verify OCA cert chain from the Platform Owner
 7. Run the generate_launch_blob command
    - Reads in Platform Diffie-Hellman key (PDH cert from Platform) and generates new public/private Guest Owner Diffie-Hellman keypair. The DH key exchange is completed when the PO calls Launch_Start using the GODH public key.
@@ -210,13 +221,14 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          $ sudo ./sevtool --ofolder ./certs --pdh_cert_export
          ```
 7. pek_cert_import
-This command imports an OCA private key from the user, runs a platform_status command to get the API major/minor used to create the certificate, runs the pek_csr to create the PEK certificate signing request, signs the PEK signing request with the OCA private key, and calls pek_cert_import to import the PEK and OCA certificates.
-     - Required input args: The unencrypted OCA Private key file (.pem).
+This command imports the signed PEK CSR and OCA.cert which were previously created.
+     - Required input args:
+        - The signed pek_csr certificate (pek_csr.signed.cert)
+        - The OCA certificate in AMD certificate format which was generated during the signing process (oca.cert)
      - Outputs: none
      - Example
          ```sh
-         $ sudo ./sevtool --pek_cert_import [oca_priv_key_file]
-         $ sudo ./sevtool --pek_cert_import ../psp-sev-assets/oca_key_in.pem
+         $ sudo ./sevtool --pek_cert_import pek_csr.signed.cert oca.cert
          ```
 8. get_id
      - Optional input args: --ofolder [folder_path]
@@ -236,7 +248,8 @@ This command imports an OCA private key from the user, runs a platform_status co
          $ sudo ./sevtool --ofolder ./certs --set_self_owned
          ```
 10. set_externally_owned
-     - Required input args: This function, among other things, calls pek_cert_import, so the OCA Private key file (.pem) is a required argument.
+     - This function, among other things, creates a CSR, signs it with the private key, creates the respective oca.cert and reimports both files by calling pek_cert_import.
+     - Reuqired Input args: The OCA private key in pem format [oca_priv_key_file]
      - Outputs: none
      - Example
          ```sh
@@ -275,11 +288,27 @@ This command calls the get_id command and passes that ID into the AMD KDS server
 14. calc_measurement
      - The purpose of the calc_measurement command is for the user to be able to validate that they are calculating the HMAC/measurement correctly when they would be calling Launch_Measure during the normal API flow. The user can input all of the parameters used to calculate the HMAC and an output will be generated that the user can compare to their calculated measurement.
      - The digest parameter is the SHA256 (Naples) or SHA384 (Rome) output digest of the data passed into LaunchUpdateData and LaunchUpdateVMSA
-     - Required input args: [Context] [Api Major] [Api Minor] [Build ID] [Policy] [Digest] [MNonce] [TIK]
-         - The format of the input parameters are ascii-encoded hex bytes.
+     - Required input args: Note the format of the input parameters are ascii-encoded hex bytes.
+         - [Context]: 0x04 (Does not change)
+         - [Api Major]: Can be obtained from provided pek.cert (see example below)
+         - [Api Minor]: Can be obtained from provided pek.cert
+         ```
+         API=$(dd if=pek.cert ibs=1 skip=4 count=2 2>/dev/null | xxd -p)
+         API_MAJOR=$(echo $API | cut -c1-2)
+         API_MINOR=$(echo $API | cut -c3-4)
+         ```
+         - [Build ID]: Must be provided by PO to GO in some way. Note  that command `platform_status` returns value in decimal format, not hex.
+         - [Policy]: Defined by guest. See [API](https://www.amd.com/system/files/TechDocs/55766_SEV-KM_API_Specification.pdf) Chapter 3 Guest Policy.
+         - [Digest]: Sha256 output digest over UEFI used during VM launch, e.g.  OVMF_CODE.fd (for Naples, Sha384 for Rome)
+         - [MNonce]: Provided by PO in some way. During VM launch, Launch_measure creates the nonce and appends it to the measure it calculated, see command description in the [API](https://www.amd.com/system/files/TechDocs/55766_SEV-KM_API_Specification.pdf). Obtain  MNonce by separating measure from nonce
+         - [TIK]: Created during launch_blob creation and stored tmp_tk.bin. Retrieve by  splitting into TEK and TIK (last 32 bytes)
+         ```
+         TIK=$(xxd -p tmp_tk.bin  | tr -d '\n'  | tail -c 32)
+         ```
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the calculated measurement
      - Outputs:
+         - The calculated measurement matches the measure of the launch_measure command (see above) if the same settings were used.
          - If --[verbose] flag used: The input data and calculated measurement will be printed out to the screen
          - If --[ofolder] flag used: The calculated measurement will be written to the specified folder. File: calc_measurement_out.txt
      - Example
@@ -332,7 +361,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          $ sudo ./sevtool --ofolder ./certs --generate_launch_blob 39
          ```
 17. package_secret
-     - This command reads in the file generated by generate_launch_blob (launch_blob.txt) to get the TEK and also reads in the secret file (secret.txt) to be encrypted/wrapped by the TEK. It then outputs a file (packaged_secret.txt) which is then passed into Launch_Secret as part of the normal API flow
+     - This command reads in the pek.cert for API information, the file generated by generate_launch_blob (tmp_tk.bin) for the TEK and the secret file (secret.txt) which is to be encrypted/wrapped by the TEK. It then outputs a file (packaged_secret.txt) which is then passed into Launch_Secret as part of the normal API flow
      - Required input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will look for the launch blob file and the secrets file, and where it will export the packaged secret file to
      - Outputs:
@@ -341,6 +370,21 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          ```sh
          $ sudo ./sevtool --ofolder ./certs --package_secret
          ```
+18. sign_pek_csr
+    - This command reads the CSR and signs it with the provided OCA private key. Additionally, the oca.cert is created, which specifies the public key in AMD certificate format.
+    - Required input args:
+        - The CSR to be signed (pek_csr.cert)
+        - The private key of the OCA in pem format [oca_priv_key].pem
+    - Optional input args: --ofolder [folder_path]
+        - This allows the user to specify the folder where the tool will export the signed CSR and OCA certificate to
+    - Outputs:
+       - oca.cert: The public certificate belonging to the private key, in AMD certificate format
+       - pek_csr.signed.cert: The signed CSR containing the OCA signature but still missing the PEK signature.
+    - Example
+        ```sh
+        $ sudo ./sevtool --sign_pek_csr [pek_csr.cert] [oca_priv_ley]
+        $ sudo ./sevtool --sign_pek_csr pek_csr.cert oca_priv.pem
+        ```
 
 ## Running tests
 To run tests to check that each command is functioning correctly, run the test_all command and check that the entire thing returns success.

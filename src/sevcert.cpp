@@ -303,20 +303,20 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
         return false;
 
     do {
-        memset(&m_child_cert, 0, sizeof(sev_cert));
+        memset(m_child_cert, 0, sizeof(sev_cert));
 
-        m_child_cert.version = SEV_CERT_MAX_VERSION;
-        m_child_cert.api_major = api_major;
-        m_child_cert.api_minor = api_minor;
-        m_child_cert.pub_key_usage = SEV_USAGE_PDH;
-        m_child_cert.pub_key_algo = SEV_SIG_ALGO_ECDH_SHA256;
-        m_child_cert.sig_1_usage = SEV_USAGE_PEK;
-        m_child_cert.sig_1_algo = SEV_SIG_ALGO_ECDSA_SHA256;
-        m_child_cert.sig_2_usage = SEV_USAGE_INVALID;
-        m_child_cert.sig_2_algo = SEV_SIG_ALGO_INVALID;
+        m_child_cert->version = SEV_CERT_MAX_VERSION;
+        m_child_cert->api_major = api_major;
+        m_child_cert->api_minor = api_minor;
+        m_child_cert->pub_key_usage = SEV_USAGE_PDH;
+        m_child_cert->pub_key_algo = SEV_SIG_ALGO_ECDH_SHA256;
+        m_child_cert->sig_1_usage = SEV_USAGE_PEK;
+        m_child_cert->sig_1_algo = SEV_SIG_ALGO_ECDSA_SHA256;
+        m_child_cert->sig_2_usage = SEV_USAGE_INVALID;
+        m_child_cert->sig_2_algo = SEV_SIG_ALGO_INVALID;
 
         // Set the pubkey portion of the cert
-        if (decompile_public_key_into_certificate(&m_child_cert, *godh_key_pair) != STATUS_SUCCESS)
+        if (decompile_public_key_into_certificate(m_child_cert, *godh_key_pair) != STATUS_SUCCESS)
             break;
 
         /*
@@ -341,13 +341,9 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
  *                LaunchStart
  * Parameters:    [oca_key_pair] the input pub/priv key pair used to populate
  *                  and sign the cert
- *                [api_major] the api_major returned from a PlatformStatus
- *                  command as input to this function, to help populate the cert
- *                [api_minor] the api_minor returned from a PlatformStatus
  *                  command as input to this function, to help populate the cert
  */
-bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
-                              uint8_t api_minor, SEV_SIG_ALGO algo)
+bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, SEV_SIG_ALGO algo)
 {
     bool cmd_ret = false;
 
@@ -355,20 +351,20 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
         return false;
 
     do {
-        memset(&m_child_cert, 0, sizeof(sev_cert));
+        memset(m_child_cert, 0, sizeof(sev_cert));
 
-        m_child_cert.version = SEV_CERT_MAX_VERSION;
-        m_child_cert.api_major = api_major;
-        m_child_cert.api_minor = api_minor;
-        m_child_cert.pub_key_usage = SEV_USAGE_OCA;
-        m_child_cert.pub_key_algo = algo;
-        m_child_cert.sig_1_usage = SEV_USAGE_OCA;
-        m_child_cert.sig_1_algo = algo;         // OCA is self-signed (sig algo is algo from OCA's keypair)
-        m_child_cert.sig_2_usage = SEV_USAGE_INVALID;
-        m_child_cert.sig_2_algo = SEV_SIG_ALGO_INVALID;
+        m_child_cert->version = SEV_CERT_MAX_VERSION;
+        m_child_cert->api_major = 0;
+        m_child_cert->api_minor = 0;
+        m_child_cert->pub_key_usage = SEV_USAGE_OCA;
+        m_child_cert->pub_key_algo = algo;
+        m_child_cert->sig_1_usage = SEV_USAGE_OCA;
+        m_child_cert->sig_1_algo = algo;         // OCA is self-signed (sig algo is algo from OCA's keypair)
+        m_child_cert->sig_2_usage = SEV_USAGE_INVALID;
+        m_child_cert->sig_2_algo = SEV_SIG_ALGO_INVALID;
 
         // Set the pubkey portion of the cert
-        if (decompile_public_key_into_certificate(&m_child_cert, *oca_key_pair) != STATUS_SUCCESS)
+        if (decompile_public_key_into_certificate(m_child_cert, *oca_key_pair) != STATUS_SUCCESS)
             break;
 
         /*
@@ -414,17 +410,17 @@ bool SEVCert::sign_with_key(uint32_t version, uint32_t pub_key_usage,
 {
     // Sign the certificate    sev_cert.c -> sev_cert_sign()
     // The constructor defaults all member vars, and the user can change them
-    memset(&m_child_cert.sig_1, 0, sizeof(sev_cert::sig_1));
-    m_child_cert.version = version;
-    m_child_cert.pub_key_usage = pub_key_usage;
-    m_child_cert.pub_key_algo = pub_key_algo;
+    memset(&m_child_cert->sig_1, 0, sizeof(sev_cert::sig_1));
+    m_child_cert->version = version;
+    m_child_cert->pub_key_usage = pub_key_usage;
+    m_child_cert->pub_key_algo = pub_key_algo;
 
-    m_child_cert.sig_1_usage = sig_1_usage;       // Parent cert's sig
-    m_child_cert.sig_1_algo = (uint32_t)sig_1_algo;
+    m_child_cert->sig_1_usage = sig_1_usage;       // Parent cert's sig
+    m_child_cert->sig_1_algo = (uint32_t)sig_1_algo;
 
     // SHA256/SHA384 hash the cert from the [version:pub_key] params
     uint32_t pub_key_offset = offsetof(sev_cert, sig_1_usage);  // 16 + sizeof(sev_pubkey)
-    return sign_message(&m_child_cert.sig_1, priv_evp_key, (uint8_t *)&m_child_cert, pub_key_offset, sig_1_algo);
+    return sign_message(&m_child_cert->sig_1, priv_evp_key, (uint8_t *)m_child_cert, pub_key_offset, sig_1_algo);
 }
 
 /**
@@ -532,6 +528,8 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
     sev_sig cert_sig[SEV_CERT_MAX_SIGNATURES] = {child_cert->sig_1, child_cert->sig_2};
+    uint32_t cert_sig_algo[SEV_CERT_MAX_SIGNATURES] = {child_cert->sig_1_algo, child_cert->sig_2_algo};
+    uint32_t cert_sig_usage[SEV_CERT_MAX_SIGNATURES] = {child_cert->sig_1_usage, child_cert->sig_2_usage};
     hmac_sha_256 sha_digest_256;        // Hash on the cert from Version to PubKey
     hmac_sha_512 sha_digest_384;        // Hash on the cert from Version to PubKey
     SHA_TYPE sha_type;
@@ -571,7 +569,8 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
         // 2. Use the pub_key in sig[i] arg to decrypt the sig in child_cert arg
         // Try both sigs in child_cert, to see if either of them match. In PEK, CEK and OCA can be in any order
         bool found_match = false;
-        for (int i = 0; i < SEV_CERT_MAX_SIGNATURES; i++)
+        int i;
+        for (i = 0; i < SEV_CERT_MAX_SIGNATURES; i++)
         {
             if ((parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
                 (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
@@ -651,7 +650,13 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
             break;
 
         // 3. Compare
-
+        // Check if:
+        // 1. sig algo and parent key algo and
+        // 2. sig usage and parent key usage match
+        if((cert_sig_algo[i] != parent_cert->pub_key_algo) ||
+           (cert_sig_usage[i] != parent_cert->pub_key_usage)) {
+               break;
+        }
         cmd_ret = STATUS_SUCCESS;
     } while (0);
 
@@ -921,43 +926,47 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
                 break;
 
             // Now, we have Parent's PublicKey(s), validate them
-            if (validate_public_key(&m_child_cert, parent_pub_key[i]) != STATUS_SUCCESS)
+            if (validate_public_key(m_child_cert, parent_pub_key[i]) != STATUS_SUCCESS)
                 break;
 
             // Validate the signature before we do any other checking
             // Sub-function will need a separate loop to find which of the 2 signatures this one matches to
-            if (validate_signature(&m_child_cert, parent_cert[i], parent_pub_key[i]) != STATUS_SUCCESS)
+            if (validate_signature(m_child_cert, parent_cert[i], parent_pub_key[i]) != STATUS_SUCCESS)
                 break;
         }
         if (i != numSigs)
             break;
 
         // Validate the certificate body
-        if (validate_body(&m_child_cert) != STATUS_SUCCESS)
+        if (validate_body(m_child_cert) != STATUS_SUCCESS)
             break;
 
         // Although the signature was valid, ensure that the certificate
         // was signed with the proper key(s) in the correct order
-        if (m_child_cert.pub_key_usage == SEV_USAGE_PDH) {
+        if (m_child_cert->pub_key_usage == SEV_USAGE_PDH) {
             // The PDH certificate must be signed by the PEK
             if (parent_cert1->pub_key_usage != SEV_USAGE_PEK) {
                 break;
             }
         }
-        else if (m_child_cert.pub_key_usage == SEV_USAGE_PEK) {
-            // The PEK certificate must be signed by the CEK and the OCA
+        else if (m_child_cert->pub_key_usage == SEV_USAGE_PEK) {
+            // Checks parent certs for
+            // 1. If OCA parent1 and CEK parent2 or
+            // 2. If CEK parent1 and OCA parent2 or
+            // 3. If OCA parent1 only certificate (signed CSR)
             if (((parent_cert1->pub_key_usage != SEV_USAGE_OCA) && (parent_cert2->pub_key_usage != SEV_USAGE_CEK)) &&
-                ((parent_cert2->pub_key_usage != SEV_USAGE_OCA) && (parent_cert1->pub_key_usage != SEV_USAGE_CEK))) {
+                ((parent_cert1->pub_key_usage != SEV_USAGE_CEK) && (parent_cert2->pub_key_usage != SEV_USAGE_OCA)) &&
+                ((numSigs == 1) && (parent_cert1->pub_key_usage != SEV_USAGE_OCA))) {
                 break;
             }
         }
-        else if (m_child_cert.pub_key_usage == SEV_USAGE_OCA) {
+        else if (m_child_cert->pub_key_usage == SEV_USAGE_OCA) {
             // The OCA certificate must be self-signed
             if (parent_cert1->pub_key_usage != SEV_USAGE_OCA) {
                 break;
             }
         }
-        else if (m_child_cert.pub_key_usage == SEV_USAGE_CEK) {
+        else if (m_child_cert->pub_key_usage == SEV_USAGE_CEK) {
             // The CEK must be signed by the ASK
             if (parent_cert1->pub_key_usage != SEV_USAGE_ASK) {
                 break;
@@ -975,4 +984,60 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
     }
 
     return cmd_ret;
+}
+
+SEV_ERROR_CODE SEVCert::verify_signed_pek_csr(const sev_cert *oca_cert)
+{
+    do {
+        if (m_child_cert->version        != 1                         ||
+            m_child_cert->pub_key_usage  != SEV_USAGE_PEK             ||
+            m_child_cert->pub_key_algo   != SEV_SIG_ALGO_ECDSA_SHA256 ||
+            oca_cert->api_minor          != 0                         ||
+            oca_cert->api_major          != 0                         ||
+            oca_cert->version            != 1                         ||
+            oca_cert->pub_key_usage      != SEV_USAGE_OCA ) {
+                break;
+        }
+        uint32_t usage1 = m_child_cert->sig_1_usage, usage2 = m_child_cert->sig_2_usage;
+        uint32_t algo1 = m_child_cert->sig_1_algo, algo2 = m_child_cert->sig_2_algo;
+
+        char testblock [SEV_SIG_SIZE];
+        memset (testblock, 0, SEV_SIG_SIZE);
+        // Check exactly one field empty
+        if ((algo1 == SEV_SIG_ALGO_INVALID) && (usage1 == SEV_USAGE_INVALID))
+        {
+            if (memcmp(testblock, &m_child_cert->sig_1, SEV_SIG_SIZE) != 0) {
+                break;
+            }
+        }
+        else if((algo2 == SEV_SIG_ALGO_INVALID) && (usage2 == SEV_USAGE_INVALID)) {
+            if (memcmp(testblock, &m_child_cert->sig_2, SEV_SIG_SIZE) != 0) {
+                break;
+            }
+        } else {
+            break;
+        }
+        // Will check subsequent signature flags
+        return verify_sev_cert(oca_cert, NULL);
+    } while(0);
+    return ERROR_INVALID_CERTIFICATE;
+}
+
+SEV_ERROR_CODE SEVCert::verify_pek_csr()
+{
+    if (m_child_cert->version        == 1                         &&
+        m_child_cert->pub_key_usage  == SEV_USAGE_PEK             &&
+        m_child_cert->pub_key_algo   == SEV_SIG_ALGO_ECDSA_SHA256 &&
+        m_child_cert->sig_1_usage    == SEV_USAGE_INVALID         &&
+        m_child_cert->sig_1_algo     == SEV_SIG_ALGO_INVALID      &&
+        m_child_cert->sig_2_usage    == SEV_USAGE_INVALID         &&
+        m_child_cert->sig_2_algo     == SEV_SIG_ALGO_INVALID ) {
+        char testblock [SEV_SIG_SIZE];
+        memset (testblock, 0, SEV_SIG_SIZE);
+        // if both signatures 0
+        if (!memcmp(testblock, &m_child_cert->sig_1, SEV_SIG_SIZE) || !memcmp(testblock, &m_child_cert->sig_2, SEV_SIG_SIZE)) {
+            return STATUS_SUCCESS;
+        }
+    }
+    return ERROR_INVALID_CERTIFICATE;
 }

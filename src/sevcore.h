@@ -124,8 +124,9 @@ private:
 
     inline int get_fd(void) { return mFd; }
     int sev_ioctl(int cmd, void *data, int *cmd_ret);
+    int pek_csr_sign(sev_cert *pek_csr, const std::string oca_priv_key_file,
+                      sev_cert *oca_cert_out);
 
-    bool validate_pek_csr(sev_cert *pek_csr);
     std::string display_build_info(void);
 
     bool kvm_amd_sev_enabled(void);
@@ -176,8 +177,8 @@ public:
     int pdh_gen(void);
     int pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
                         void *cert_chain_mem);
-    int pek_cert_import(uint8_t *data, sev_cert *pek_csr,
-                        const std::string oca_priv_key_file);
+    int pek_cert_import(uint8_t *data, sev_cert *signed_pek_csr,
+                        sev_cert *oca_cert);
     int get_id(void *data, void *id_mem, uint32_t id_length = 0);
 
     void check_dependencies(void);

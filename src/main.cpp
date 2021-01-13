@@ -33,7 +33,8 @@ const char help_array[] =  "The following commands are supported:\n" \
                     "  pdh_cert_export\n" \
                     "  pek_cert_import\n" \
                     "      Input params:\n" \
-                    "          [oca private key].pem file\n" \
+                    "          pek_csr.signed.cert file\n" \
+                    "          oca.cert file\n" \
                     "  get_id\n" \
                     "  set_self_owned\n" \
                     "  set_externally_owned\n" \
@@ -58,8 +59,10 @@ const char help_array[] =  "The following commands are supported:\n" \
                     "      Input params:\n" \
                     "          uint32_t policy\n" \
                     "  package_secret\n" \
+                    "  sign_pek_csr\n" \
                     "      Input params:\n" \
-                    "          launch_blob.txt file\n" \
+                    "          pek_csr.cert file\n" \
+                    "          [oca private key].pem file\n" \
                     ;
 
 /* Flag set by '--verbose' */
@@ -87,6 +90,7 @@ static struct option long_options[] =
     {"get_ask_ark",          no_argument,       0, 'n'},
     {"export_cert_chain",    no_argument,       0, 'p'},
     /* Guest Owner commands */
+    {"sign_pek_csr",         required_argument, 0, 's'},
     {"calc_measurement",     required_argument, 0, 't'},
     {"validate_cert_chain",  no_argument,       0, 'u'},
     {"generate_launch_blob", required_argument, 0, 'v'},
@@ -176,15 +180,16 @@ int main(int argc, char **argv)
                 break;
             }
             case 'g': {         // PEK_CERT_IMPORT
-                optind--;   // Can't use option_index because it doesn't account for '-' flags
-                if (argc - optind != 1) {
-                    printf("Error: Expecting exactly 1 arg for pek_cert_import\n");
+                optind--;
+                if (argc - optind != 2) {
+                    printf("Error: Expecting exactly 2 args for pek_cert_import (pek cert and oca.pem)\n");
                     return false;
                 }
+                std::string signed_pek_csr_file = argv[optind++];
+                std::string oca_cert_file = argv[optind++];
 
-                std::string oca_priv_key_file = argv[optind++];
                 Command cmd(output_folder, verbose_flag);
-                cmd_ret = cmd.pek_cert_import(oca_priv_key_file);
+                cmd_ret = cmd.pek_cert_import(signed_pek_csr_file, oca_cert_file);
                 break;
             }
             case 'j': {         // GET_ID
@@ -222,6 +227,19 @@ int main(int argc, char **argv)
             case 'p': {         // EXPORT_CERT_CHAIN
                 Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.export_cert_chain();
+                break;
+            }
+            case 's': {         // SIGN_PEK_CSR
+                optind--;
+                if (argc - optind != 2) {
+                    printf("Error: Expecting exactly 2 args for pek_cert_import\n");
+                    return false;
+                }
+                std::string pek_csr_file = argv[optind++];
+                std::string oca_priv_key_file = argv[optind++];
+
+                Command cmd(output_folder, verbose_flag, CCP_NOT_REQ);
+                cmd_ret = cmd.sign_pek_csr(pek_csr_file, oca_priv_key_file);
                 break;
             }
             case 't': {         // CALC_MEASUREMENT

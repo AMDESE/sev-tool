@@ -50,20 +50,18 @@ private:
                                       EVP_PKEY *parent_signing_key);
     SEV_ERROR_CODE validate_body(const sev_cert *cert);
 
-    sev_cert m_child_cert;
+    sev_cert *m_child_cert;
 
 public:
-    SEVCert(sev_cert& cert) { m_child_cert = cert; }
+    SEVCert(sev_cert *cert) { m_child_cert = cert; }
     ~SEVCert() {};
 
-    const sev_cert *data() { return &m_child_cert; }
+    const sev_cert *data() { return m_child_cert; }
 
     bool create_godh_cert(EVP_PKEY **godh_key_pair,
                           uint8_t api_major,
                           uint8_t api_minor);
     bool create_oca_cert(EVP_PKEY **oca_key_pair,
-                         uint8_t api_major,
-                         uint8_t api_minor,
                          SEV_SIG_ALGO algo);
     bool sign_with_key(uint32_t version, uint32_t pub_key_usage,
                        uint32_t pub_key_algorithm, EVP_PKEY **priv_key,
@@ -74,6 +72,8 @@ public:
                                                          EVP_PKEY *evp_pubkey);
     SEV_ERROR_CODE verify_sev_cert(const sev_cert *parent_cert1,
                                    const sev_cert *parent_cert2 = NULL);
+    SEV_ERROR_CODE verify_signed_pek_csr(const sev_cert *oca_cert);
+    SEV_ERROR_CODE verify_pek_csr();
 };
 
 #endif /* SEVCERT_H */
