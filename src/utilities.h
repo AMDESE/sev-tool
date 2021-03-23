@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright 2018 Advanced Micro Devices, Inc.
+ * Copyright 2018-2021 Advanced Micro Devices, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,9 @@ namespace sev
     #define KDS_CERT_SITE         "https://kdsintf.amd.com"
     #define KDS_DEV_CERT_SITE     "https://kdsintfdev.amd.com"
     #define KDS_CEK               KDS_CERT_SITE "/cek/id/"
+    #define KDS_VCEK              KDS_CERT_SITE "/vcek/v1/"   // KDS_VCEK/{product_name}/{hwid}?{tcb parameter list}
+    #define KDS_VCEK_CERT_CHAIN   "cert_chain"                // KDS_VCEK/{product_name}/cert_chain
+    #define KDS_VCEK_CRL          "crl"                       // KDS_VCEK/{product_name}/crl"
 
     #define PAGE_SIZE               4096        // Todo remove this one?
     #define PAGE_SIZE_4K            4096

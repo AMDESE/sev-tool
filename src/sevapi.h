@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright 2018 Advanced Micro Devices, Inc.
+ * Copyright 2018-2021 Advanced Micro Devices, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ typedef bool _Bool;
 
 // TMR (Trusted Memory Region) size required for INIT with SEV-ES enabled
 #define SEV_TMR_SIZE     (1024*1024)
+#define SEV_TMR_SIZE_SNP (1024*1024*2)
 
 // NV data size required for INIT_EX.
 #define SEV_NV_SIZE      (32*1024)
@@ -110,6 +111,40 @@ typedef enum __attribute__((mode(HI))) SEV_API_COMMAND
 
     SEV_MAX_API_COMMAND     = SWAP_IN,
 
+    /* SNP Platform commands */
+    SNP_INIT                = 0x81,     /* Initialize the Platform */
+    SNP_SHUTDOWN            = 0x82,     /* Shut down the Platform */
+    SNP_PLATFORM_STATUS     = 0x83,     /* Return status of the Platform */
+    SNP_DF_FLUSH            = 0x84,     /* Flush the data fabric */
+    SNP_INIT_EX             = 0x85,     /* Initialize the Platform with Parameter */
+
+    /* SNP Guest commands */
+    SNP_DECOMMISSION        = 0x90,     /* Delete the Guest's SEV context */
+    SNP_ACTIVATE            = 0x91,     /* Load a Guest's key into the UMC */
+    SNP_GUEST_STATUS        = 0x92,     /* Query the status and metadata of a Guest */
+    SNP_GCTX_CREATE         = 0x93,     /* Create a Guest context */
+    SNP_GUEST_REQUEST       = 0x94,     /* Process a Guest request */
+    SNP_ACTIVATE_EX         = 0x95,     /* the Guest is bound to a particular ASID and to CCX(s) which will be
+                                           allowed to run the Guest. Then Guest's key is loaded into the UMC */
+
+    /* SNP Guest launch commands */
+    SNP_LAUNCH_START        = 0xA0,     /* Begin to launch a new SEV enabled Guest */
+    SNP_LAUNCH_UPDATE       = 0xA1,     /* Encrypt Guest data for launch */
+    SNP_LAUNCH_FINISH       = 0xA2,     /* Complete launch of Guest */
+
+    /* SNP Debugging commands */
+    SNP_DBG_DECRYPT         = 0xB0,     /* Decrypt Guest memory region for debugging */
+    SNP_DBG_ENCRYPT         = 0xB1,     /* Encrypt Guest memory region for debugging */
+
+    /* SNP Page Migration Commands */
+    SNP_SWAP_OUT            = 0xC0,     /* Encrypt Guest memory region for temporary storage */
+    SNP_SWAP_IN             = 0xC1,     /* Reverse of SNP_SWAP_OUT */
+    SNP_PAGE_MOVE           = 0xC2,     /* Moves contents of SNP-protected pages */
+    SNP_MD_INIT             = 0xC3,     /* Init the Metadata page */
+    SNP_PAGE_RECLAIM        = 0xC7,     /* Clear the immutable bit on a page */
+    SNP_PAGE_UNSMASH        = 0xC8,     /* Combine 512 4k pages into one 2M page in RMP */
+    SNP_CONFIG              = 0xC9,     /* Set the system wide configuration values */
+
     SEV_LIMIT,                          /* Invalid command ID */
 } SEV_API_COMMAND;
 
@@ -136,6 +171,23 @@ typedef enum __attribute__((mode(QI))) SEV_PLATFORM_STATE
 
     SEV_PLATFORM_LIMIT,
 } SEV_PLATFORM_STATE;
+
+/**
+ * SNP Platform state
+ *
+ * State        Encoding    Description                     Allowed Platform Commands
+ * UNINIT       0h          Platform is uninitialized       Only SNP_INIT, SNP_PLATFORM_STATUS,
+ *                                                          DOWNLOAD_FIRMWARE, GET_ID
+ * INIT         1h          Platform is initialized         All SNP commands except SNP_INIT,
+ *                                                          DOWNLOAD_FIRMWARE
+ */
+typedef enum __attribute__((mode(QI))) SNP_PLATFORM_STATE
+{
+    SNP_PLATFORM_UNINIT       = 0,
+    SNP_PLATFORM_INIT         = 1,
+
+    SNP_PLATFORM_LIMIT,
+} SNP_PLATFORM_STATE;
 
 // Chapter 6.1.1 - GSTATE Finite State Machine
 /**
@@ -173,8 +225,32 @@ typedef enum __attribute__((mode(QI))) SEV_GUEST_STATE
     SEV_GUEST_SUPDATE   = 4,
     SEV_GUEST_RUPDATE   = 5,
     SEV_GUEST_SENT      = 6,
+
     SEV_GUEST_STATE_LIMIT,
 } SEV_GUEST_STATE;
+
+/**
+ * State            Description     Allowed Guest Commands
+ * GSTATE_INIT      Initial state   SNP_LAUNCH_START, SNP_GUEST_REQUEST (VM_IMPORT)
+ *                  of the guest    SNP_PAGE_RECLAIM, SNP_DECOMMISSION
+ *
+ * GSTATE_LAUNCH    Guest is being  SNP_GCTX_CREATE, SNP_LAUNCH_UPDATE, SNP_LAUNCH_FINISH
+ *                  launched        SNP_ACTIVATE, SNP_DECOMMISSION, SNP_PAGE_RECLAIM
+ *                                  SNP_PAGE_MOVE, SNP_PAGE_SWAP_OUT, SNP_PAGE_SWAP_IN,
+ *                                  SNP_PAGE_UNSMASH
+ *
+ * GSTATE_RUNNING   Guest is        SNP_ACTIVATE, SNP_PAGE_RECLAIM, SNP_DECOMMISSION,
+ *                  currently       SNP_PAGE_MOVE, SNP_PAGE_SWAP_OUT, SNP_PAGE_SWAP_IN,
+ *                  running         SNP_PAGE_UNSMASH, SNP_GUEST_REQUEST
+ */
+typedef enum __attribute__((mode(QI))) SNP_GUEST_STATE
+{
+    SNP_GUEST_INIT    = 0,
+    SNP_GUEST_LAUNCH  = 1,
+    SNP_GUEST_RUNNING = 2,
+
+    SNP_GUEST_STATE_LIMIT,
+} SNP_GUEST_STATE;
 
 // Chapter 4.4 - Status Codes
 /**
@@ -207,6 +283,13 @@ typedef enum __attribute__((mode(HI))) SEV_ERROR_CODE
     ERROR_INVALID_PARAM             = 0x16,
     ERROR_RESOURCE_LIMIT            = 0x17,
     ERROR_SECURE_DATA_INVALID       = 0x18,
+
+    // SNP
+    ERROR_INVALID_PAGE_SIZE         = 0x19,
+    ERROR_INVALID_PAGE_STATE        = 0x1A,
+    ERROR_INVALID_MDATA_ENTRY       = 0x1B,
+    ERROR_INVALID_PAGE_OWNER        = 0x1C,
+    ERROR_AEAD_OFLOW                = 0x1D,
 
     ERROR_RING_BUFFER_EXIT          = 0x1F,
     ERROR_LIMIT,
@@ -522,6 +605,17 @@ enum SEV_POLICY : uint32_t
     SEV_POLICY_API_MINOR = (uint32_t)0xff << 24,  // API Minor bits
 };
 
+enum SNP_POLICY : uint64_t
+{
+    SNP_POLICY_API_MINOR  = (uint32_t)0xff << 0, // Min MINOR version required to run guest
+    SNP_POLICY_API_MAJOR  = (uint32_t)0xff << 8, // Min MAJOR version required to run guest
+    SNP_POLICY_SMT        = 1 << 16,             // 0: SMT is disallowed, 1: SMT is allowed
+    SNP_POLICY_VMPL       = 1 << 17,             // 0: VMPLs are not required, 1: VMPLs must be enabled
+    SNP_POLICY_MIGRATE_MA = 1 << 18,             // 0: Migration via a MA is disallowed, 1: migration via a MA is allowed
+    SNP_POLICY_DEBUG      = 1 << 19,             // 0: Debugging is disallowed, 1: Debugging is allowed
+    SNP_POLICY_RESERVED   = (uint64_t)0xFFFFFFFFFFF << 20,  // Reserved
+};
+
 // Maximally restrictive Guest policy
 #define SEV_POLICY_MAX ((SEV_POLICY)(SEV_POLICY_NODBG|SEV_POLICY_NOKS| \
                                      SEV_POLICY_ES|SEV_POLICY_NOSEND))
@@ -535,6 +629,9 @@ enum SEV_POLICY : uint32_t
 // Allows DBG ops, examination of Guest state (ie, no SEV-ES)
 #define SEV_POLICY_DEBUG ((SEV_POLICY)(SEV_POLICY_NOKS|SEV_POLICY_DOMAIN| \
                                        SEV_POLICY_SEV))
+// Minimally restrictive Guest policy
+#define SNP_POLICY_MIN ((SNP_POLICY)(SNP_POLICY_SMT|SNP_POLICY_VMPL| \
+                                     SNP_POLICY_MIGRATE_MA|SNP_POLICY_DEBUG))
 
 /**
  * PLATFORM_STATUS Command Sub-Buffer
@@ -715,6 +812,9 @@ typedef struct __attribute__ ((__packed__)) sev_df_flush_cmd_buf_t
 } sev_df_flush_cmd_buf;
 
 #define DLFW_IMAGE_MAX_LENGTH       (64*1024)     // 64KB Naples/Rome
+#define DLFW_IMAGE_MAX_LENGTH_MILAN (128*1024)    // 128KB
+#define FW_MAX_SIZE                 (DLFW_IMAGE_MAX_LENGTH_MILAN)   // Maximum size of firmware image
+
 typedef struct __attribute__ ((__packed__)) sev_download_firmware_cmd_buf_t
 {
     uint64_t    fw_p_addr;
@@ -868,6 +968,7 @@ typedef struct __attribute__ ((__packed__)) attestation_report_t
     uint32_t    policy;
     uint32_t    sig_usage;
     uint32_t    sig_algo;
+    uint32_t    reserved;
     uint8_t     sig1[144];
 } attestation_report;
 
@@ -1027,6 +1128,325 @@ typedef struct __attribute__ ((__packed__)) swap_io_metadata_entry_t
     uint32_t reserved5      : 29;   /* bits 3 to 31 */
 } swap_io_metadata_entry;
 static_assert(sizeof(swap_io_metadata_entry) == 0x40, "Error, static assertion failed");
+
+// SNP
+#define SNP_PAGE_SIZE(x) (x & 1)
+#define SNP_PAGE_ADDR(x) (x & ~(PAGE_SIZE_4K - 1))
+
+typedef struct __attribute__ ((__packed__)) snp_init_cmd_buf_t
+{
+} snp_init_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_shutdown_cmd_buf_t
+{
+} snp_shutdown_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_platform_status_cmd_buf_t
+{
+    uint64_t status_p_addr; /* sPA of region to write Platform information */
+} snp_platform_status_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_platform_status_buffer_t
+{
+    uint8_t  api_major;
+    uint8_t  api_minor;
+    uint8_t  state;
+    uint8_t  is_rmp_init : 1;   /* bit 0 */
+    uint8_t  reserved    : 7;   /* bits 1 to 7 */
+    uint32_t build_id;
+    uint8_t  mask_chip_id : 1;  /* bit 0 */
+    uint32_t reserved2    : 31; /* bits 1 to 31 */
+    uint32_t guest_count;       /* SNP Guest count */
+    uint64_t tcb_version;       /* Platform/installed version */
+    uint64_t reported_tcb;      /* SetReportedTCB() version */
+} snp_platform_status_buffer;
+
+typedef struct __attribute__ ((__packed__)) snp_df_flush_cmd_buf_t
+{
+} snp_df_flush_cmd_buf;
+
+#define INIT_RMP_REQ     1
+#define INIT_RMP_NO_REQ  0
+typedef struct __attribute__ ((__packed__)) snp_init_ex_cmd_buf_t
+{
+    uint32_t init_rmp  : 1;  /* bit 0 */
+    uint32_t reserved : 31;  /* bits 1 to 31 */
+    uint8_t reserved2[0x40-0x04];
+} snp_init_ex_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_decommission_cmd_buf_t
+{
+    uint64_t gctx_p_addr;   /* sPA of the Guest context page */
+} snp_decommission_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_activate_cmd_buf_t
+{
+    uint64_t gctx_p_addr;   /* sPA of the Guest context page */
+    uint32_t asid;
+} snp_activate_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_guest_status_cmd_buf_t
+{
+    uint64_t gctx_p_addr;   /* sPA of the Guest context page */
+    uint64_t status_p_addr; /* sPA of page to receive status information */
+} snp_guest_status_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_guest_status_buffer_t
+{
+    uint64_t policy;
+    uint32_t asid;
+    uint8_t  state;
+    uint8_t  reserved;
+    uint8_t  reserved2[2];
+    uint64_t reserved3;
+    uint64_t reserved4;
+} snp_guest_status_buffer;
+
+typedef struct __attribute__ ((__packed__)) snp_activate_ex_cmd_buf_t
+{
+    uint32_t ex_len;        /* Length of command buffer. 20h for this version */
+    uint32_t reserved;
+    uint64_t gctx_p_addr;   /* sPA of the Guest context page */
+    uint32_t asid;          /* ASID to activate the Guest with */
+    uint32_t num_ids;       /* Number of APIC IDs in IDs_PADDR list. */
+    uint64_t ids_p_addr;    /* System physical address of the list of APIC IDs */
+} snp_activate_ex_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_gctx_create_cmd_buf_t
+{
+    uint64_t gctx_p_addr;   /* sPA of the Guest context page */
+} snp_gctx_create_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_guest_request_cmd_buf_t
+{
+    uint64_t gctx_p_addr;       /* sPA of the Guest context page */
+    uint64_t request_p_addr;    /* request message */
+    uint64_t response_p_addr;   /* response message */
+} snp_guest_request_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_launch_start_cmd_buf_t
+{
+    uint64_t gctx_p_addr;       /* sPA of the Guest context page */
+    uint64_t policy;
+    uint64_t ma_gctx_p_addr;    /* sPA of the Guest context of the migration agent */
+    uint32_t ma_en      : 1;    // bit 0   /* 1=Guest associated with a migration agent, else 0 */
+    uint32_t imi_en     : 1;    // bit 1   /* 1=launch flow is launching an IMI for guest-assisted migration. */
+    uint32_t reserved   : 30;   // bits 2 to 31 Reserved
+    uint32_t reserved2;
+    uint8_t  gosvw[16];         /* HV provided value for guest OS visible workarounds */
+} snp_launch_start_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_launch_update_cmd_buf_t
+{
+    uint64_t gctx_p_addr;       /* sPA of the Guest context page */
+    uint32_t page_size    : 1;  // bit 0    /* 0h is 4k page, 1h is 2MB page. */
+    uint32_t page_type    : 3;  // bits 1 to 3
+    uint32_t imi_page     : 1;  // bit 4
+    uint32_t reserved     : 27; // bits 5 to 31
+    uint32_t reserved2;
+    uint64_t page_p_addr;
+    uint32_t reserved3    : 8;  // bits 0 to 7
+    uint32_t vmpl_1_perms : 8;  // bits 8 to 15
+    uint32_t vmpl_2_perms : 8;  // bits 16 to 23
+    uint32_t vmpl_3_perms : 8;  // bits 24 to 31
+    uint32_t reserved4    : 32; // bits 32 to 63
+} snp_launch_update_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_launch_update_page_info_t  // digest
+{
+    uint8_t digest_cur[48];
+    uint8_t contents[48];
+    uint16_t length;
+    uint8_t page_type;
+    uint8_t imi_page : 1;       // bit 0
+    uint8_t reserved : 7;       // bits 1 to 7
+    uint8_t reserved2;
+    uint8_t vmpl_1_perms;
+    uint8_t vmpl_2_perms;
+    uint8_t vmpl_3_perms;
+    uint64_t gpa;
+} snp_launch_update_page_info;
+static_assert(sizeof(snp_launch_update_page_info) == 0x70, "Error, static assertion failed");
+
+#define SNP_LAUNCH_UPDATE_SECRETS_PAGE_VERSION  2
+typedef struct __attribute__ ((__packed__)) snp_launch_update_secrets_page_t
+{
+    uint32_t version;
+    uint8_t imi_en    : 1;      // bit 0
+    uint32_t reserved : 31;     // bits 1 to 31
+    uint32_t fms;               // family, model, stepping
+    uint32_t reserved2;
+    uint8_t gosvw[16];
+    uint8_t vmpck_0[32];
+    uint8_t vmpck_1[32];
+    uint8_t vmpck_2[32];
+    uint8_t vmpck_3[32];
+    uint8_t reserved_guest_os[0xC0-0xA0];
+    uint8_t reserved3[0x1000-0xC0];
+} snp_launch_update_secrets_page;
+static_assert(sizeof(snp_launch_update_secrets_page) == 0x1000, "Error, static assertion failed");
+
+typedef struct snp_cpuid_function
+{
+    uint32_t eax_in;        // Input
+    uint32_t ecx_in;
+    uint64_t xcr0_in;
+    uint64_t xss_in;
+    uint32_t eax;           // Output
+    uint32_t ebx;
+    uint32_t ecx;
+    uint32_t edx;
+    uint64_t reserved;
+} snp_cpuid_function_t;
+
+#define SNP_CPUID_COUNT_MAX     64
+typedef struct __attribute__ ((__packed__)) snp_launch_update_cpuid_page_t
+{
+    uint32_t count;
+    uint32_t reserved;
+    uint64_t reserved2;
+    snp_cpuid_function_t cpuid_function[SNP_CPUID_COUNT_MAX];
+} snp_launch_update_cpuid_page;
+
+typedef struct __attribute__ ((__packed__)) snp_launch_finish_cmd_buf_t
+{
+    uint64_t gctx_p_addr;
+    uint64_t id_block_p_addr;
+    uint64_t id_auth_p_addr;
+    uint8_t id_block_en     : 1;    // bit 0
+    uint8_t auth_key_en     : 1;    // bit 1
+    uint64_t reserved       : 62;   // bits 2 to 63
+    uint8_t  host_data[32];
+} snp_launch_finish_cmd_buf;
+
+#define snp_launch_FINISH_ID_BLOCK_MAX_VERSION 1
+typedef struct __attribute__ ((__packed__)) snp_launch_finish_id_block_t
+{
+    uint8_t  ld[48];            // The expected launch digest of the guest
+    uint8_t  family_id[16];     // Family ID of the guest
+    uint8_t  image_id[16];      // Image ID of the guest
+    uint32_t version;           // Version of the ID block format
+    uint32_t guest_svn;         // SVN of the guest
+    uint64_t policy;            // The policy of the guest
+} snp_launch_finish_id_block;
+static_assert(sizeof(snp_launch_finish_id_block) == 0x290-0x230, "Error, static assertion failed");  // Must fit into Import/Export struct
+
+typedef struct __attribute__ ((__packed__)) snp_launch_finish_id_auth_page_t
+{
+    uint32_t id_key_algo;               // The algorithm of the ID Key
+    uint32_t auth_key_algo;             // The algorithm of the Author Key
+    uint8_t reserved[0x40-0x8];
+    uint8_t id_block_sig[0x240-0x40];   // The signature of the ID block
+    uint8_t id_key[0x644-0x240];        // The public component of the ID key
+    uint8_t reserved2[0x680-0x644];
+    uint8_t id_key_sig[0x880-0x680];    // The signature of the ID_KEY
+    uint8_t author_key[0xC84-0x880];    // The public component of the Author key
+    uint8_t reserved3[0x1000-0xC84];
+} snp_launch_finish_id_auth_page;
+static_assert(sizeof(snp_launch_finish_id_auth_page) == 0x1000, "Error, static assertion failed");
+
+typedef struct __attribute__ ((__packed__)) snp_dbg_decrypt_cmd_buf_t
+{
+    uint64_t gctx_p_addr;      /* sPA of the Guest context page */
+    uint64_t src_p_addr;
+    uint64_t dst_p_addr;
+} snp_dbg_decrypt_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_dbg_encrypt_cmd_buf_t
+{
+    uint64_t gctx_p_addr;      /* sPA of the Guest context page */
+    uint64_t src_p_addr;
+    uint64_t dst_p_addr;
+} snp_dbg_encrypt_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_swap_out_cmd_buf_t
+{
+    uint64_t gctx_p_addr;           /* sPA of the guest context page */
+    uint64_t src_p_addr;            /* sPA of src page */
+    uint64_t dst_p_addr;            /* sPA of dst page */
+    uint64_t m_data_p_addr;         /* sPA of metadata entry (mdata) */
+    uint64_t software_data;         /* software available data supplied by hypervisor */
+    uint32_t page_size      : 1;    /* bit 0            0h is 4k page, 1h is 2MB page */
+    uint32_t page_type      : 2;    /* bits 1 to 2      0h is data page, 1h is Metadata, 2h is VMSA page page */
+    uint32_t reserved       : 1;    /* bit 3 */
+    uint32_t root_m_data_en : 1;    /* bit 4            MDATA entry will be stored in gctx, not in MDATA_PADDR. */
+    uint64_t reserved2      : 59;   /* bits 5 to 63 */
+} snp_swap_out_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_swap_in_cmd_buf_t
+{
+    uint64_t gctx_p_addr;           /* sPA of the guest context page */
+    uint64_t src_p_addr;            /* sPA of src page */
+    uint64_t dst_p_addr;            /* sPA of dst page */
+    uint64_t m_data_p_addr;         /* sPA of metadata entry (mdata) */
+    uint64_t reserved;
+    uint32_t page_size      : 1;    /* bit 0            0h is 4k page, 1h is 2MB page */
+    uint32_t page_type      : 2;    /* bits 1 to 2      0h is data page, 1h is Metadata, 2h is VMSA page page */
+    uint32_t swap_in_place  : 1;    /* bit 3            Indicates src and dst pAddr's are the same */
+    uint32_t root_m_data_en : 1;    /* bit 4            MDATA entry will be stored in gctx, not in MDATA_PADDR. */
+    uint64_t reserved2      : 59;   /* bits 5 to 63 */
+} snp_swap_in_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_page_move_cmd_buf_t
+{
+    uint64_t gctx_p_addr;      /* sPA of the Guest context page */
+    uint32_t page_size : 1;    // bit 0    /* 0h is 4k page, 1h is 2MB page. */
+    uint32_t reserved  : 31;   // bits 1 to 31
+    uint32_t reserved2;
+    uint64_t src_p_addr;         /* sPA of src page */
+    uint64_t dst_p_addr;         /* sPA of dst page */
+} snp_page_move_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_md_init_cmd_buf_t
+{
+    uint64_t gctx_p_addr;      /* sPA of the Guest context page */
+    uint64_t page_p_addr;        /* sPA of page to turn into metadata page */
+} snp_md_init_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_page_reclaim_cmd_buf
+{
+    uint64_t page_addr_size;
+} snp_page_reclaim_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_page_unsmash_cmd_buf_t
+{
+    uint64_t page_p_addr;        /* 4K page, 2MB aligned */
+} snp_page_unsmash_cmd_buf;
+
+typedef struct __attribute__ ((__packed__)) snp_config_cmd_buf_t
+{
+    uint64_t reported_tcb;
+    uint8_t  mask_chip_id : 1;  /* bit 0 */
+    uint32_t reserved     : 31; /* bits 1 to 31 */
+    uint8_t  reserved2[0x40-0xC];
+} snp_config_cmd_buf;
+
+// Defines
+#define IMI_EN (true)   // SNP_LAUNCH_START_PARAMS
+#define MA_EN  (true)
+
+typedef enum SNP_LAUNCH_UPDATE_PAGE
+{
+    SNP_PAGE_TYPE_RESERVED   = 0x0,
+    SNP_PAGE_TYPE_NORMAL     = 0x1, // Normal data page
+    SNP_PAGE_TYPE_VMSA       = 0x2, // VMSA page
+    SNP_PAGE_TYPE_ZERO       = 0x3, // Page full of zeros
+    SNP_PAGE_TYPE_UNMEASURED = 0x4, // Encrypted but not measured
+    SNP_PAGE_TYPE_SECRETS    = 0x5, // Where firmware stores secrets for the Guest
+    SNP_PAGE_TYPE_CPUID      = 0x6, // Where hypervisor provides CPUID function values
+} SNP_LAUNCH_UPDATE_PAGE;
+
+typedef enum SNP_SIGNATURE_ALGO
+{
+    SNP_SIGNATURE_ALGO_ECDSA_P384_SHA384 = 0x1,
+} SNP_SIGNATURE_ALGO;
+
+typedef enum SNP_LAUNCH_UPDATE_IMI_PAGE
+{
+    NOT_IMI_PAGE = 0x0,
+    IS_IMI_PAGE  = 0x1,
+} SNP_LAUNCH_UPDATE_IMI_PAGE;
+
 typedef enum SWAP_IO_PAGE
 {
     SWAP_IO_DATA_PAGE     = 0x0,
