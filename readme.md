@@ -122,7 +122,7 @@ Updated: 2019-10-03
 7. Get the CEK_ASK from the AMD KDS server by running the generate_cek_ask command
    - Note: the CEK certificate will be different every time you pull it from the KDS sever. The server re-generates/re-signs the cert every time instead of storing a static cert
 8. Run the pek_csr command to generate a certificate signing request for your PEK. This will allow you to take ownership of the platform.
-9. Sign PEK with OCA (example using openssl coming soon)
+9. Sign PEK with OCA (see pek_cert_import() command in sevcore_xx.cc)
 10. Run the pek_cert_import command
 11. Run the pdh_cert_export command
 12. Run the get_ask_ark command

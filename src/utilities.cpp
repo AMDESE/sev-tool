@@ -58,8 +58,8 @@ size_t sev::read_file(const std::string file_name, void *buffer, size_t len)
     std::streamsize slen = (std::streamsize)len;
 
     if (!file.is_open()) {
-        printf("read_file Error: Could not open file. "
-               "Ensure directory and file exists\n"
+        printf("read_file Error: Could not open file. " \
+               " ensure directory and file exists\n" \
                "  file_name: %s\n", file_name.c_str());
         return 0;
     }
@@ -170,8 +170,7 @@ void sev::ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len)
 {
     std::string temp;
 
-    for (size_t i = 0; i < len; i++)
-    {
+    for (size_t i = 0; i < len; i++) {
         temp = {in_bytes[i*2], in_bytes[(i*2)+1], '\0'};
         ((uint8_t *)out)[i] = (uint8_t)stoi(temp, NULL, 16);
     }

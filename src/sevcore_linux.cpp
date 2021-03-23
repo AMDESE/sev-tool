@@ -58,6 +58,9 @@ ePSP_DEVICE_TYPE sev::get_device_type(void)
     else if (family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
         return PSP_DEVICE_TYPE_ROME;
     }
+    else if (family == MILAN_FAMILY && (int)model >= (int)MILAN_MODEL_LOW && model <= MILAN_MODEL_HIGH) {
+        return PSP_DEVICE_TYPE_MILAN;
+    }
     else
         return PSP_DEVICE_TYPE_INVALID;
 }
@@ -106,6 +109,10 @@ int sev::get_ask_ark(const std::string output_folder, const std::string cert_fil
         else if (device_type == PSP_DEVICE_TYPE_ROME) {
             cmd += ASK_ARK_ROME_SITE;
             cert_w_path += ASK_ARK_ROME_FILE;
+        }
+        else if (device_type == PSP_DEVICE_TYPE_MILAN) {
+            cmd += ASK_ARK_MILAN_SITE;
+            cert_w_path += ASK_ARK_MILAN_FILE;
         }
         else {
             printf("Error: Unable to determine Platform type. " \

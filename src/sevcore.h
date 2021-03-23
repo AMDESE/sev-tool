@@ -34,8 +34,10 @@ const std::string DEFAULT_SEV_DEVICE     = "/dev/sev";
 
 const std::string ASK_ARK_NAPLES_FILE    = "ask_ark_naples.cert";
 const std::string ASK_ARK_ROME_FILE      = "ask_ark_rome.cert";
+const std::string ASK_ARK_MILAN_FILE     = "ask_ark_milan.cert";
 const std::string ASK_ARK_NAPLES_SITE    = ASK_ARK_PATH_SITE + ASK_ARK_NAPLES_FILE;
 const std::string ASK_ARK_ROME_SITE      = ASK_ARK_PATH_SITE + ASK_ARK_ROME_FILE;
+const std::string ASK_ARK_MILAN_SITE     = ASK_ARK_PATH_SITE + ASK_ARK_MILAN_FILE;
 
 constexpr uint32_t NAPLES_FAMILY     = 0x17UL;      // 23
 constexpr uint32_t NAPLES_MODEL_LOW  = 0x00UL;
@@ -43,11 +45,15 @@ constexpr uint32_t NAPLES_MODEL_HIGH = 0x0FUL;
 constexpr uint32_t ROME_FAMILY       = 0x17UL;      // 23
 constexpr uint32_t ROME_MODEL_LOW    = 0x30UL;
 constexpr uint32_t ROME_MODEL_HIGH   = 0x3FUL;
+constexpr uint32_t MILAN_FAMILY      = 0x19UL;      // 25
+constexpr uint32_t MILAN_MODEL_LOW   = 0x00UL;
+constexpr uint32_t MILAN_MODEL_HIGH  = 0x0FUL;
 
 enum __attribute__((mode(QI))) ePSP_DEVICE_TYPE {
     PSP_DEVICE_TYPE_INVALID = 0,
     PSP_DEVICE_TYPE_NAPLES  = 1,
     PSP_DEVICE_TYPE_ROME    = 2,
+    PSP_DEVICE_TYPE_MILAN   = 3,
 };
 
 constexpr char LINUX_SEV_FILE[]         = "/dev/sev";
@@ -56,10 +62,12 @@ constexpr char KVM_AND_SEV_PARAM[]      = "/sys/module/kvm_amd/parameters/sev";
 constexpr char LIBVIRT_SEV_SUPPORTED[]  = "<sev supported='yes'>";
 constexpr char COMMAND_NOT_FOUND[]      = "CommandNotFound";
 
-// A system physical address that should always be invalid.
-// Used to test the SEV FW detects such invalid addresses and returns the
-// correct error return value.
-constexpr uint64_t INVALID_ADDRESS  = (0xFD000000018);
+/**
+ * A system physical address that should always be invalid.
+ * Used to test the SEV FW detects such invalid addresses and returns the
+ * correct error return value.
+ */
+constexpr uint64_t INVALID_ADDRESS  = (0xFFF00000018); // Needs to be bigger than 0xFFCFFFFFFFF (16TB memory)
 constexpr uint32_t BAD_ASID         = ((uint32_t)~0);
 constexpr uint32_t BAD_DEVICE_TYPE  = ((uint32_t)~0);
 constexpr uint32_t BAD_FAMILY_MODEL = ((uint32_t)~0);

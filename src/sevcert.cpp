@@ -345,6 +345,8 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
  *                  command as input to this function, to help populate the cert
  *                [api_minor] the api_minor returned from a PlatformStatus
  *                  command as input to this function, to help populate the cert
+ *                [algo] the algorithm with which to create the pubkey and
+ *                  signature, ECDSA or RSA, and SHA256 or SHA384
  */
 bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
                               uint8_t api_minor, SEV_SIG_ALGO algo)
@@ -571,8 +573,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
         // 2. Use the pub_key in sig[i] arg to decrypt the sig in child_cert arg
         // Try both sigs in child_cert, to see if either of them match. In PEK, CEK and OCA can be in any order
         bool found_match = false;
-        for (int i = 0; i < SEV_CERT_MAX_SIGNATURES; i++)
-        {
+        for (int i = 0; i < SEV_CERT_MAX_SIGNATURES; i++) {
             if ((parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
                 (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
                 uint32_t sig_len = parent_cert->pub_key.rsa.modulus_size/8; // Should be child_cert but SEV_RSA_SIG doesn't have a size param

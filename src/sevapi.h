@@ -33,10 +33,10 @@ typedef bool _Bool;
 // ------------------------------- //
 
 // TMR (Trusted Memory Region) size required for INIT with SEV-ES enabled
-#define SEV_TMR_SIZE (1024*1024)
+#define SEV_TMR_SIZE     (1024*1024)
 
 // NV data size required for INIT_EX.
-#define SEV_NV_SIZE (32*1024)
+#define SEV_NV_SIZE      (32*1024)
 
 // Invalid Guest handle.
 #define INVALID_GUEST_HANDLE    0
