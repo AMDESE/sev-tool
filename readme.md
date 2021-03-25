@@ -1,7 +1,7 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v17
-Updated: 2021-03-24
+Version: v18
+Updated: 2021-03-25
 &nbsp;
 &nbsp;
 
@@ -158,10 +158,11 @@ This is the flow that the Hypervisor will take to prepare the guest
 6. The Guest Owner should now give the Hypervisor approval to run its Guest
 
 ## Command List
-The following commands are supposed be the SEV-Tool. Please see the SEV-API for info on each specific command
+The following commands are supported by the SEV-Tool. Please see the SEV-API for info on each specific command
 Note: All input and output cert's mentioned below are SEV (special format) Certs. See SEV API for details
 1. factory_reset
      - Input args: none
+     - Files read in: none
      - Outputs: none
      - Note: in the current SEV API, this command was renamed to PLATFORM_RESET
      - Example
@@ -170,6 +171,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          ```
 2. platform_status
      - Input args: none
+     - Files read in: none
      - Outputs: The current platform status will be printed to the screen
      - Example
          ```sh
@@ -177,6 +179,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          ```
 3. pek_gen
      - Input args: none
+     - Files read in: none
      - Outputs: none
      - Example
          ```sh
@@ -185,6 +188,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
 4. pek_csr
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the certificate signing request
+     - Files read in: none
      - Outputs:
          - If --[verbose] flag used: The pek_csr will be printed out to the screen as a hex dump and as a readable format
          - If --[ofolder] flag used: The pek_csr will be written as files to the specified folder as a hex dump and as a readable format. Files: pek_csr_out.cert and pek_csr_out_readable.cert
@@ -194,6 +198,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          ```
 5. pdh_gen
      - Input args: none
+     - Files read in: none
      - Outputs: none
      - Example
          ```sh
@@ -202,6 +207,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
 6. pdh_cert_export
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the PDH cert and the Cert Chain (PEK, OCA, CEK)
+     - Files read in: none
      - Outputs:
          - If --[verbose] flag used: The PDH cert and Cert Chain will be printed out to the screen as hex dumps and as readable formats
          - If --[ofolder] flag used: The PDH cert and Cert Chain will be written as files to the specified folder as hex dumps and as readable formats. Files: pdh_out.cert, pdh_readable_out.cert, cert_chain_out.cert, cert_chain_readable_out.cert
@@ -212,6 +218,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
 7. pek_cert_import
 This command imports an OCA private key from the user, runs a platform_status command to get the API major/minor used to create the certificate, runs the pek_csr to create the PEK certificate signing request, signs the PEK signing request with the OCA private key, and calls pek_cert_import to import the PEK and OCA certificates.
      - Required input args: The unencrypted OCA Private key file (.pem).
+     - Files read in: [oca_priv_key_file]
      - Outputs: none
      - Example
          ```sh
@@ -221,15 +228,18 @@ This command imports an OCA private key from the user, runs a platform_status co
 8. get_id
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the IDs for Socket0 and Socket1
+     - Files read in: none
      - Outputs:
          - If --[verbose] flag used: The IDs for Socket0 and Socket1 will be printed out to the screen
-         - If --[ofolder] flag used: The IDs for Socket0 and Socket1 will be written as files to the specified folder. Files: getid_s0_out.txt and getid_s1_out.txt
+         - If --[ofolder] flag used: The IDs for Socket0 and Socket1 will be written as files to the specified folder.
+            - Files: getid_s0_out.txt and getid_s1_out.txt
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --get_id
          ```
 9. set_self_owned
      - Input args: none
+     - Files read in: none
      - Outputs: none
      - Example
          ```sh
@@ -237,6 +247,7 @@ This command imports an OCA private key from the user, runs a platform_status co
          ```
 10. set_externally_owned
      - Required input args: This function, among other things, calls pek_cert_import, so the OCA Private key file (.pem) is a required argument.
+     - Files read in: [oca_priv_key_file]
      - Outputs: none
      - Example
          ```sh
@@ -247,6 +258,7 @@ This command imports an OCA private key from the user, runs a platform_status co
 This command calls the get_id command and passes that ID into the AMD KDS server to retrieve the cek_ask. If the command returns an error while connecting to the KDS server, please try the command again.
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the cek_ark.cert to
+     - Files read in: none
      - Outputs:
         - If --[ofolder] flag used: The cek_ask.cert file for your specific platform (processor in socket0) will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: cek_ask.cert
      - Example
@@ -256,6 +268,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
 12. get_ask_ark
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the ask_ark certificate to
+     - Files read in: none
      - Outputs:
         - If --[ofolder] flag used: The ark_ark certificate will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: ask_ark.cert
      - Example
@@ -266,6 +279,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - This command exports all of the certs (PDH, PEK, OCA, CEK, ASK, ARK) and zips them up so that the Platform Owner can send them to the Guest Owner to allow the Guest Owner to validate the cert chain. The tool gets the CEK from the AMD KDS server and gets the ASK_ARK certificate from the SEV Developer website.
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export all of the certificates to and the zip folder in
+     - Files read in: none
      - Outputs:
         - If --[ofolder] flag used: The certificates will be exported to and zipped up in the folder specified. Otherwise, they will be exported to and zipped up in the same directory as the SEV-Tool executable. Files: pdh.cert, pek.cert, oca.cert, cek.cert, ask.cert, ark.cert, certs_export.zip
      - Example
@@ -277,6 +291,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - The digest parameter is the SHA256 (Naples) or SHA384 (Rome) output digest of the data passed into LaunchUpdateData and LaunchUpdateVMSA
      - Required input args: [Context] [Api Major] [Api Minor] [Build ID] [Policy] [Digest] [MNonce] [TIK]
          - The format of the input parameters are ascii-encoded hex bytes.
+     - Files read in: none
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the calculated measurement
      - Outputs:
@@ -316,6 +331,8 @@ This command calls the get_id command and passes that ID into the AMD KDS server
         - Validates the PDH using the PEK
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will import the certs from, otherwise it will use the same folder as the SEV-Tool executable
+     - Files read in: ask.cert, ask.cert, cek.cert, oca.cert, pek.cert, pdh.cert
+     - Outputs: none
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_cert_chain
@@ -325,16 +342,19 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Required input args: Guest policy in hex format
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the blob file to
+     - Files read in: pdh.cert
      - Outputs:
         - If --[ofolder] flag used: The blob file and Guest Owner DH public key certificate will be exported to the folder specified. The Guest Owner DH public and private keys are also exported during the process and are only to be used by the SEV-Tool. Otherwise, all files will be exported to the same directory as the SEV-Tool executable. Files: launch_blob.bin, godh.cert, (ignore these: godh_pubkey.pem, godh_privkey.pem). Note that the output blob file is a binary file; to import to qemu, the file needs to be manually converted to base64.
      - Example
          ```sh
+         $ sudo ./sevtool --ofolder ./certs --generate_launch_blob [guest policy]
          $ sudo ./sevtool --ofolder ./certs --generate_launch_blob 39
          ```
 17. package_secret
      - This command reads in the file generated by generate_launch_blob (launch_blob.bin) to get the TEK and also reads in the secert file (secret.txt) to be encrypted/wrapped by the TEK. It then outputs a file (packaged_secret.txt) which is then passed into Launch_Secret as part of the normal API flow
      - Required input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will look for the launch blob file and the secrets file, and where it will export the packaged secret file to
+     - Files read in: secret.txt, launch_blob.bin, tmp_tk.bin, calc_measurement_out.txt
      - Outputs:
         - If --[ofolder] flag used: The blob file will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: packaged_secret.txt
      - Example
@@ -345,6 +365,8 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - This command imports the attestation report (attestation_report.bin) sent by the ATTESTATION command and the PEK certificate (pek.cert)(exported during generate_all_certs) and validates that the attestion report was signed by the PEK.
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will look for the attestation report and the pek cert file
+     - Files read in: attestation_report.bin, pek.cert
+     - Outputs: none
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_attestation
@@ -353,6 +375,8 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - This command imports the attestation report (guest_report.bin) generated from the Attestation guest message, sent through SNP_GUEST_REQUEST along with the current VCEK (vcek.pem)(exported during export_cert_chain_vcek) of the Platform and validates that the attestation report was signed by the VCEK.
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will look for the attestation report and the vcek cert file
+     - Files read in: guest_report.bin, vcek.pem
+     - Outputs: none
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_guest_report
@@ -367,16 +391,31 @@ This command calls the get_id command and passes that ID into the AMD KDS server
         - Validates the VCEK using the ASK
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will import the certs from, otherwise it will use the same folder as the SEV-Tool executable
+     - Files read in: vcek.pem, ask.pem, ark.pem
+     - Outputs: none
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_cert_chain_vcek
+         ```
+21. export_cert_chain_vcek
+     - This command exports all of the certs (VCEK, ASK, ARK) as .pem files and zips them up so that the Platform Owner can send them to the Guest Owner to allow the Guest Owner to validate the vcek cert chain and the SNP guest message's Attestation report from SNP_GUEST_REQUEST. The tool gets the VCEK and ASK_ARK certificates from the AMD KDS server.
+     - Required input args: TCBVersion returned from SNPPlatformStatus as a decimal string
+     - Optional input args: --ofolder [folder_path]
+         - This allows the user to specify the folder where the tool will export all of the certificates to and the zip folder in
+     - Files read in: none
+     - Outputs:
+        - If --[ofolder] flag used: The certificates will be exported to and zipped up in the folder specified. Otherwise, they will be exported to and zipped up in the same directory as the SEV-Tool executable. Files: vcek.der, vcek.pem, cert_chain.pem, ask.pem, ark.pem, certs_export_vcek.zip
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --export_cert_chain_vcek [tcb_version]
+         $ sudo ./sevtool --ofolder ./certs --export_cert_chain_vcek 0000000000000163
          ```
 
 ## Running tests
 To run tests to check that each command is functioning correctly, run the test_all command and check that the entire thing returns success.
 1. test_all
      - Required input args: --ofolder [folder_path]
-         - Make a directly that the tests can use to store certs/data in during the test. Note that the tool will clear this directly before the tests are run.
+         - Make a directory that the tests can use to store certs/data in during the test. Note that the tool will clear this directory before the tests are run.
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./tests --test_all

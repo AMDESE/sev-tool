@@ -43,6 +43,7 @@ const std::string VCEK_ASK_PEM_FILENAME           = "ask.pem";
 const std::string VCEK_ARK_PEM_FILENAME           = "ark.pem";
 
 const std::string CERTS_ZIP_FILENAME              = "certs_export";             // export_cert_chain
+const std::string CERTS_VCEK_ZIP_FILENAME         = "certs_export_vcek";        // export_cert_chain_vcek
 const std::string ASK_ARK_FILENAME                = "ask_ark.cert";             // get_ask_ark
 const std::string PEK_CSR_HEX_FILENAME            = "pek_csr.cert";             // pek_csr
 const std::string PEK_CSR_READABLE_FILENAME       = "pek_csr_readable.txt";     // pek_csr
@@ -97,6 +98,7 @@ private:
 
     int calculate_measurement(measurement_t *user_data, hmac_sha_256 *final_meas);
     int generate_all_certs(void);
+    int generate_all_certs_vcek(const std::string tcb_version);
     int import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
                          sev_cert *cek, amd_cert *ask, amd_cert *ark);
     bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
@@ -144,6 +146,7 @@ public:
     int generate_cek_ask(void);
     int get_ask_ark(void);
     int export_cert_chain(void);
+    int export_cert_chain_vcek(const std::string tcb_version);
     int calc_measurement(measurement_t *user_data);
     int validate_cert_chain(void);
     int generate_launch_blob(uint32_t policy);

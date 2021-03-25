@@ -18,6 +18,8 @@
 #include "sevcore.h"
 #include "utilities.h"
 #include "psp-sev.h"
+#include "rmp.h"
+#include "x509cert.h"
 #include <sys/ioctl.h>      // for ioctl()
 #include <sys/mman.h>       // for mmap() and friends
 #include <cstdio>           // for std::rename
@@ -128,8 +130,7 @@ int sev::get_ask_ark(const std::string output_folder, const std::string cert_fil
         }
 
         // Check if the file got downloaded
-        char tmp_buf[100] = {0};  // Just try to read some amount of chars
-        if (sev::read_file(cert_w_path, tmp_buf, sizeof(tmp_buf)) == 0) {
+        if (sev::get_file_size(cert_w_path) == 0) {
             printf("Error: command to get ask_ark cert failed\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
@@ -141,6 +142,70 @@ int sev::get_ask_ark(const std::string output_folder, const std::string cert_fil
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
         }
+        cmd_ret = SEV_RET_SUCCESS;
+    } while (0);
+
+    return cmd_ret;
+}
+
+int sev::get_ask_ark_pem(const std::string output_folder, const std::string cert_chain_file,
+                         const std::string ask_file, const std::string ark_file)
+{
+    int cmd_ret = SEV_RET_UNSUPPORTED;
+    std::string cmd = "wget ";
+    std::string output = "";
+    std::string cert_chain_w_path = output_folder + cert_chain_file;
+    std::string ask_w_path = output_folder + ask_file;
+    std::string ark_w_path = output_folder + ark_file;
+
+    do {
+        cmd += "-O " + cert_chain_w_path;  // Really ASK and ARK
+        cmd += " \"";
+        cmd += KDS_VCEK;
+        cmd += "Milan/";
+        cmd += KDS_VCEK_CERT_CHAIN;
+        cmd += "\"";
+
+        // Don't re-download the CEK from the KDS server if you already have it
+        if (sev::get_file_size(cert_chain_w_path) != 0) {
+            // printf("ASK_ARK pem already exists, not re-downloading\n");
+            cmd_ret = SEV_RET_SUCCESS;
+            break;
+        }
+
+        // Download the certificate from the AMD server
+        if (!sev::execute_system_command(cmd, &output)) {
+            printf("Error: pipe not opened for system command\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+
+        // Check if the file got downloaded
+        if (sev::get_file_size(cert_chain_w_path) == 0) {
+            printf("Error: command to get ask_ark cert failed\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+
+        // Split it from ask_ark into 2 separate pem files
+        cmd = "csplit -z -f " SEV_DEFAULT_DIR "cert_chain- ";
+        cmd += cert_chain_w_path;
+        cmd += " '/-----BEGIN CERTIFICATE-----/' '{*}'";
+        if (!execute_system_command(cmd, &output)) {
+            printf("Error: pipe not opened for system command\n");
+            break;
+        }
+
+        // Move the file from "cert_chain-xx" to something known (cert_chain_w_path)
+        if (std::rename(SEV_DEFAULT_DIR "cert_chain-00", ask_w_path.c_str()) != 0) {
+            printf("Error: renaming vcek cert chain file\n");
+            break;
+        }
+        if (std::rename(SEV_DEFAULT_DIR "cert_chain-01", ark_w_path.c_str()) != 0) {
+            printf("Error: renaming vcek cert chain file\n");
+            break;
+        }
+
         cmd_ret = SEV_RET_SUCCESS;
     } while (0);
 
@@ -1239,7 +1304,6 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
 
         // The AMD KDS server only accepts requests every 10 seconds
         std::string cert_w_path = output_folder + id0_buf;
-        char tmp_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
         bool cert_found = false;
         int sec_to_sleep = 6;
         int retries = 0;
@@ -1252,7 +1316,7 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
             }
 
             // Check if the file got downloaded
-            if (sev::read_file(cert_w_path, tmp_buf, sizeof(tmp_buf)) != 0) {
+            if (sev::get_file_size(cert_w_path) != 0) {
                 cert_found = true;
                 break;
             }
@@ -1272,6 +1336,111 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
         }
+    } while (0);
+
+    return cmd_ret;
+}
+
+int SEVDevice::generate_vcek_ask(const std::string output_folder,
+                                 const std::string vcek_der_file,
+                                 const std::string vcek_pem_file,
+                                 const std::string tcb_version)
+{
+    int cmd_ret = SEV_RET_UNSUPPORTED;
+    int ioctl_ret = -1;
+    sev_user_data_get_id id_buf;
+    std::string cmd = "wget ";
+    std::string output = "";
+    std::string der_cert_w_path = output_folder + vcek_der_file;
+    std::string pem_cert_w_path = output_folder + vcek_pem_file;
+
+    // Set struct to 0
+    memset(&id_buf, 0, sizeof(sev_user_data_get_id));
+
+    do {
+        cmd += "-O " + der_cert_w_path;
+        cmd += " \"";
+        cmd += KDS_VCEK;
+        cmd += "Milan/";
+
+        // Get the ID of the Platform
+        // Send the command
+        ioctl_ret = sev_ioctl(SEV_GET_ID, &id_buf, &cmd_ret);
+        if (ioctl_ret != 0)
+            break;
+
+        // Copy the resulting IDs into the real buffer allocated for them
+        // Note that Linux referrs to P0 and P1 as socket1 and socket2 (which is incorrect).
+        //   So below, we are getting the ID for P0, which is the first socket
+        char id0_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
+        for (uint8_t i = 0; i < sizeof(id_buf.socket1); i++)
+        {
+            sprintf(id0_buf+strlen(id0_buf), "%02x", id_buf.socket1[i]);
+        }
+        cmd += id0_buf;
+
+        // Get the TCB version of the Platform
+        // (passed in right now, not getting it from SNPPlatformStatus here)
+
+        // Convert the TCB buffer to decimal bytes
+        std::string TCBStringArray[8];
+        TCBStringArray[0] = "blSPL=";
+        TCBStringArray[1] = "teeSPL=";
+        TCBStringArray[2] = "reserved0SPL=";
+        TCBStringArray[3] = "reserved1SPL=";
+        TCBStringArray[4] = "reserved2SPL=";
+        TCBStringArray[5] = "reserved3SPL=";
+        TCBStringArray[6] = "snpSPL=";
+        TCBStringArray[7] = "ucodeSPL=";
+        for (uint8_t i = 0; i < sizeof(snp_tcb_version_t); i++) {
+            TCBStringArray[i] += tcb_version[(i*2)];
+            TCBStringArray[i] += tcb_version[(i*2)+1];
+            printf("%d, %s\n", i, TCBStringArray[i].c_str());
+        }
+
+        cmd += "?";
+        cmd += TCBStringArray[0] + "&" + TCBStringArray[1] + "&" +
+            //    TCBStringArray[2] + "&" + TCBStringArray[3] + "&" +
+            //    TCBStringArray[4] + "&" + TCBStringArray[5] + "&" +
+               TCBStringArray[6] + "&" + TCBStringArray[7];
+        cmd += "\"";
+
+        // Don't re-download the VCEK from the KDS server if you already have it
+        if (sev::get_file_size(pem_cert_w_path) != 0) {
+            // printf("VCEK already exists, not re-downloading\n");
+            cmd_ret = SEV_RET_SUCCESS;
+            break;
+        }
+
+        // The AMD KDS server only accepts requests every 10 seconds
+        bool cert_found = false;
+        int sec_to_sleep = 6;
+        int retries = 0;
+        int max_retries = (int)((10/sec_to_sleep)+2);
+        while (!cert_found && retries <= max_retries) {
+            if (!sev::execute_system_command(cmd, &output)) {
+                printf("Error: pipe not opened for system command\n");
+                cmd_ret = SEV_RET_UNSUPPORTED;
+                break;
+            }
+
+            // Check if the file got downloaded
+            if (sev::get_file_size(der_cert_w_path) != 0) {
+                cert_found = true;
+                break;
+            }
+            sleep(sec_to_sleep);
+            printf("Trying again\n");
+            retries++;
+        }
+        if (!cert_found) {
+            printf("Error: command to get vcek_ask cert failed\n");
+            cmd_ret = SEV_RET_UNSUPPORTED;
+            break;
+        }
+
+        // Convert the file from a DER to a PEM file
+        convert_der_to_pem(der_cert_w_path, pem_cert_w_path);
     } while (0);
 
     return cmd_ret;

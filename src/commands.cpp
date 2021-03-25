@@ -491,6 +491,56 @@ int Command::export_cert_chain(void)
     return (int)cmd_ret;
 }
 
+int Command::generate_all_certs_vcek(const std::string tcb_version)
+{
+    int cmd_ret = -1;
+
+    std::string vcek_der_file = VCEK_DER_FILENAME;
+    std::string vcek_pem_file = VCEK_PEM_FILENAME;
+    std::string cert_chain_file = VCEK_CERT_CHAIN_PEM_FILENAME;
+    std::string ask_file = VCEK_ASK_PEM_FILENAME;
+    std::string ark_file = VCEK_ARK_PEM_FILENAME;
+
+    do {
+        // Generate the vcek from the AMD KDS server
+        cmd_ret = m_sev_device->generate_vcek_ask(m_output_folder, vcek_der_file,
+                                                  vcek_pem_file, tcb_version);
+        if (cmd_ret != STATUS_SUCCESS)
+            break;
+
+        // Get the cert_chain (ask_ark) from the AMD KDS server
+        cmd_ret = sev::get_ask_ark_pem(m_output_folder, cert_chain_file,
+                                       ask_file, ark_file);
+        if (cmd_ret != STATUS_SUCCESS)
+            break;
+
+        cmd_ret = STATUS_SUCCESS;
+    } while (0);
+
+    return (int)cmd_ret;
+}
+
+int Command::export_cert_chain_vcek(const std::string tcb_version)
+{
+    int cmd_ret = -1;
+    std::string zip_name = CERTS_VCEK_ZIP_FILENAME;
+    std::string space = " ";
+    std::string cert_names = m_output_folder + VCEK_DER_FILENAME + space +
+                             m_output_folder + VCEK_PEM_FILENAME + space +
+                             m_output_folder + VCEK_CERT_CHAIN_PEM_FILENAME + space +
+                             m_output_folder + VCEK_ASK_PEM_FILENAME + space +
+                             m_output_folder + VCEK_ARK_PEM_FILENAME;
+
+    do {
+        cmd_ret = generate_all_certs_vcek(tcb_version);
+        if (cmd_ret != STATUS_SUCCESS)
+            break;
+
+        cmd_ret = sev::zip_certs(m_output_folder, zip_name, cert_names);
+    } while (0);
+    return (int)cmd_ret;
+}
+
 // We cannot call LaunchMeasure to get the MNonce because that command doesn't
 // exist in this context, so we read the user input params for all of our data
 int Command::calculate_measurement(measurement_t *user_data, hmac_sha_256 *final_meas)

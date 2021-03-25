@@ -22,7 +22,7 @@ private:
     std::string m_output_folder = "";
     int m_verbose_flag = 0;
 
-    bool clear_output_folder();
+    bool clear_output_folder(void);
 
 public:
     Tests(std::string output_folder, int verbose_flag);
@@ -45,7 +45,9 @@ public:
     bool test_validate_cert_chain(void);
     bool test_generate_launch_blob(void);
     bool test_package_secret(void);
-    bool test_all();
+    bool test_export_cert_chain_vcek(void);
+    bool test_validate_cert_chain_vcek(void);
+    bool test_all(void);
 };
 
 #endif /* TESTS_H */

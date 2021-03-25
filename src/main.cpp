@@ -58,15 +58,12 @@ const char help_array[] =  "The following commands are supported:\n" \
                     "      Input params:\n" \
                     "          uint32_t policy\n" \
                     "  package_secret\n" \
-                    "      Input params:\n" \
-                    "          launch_blob.bin file\n" \
                     "  validate_attestation\n" \
-                    "      Input params:\n" \
-                    "          attestation_report.bin file\n" \
-                    " validate_guest_report\n" \
-                    "      Input params:\n" \
-                    "          guest_report.bin file\n" \
+                    "  validate_guest_report\n" \
                     "  validate_cert_chain_vcek\n" \
+                    "  export_cert_chain_vcek\n" \
+                    "      Input params:\n" \
+                    "          std::string tcb_version\n" \
                     ;
 
 /* Flag set by '--verbose' */
@@ -93,6 +90,7 @@ static struct option long_options[] =
     {"generate_cek_ask",         no_argument,       0, 'm'},
     {"get_ask_ark",              no_argument,       0, 'n'},
     {"export_cert_chain",        no_argument,       0, 'p'},
+    {"export_cert_chain_vcek",   required_argument, 0, 'q'},
     /* Guest Owner commands */
     {"calc_measurement",         required_argument, 0, 't'},
     {"validate_cert_chain",      no_argument,       0, 'u'},
@@ -232,6 +230,18 @@ int main(int argc, char **argv)
             case 'p': {         // EXPORT_CERT_CHAIN
                 Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.export_cert_chain();
+                break;
+            }
+            case 'q': {         // EXPORT_CERT_CHAIN_VCEK
+                optind--;   // Can't use option_index because it doesn't account for '-' flags
+                if (argc - optind != 1) {
+                    printf("Error: Expecting exactly 1 arg for export_cert_chain_vcek\n");
+                    return false;
+                }
+
+                const std::string tcb_version = argv[optind++];
+                Command cmd(output_folder, verbose_flag);
+                cmd_ret = cmd.export_cert_chain_vcek(tcb_version);
                 break;
             }
             case 't': {         // CALC_MEASUREMENT

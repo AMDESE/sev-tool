@@ -120,6 +120,8 @@ ePSP_DEVICE_TYPE get_device_type(void);
 bool min_api_version(unsigned platform_major, unsigned platform_minor,
                      unsigned api_major, unsigned api_minor);
 int get_ask_ark(const std::string output_folder, const std::string cert_file);
+int get_ask_ark_pem(const std::string output_folder, const std::string cert_chain_file,
+                    const std::string ask_file, const std::string ark_file);
 int zip_certs(const std::string output_folder, const std::string zip_name,
               const std::string files_to_zip);
 } // namespace
@@ -197,6 +199,10 @@ public:
     int set_externally_owned(const std::string oca_priv_key_file);
     int generate_cek_ask(const std::string output_folder,
                          const std::string cert_file);
+    int generate_vcek_ask(const std::string output_folder,
+                          const std::string vcek_der_file,
+                          const std::string vcek_pem_file,
+                          const std::string tcb_version);
 };
 
 #endif /* SEVCORE_H */
