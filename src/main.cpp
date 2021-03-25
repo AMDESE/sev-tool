@@ -59,7 +59,7 @@ const char help_array[] =  "The following commands are supported:\n" \
                     "          uint32_t policy\n" \
                     "  package_secret\n" \
                     "      Input params:\n" \
-                    "          launch_blob.txt file\n" \
+                    "          launch_blob.bin file\n" \
                     ;
 
 /* Flag set by '--verbose' */
