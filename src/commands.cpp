@@ -17,9 +17,13 @@
 #include "amdcert.h"
 #include "commands.h"
 #include "crypto.h"
+#include "rmp.h"
 #include "sevcert.h"
 #include "utilities.h"      // for WriteToFile
+#include "x509cert.h"
 #include <openssl/hmac.h>   // for calc_measurement
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
 #include <stdio.h>          // printf
 #include <stdlib.h>         // malloc
 
@@ -837,7 +841,7 @@ int Command::package_secret(void)
 
         // Set up the Launch_Secret packet header
         if (!create_launch_secret_header(&packaged_secret_header, &iv, encrypted_mem,
-                                        sizeof(encrypted_mem), flags)) {
+                                         sizeof(encrypted_mem), flags)) {
             break;
         }
 
@@ -846,6 +850,186 @@ int Command::package_secret(void)
 
         cmd_ret = STATUS_SUCCESS;
     } while (0);
+
+    return (int)cmd_ret;
+}
+
+int Command::validate_attestation(void)
+{
+    int cmd_ret = ERROR_UNSUPPORTED;
+    std::string report_file = m_output_folder + ATTESTATION_REPORT_FILENAME;
+    bool success = false;
+    EVP_PKEY *pek_pub_key = NULL;
+    sev_cert pek;
+
+    do {
+        // Get the size of the report, so we can allocate that much memory
+        size_t report_size = sev::get_file_size(report_file);
+        if (report_size != sizeof(attestation_report)) {
+            printf("Error: The size of the attestation report is %ld bytes\n", sizeof(attestation_report));
+            break;
+        }
+        uint8_t report_mem[report_size];
+        attestation_report *report = (attestation_report *)report_mem;
+
+        // Read in the report
+        // printf("Attempting to read in Report file\n");
+        if (sev::read_file(report_file, report_mem, report_size) != report_size)
+            break;
+
+        // Read in the PEK (Platform Encryption Public Key)
+        std::string pek_full = m_output_folder+PEK_FILENAME;
+        if (sev::read_file(pek_full, &pek, sizeof(sev_cert)) != sizeof(sev_cert))
+            break;
+
+        // Build up a pek_pub_key so we can verify the signature on the report
+        sev_cert dummy;
+        memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
+        SEVCert temp_obj(dummy);                // TODO. Hack b/c just want to call function later
+
+        // New up the pek_pub_key
+        if (!(pek_pub_key = EVP_PKEY_new()))
+            break;
+
+        // Get the friend's Public EVP_PKEY from the certificate
+        // This function allocates memory and attaches an EC_Key
+        //  to your EVP_PKEY so, to prevent mem leaks, make sure
+        //  the EVP_PKEY is freed at the end of this function
+        if (temp_obj.compile_public_key_from_certificate(&pek, pek_pub_key) != STATUS_SUCCESS)
+            break;
+
+        // Validate the report
+        success = verify_message((sev_sig *)&report->sig1,
+                                  &pek_pub_key, report_mem,
+                                  offsetof(attestation_report, sig_usage),
+                                  SEV_SIG_ALGO_ECDSA_SHA256);
+        if (!success) {
+            printf("Error: Attestation report failed to validate\n");
+            break;
+        }
+
+        printf("Attestation report validated successfully!\n");
+        cmd_ret = STATUS_SUCCESS;
+    } while (0);
+
+    // Free memory
+    EVP_PKEY_free(pek_pub_key);
+
+    return (int)cmd_ret;
+}
+
+int Command::validate_guest_report(void)
+{
+    int cmd_ret = ERROR_UNSUPPORTED;
+    std::string report_file = m_output_folder + GUEST_REPORT_FILENAME;
+    std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;
+    bool success = false;
+    EVP_PKEY *vcek_pub_key = NULL;
+    X509 *x509_vcek = NULL;
+
+    do {
+        // Get the size of the report, so we can allocate that much memory
+        size_t report_size = sev::get_file_size(report_file);
+        if (report_size != sizeof(snp_attestation_report_t)) {
+            printf("Error: The size of the attestation report is %ld bytes\n", sizeof(snp_attestation_report_t));
+            break;
+        }
+        uint8_t report_mem[report_size];
+        snp_attestation_report_t *report = (snp_attestation_report_t *)report_mem;
+
+        // Read in the report
+        // printf("Attempting to read in Report file\n");
+        if (sev::read_file(report_file, report_mem, report_size) != report_size)
+            break;
+
+        // Read in the VCEK
+        if (!read_pem_into_x509(vcek_file, &x509_vcek))
+            break;
+        // X509_print_fp(stdout, x509_vcek);
+
+        vcek_pub_key = X509_get_pubkey(x509_vcek);
+        if (!vcek_pub_key)
+            break;
+
+        // Print the key
+        // BIO *out2;
+        // out2 = BIO_new_fp(stdout, BIO_NOCLOSE);
+        // EVP_PKEY_print_public(out2, vcek_pub_key, 2, NULL);
+        // EVP_PKEY_print_params(out2, vcek_pub_key, 3, NULL);
+        // BIO_free(out2);
+
+        // Validate the report
+        success = verify_message((sev_sig *)&report->signature,
+                                  &vcek_pub_key, report_mem,
+                                  offsetof(snp_attestation_report_t, signature),
+                                  SEV_SIG_ALGO_ECDSA_SHA384);
+        if (!success) {
+            printf("Error: Guest report failed to validate\n");
+            break;
+        }
+
+        printf("Guest report validated successfully!\n");
+        cmd_ret = STATUS_SUCCESS;
+    } while (0);
+
+    // Free memory
+    EVP_PKEY_free(vcek_pub_key);
+    X509_free(x509_vcek);
+
+    return (int)cmd_ret;
+}
+
+int Command::validate_cert_chain_vcek(void)
+{
+    int cmd_ret = ERROR_UNSUPPORTED;
+    std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;
+    std::string ask_file = m_output_folder + VCEK_ASK_PEM_FILENAME;
+    std::string ark_file = m_output_folder + VCEK_ARK_PEM_FILENAME;
+    X509 *x509_vcek = NULL;
+    X509 *x509_ask = NULL;
+    X509 *x509_ark = NULL;
+    EVP_PKEY *vcek_pub_key = NULL;
+
+    do {
+        // Read in the ARK, ASK, and VCEK pem files
+        if (!read_pem_into_x509(ark_file, &x509_ark))
+            break;
+        if (!read_pem_into_x509(ask_file, &x509_ask))
+            break;
+        if (!read_pem_into_x509(vcek_file, &x509_vcek))
+            break;
+        // X509_print_fp(stdout, x509_vcek);
+
+        // Extract the vcek public key
+        vcek_pub_key = X509_get_pubkey(x509_vcek);
+        if (!vcek_pub_key)
+            break;
+
+        // Verify the signatures of the certs
+        if (!x509_validate_signature(x509_ark, NULL, x509_ark)) {   // Verify the ARK self-signed the ARK
+            printf("Error validating signature of x509_ark certs\n");
+            break;
+        }
+
+        if (!x509_validate_signature(x509_ask, NULL, x509_ark)) {   // Verify the ARK signed the ASK
+            printf("Error validating signature of x509_ask certs\n");
+            break;
+        }
+
+        if (!x509_validate_signature(x509_vcek, x509_ask, x509_ark)) {  // Verify the ASK signed the VCEK
+            printf("Error validating signature of x509_vcek certs\n");
+            break;
+        }
+
+        printf("VCEK cert chain validated successfully!\n");
+        cmd_ret = STATUS_SUCCESS;
+    } while (0);
+
+    // Free memory
+    EVP_PKEY_free(vcek_pub_key);
+    X509_free(x509_vcek);
+    X509_free(x509_ask);
+    X509_free(x509_ark);
 
     return (int)cmd_ret;
 }

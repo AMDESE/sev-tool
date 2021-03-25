@@ -540,7 +540,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
     uint8_t *sha_digest = NULL;
     size_t sha_length = 0;
 
-    do{
+    do {
         //TODO should this be child cert? should prob combine this function anyway
         // Determine if SHA_TYPE is 256 bit or 384 bit
         if (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256 || parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256 ||

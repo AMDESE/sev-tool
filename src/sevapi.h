@@ -1319,7 +1319,7 @@ typedef struct __attribute__ ((__packed__)) snp_launch_finish_cmd_buf_t
     uint8_t  host_data[32];
 } snp_launch_finish_cmd_buf;
 
-#define snp_launch_FINISH_ID_BLOCK_MAX_VERSION 1
+#define SNP_LAUNCH_FINISH_ID_BLOCK_MAX_VERSION 1
 typedef struct __attribute__ ((__packed__)) snp_launch_finish_id_block_t
 {
     uint8_t  ld[48];            // The expected launch digest of the guest

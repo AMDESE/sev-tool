@@ -379,7 +379,7 @@ typedef struct snp_msg_gctx
     uint64_t policy;
     uint8_t state;
     uint64_t oek_iv_count;
-    SNP_LAUNCH_FINISH_ID_BLOCK id_block;
+    snp_launch_finish_id_block id_block;
     uint8_t gosvw[16];
     uint8_t reserved2[0x300-0x2B0];
 } snp_msg_gctx_t;

@@ -60,6 +60,13 @@ const char help_array[] =  "The following commands are supported:\n" \
                     "  package_secret\n" \
                     "      Input params:\n" \
                     "          launch_blob.bin file\n" \
+                    "  validate_attestation\n" \
+                    "      Input params:\n" \
+                    "          attestation_report.bin file\n" \
+                    " validate_guest_report\n" \
+                    "      Input params:\n" \
+                    "          guest_report.bin file\n" \
+                    "  validate_cert_chain_vcek\n" \
                     ;
 
 /* Flag set by '--verbose' */
@@ -73,24 +80,27 @@ static struct option long_options[] =
 
     /* These options don't set a flag. We distinguish them by their indices. */
     /* Platform Owner commands */
-    {"factory_reset",        no_argument,       0, 'a'},
-    {"platform_status",      no_argument,       0, 'b'},
-    {"pek_gen",              no_argument,       0, 'c'},
-    {"pek_csr",              no_argument,       0, 'd'},
-    {"pdh_gen",              no_argument,       0, 'e'},
-    {"pdh_cert_export",      no_argument,       0, 'f'},
-    {"pek_cert_import",      required_argument, 0, 'g'},
-    {"get_id",               no_argument,       0, 'j'},
-    {"set_self_owned",       no_argument,       0, 'k'},
-    {"set_externally_owned", required_argument, 0, 'l'},
-    {"generate_cek_ask",     no_argument,       0, 'm'},
-    {"get_ask_ark",          no_argument,       0, 'n'},
-    {"export_cert_chain",    no_argument,       0, 'p'},
+    {"factory_reset",            no_argument,       0, 'a'},
+    {"platform_status",          no_argument,       0, 'b'},
+    {"pek_gen",                  no_argument,       0, 'c'},
+    {"pek_csr",                  no_argument,       0, 'd'},
+    {"pdh_gen",                  no_argument,       0, 'e'},
+    {"pdh_cert_export",          no_argument,       0, 'f'},
+    {"pek_cert_import",          required_argument, 0, 'g'},
+    {"get_id",                   no_argument,       0, 'j'},
+    {"set_self_owned",           no_argument,       0, 'k'},
+    {"set_externally_owned",     required_argument, 0, 'l'},
+    {"generate_cek_ask",         no_argument,       0, 'm'},
+    {"get_ask_ark",              no_argument,       0, 'n'},
+    {"export_cert_chain",        no_argument,       0, 'p'},
     /* Guest Owner commands */
-    {"calc_measurement",     required_argument, 0, 't'},
-    {"validate_cert_chain",  no_argument,       0, 'u'},
-    {"generate_launch_blob", required_argument, 0, 'v'},
-    {"package_secret",       no_argument,       0, 'w'},
+    {"calc_measurement",         required_argument, 0, 't'},
+    {"validate_cert_chain",      no_argument,       0, 'u'},
+    {"generate_launch_blob",     required_argument, 0, 'v'},
+    {"package_secret",           no_argument,       0, 'w'},
+    {"validate_attestation",     no_argument,       0, 'x'}, // SEV attestation command
+    {"validate_guest_report",    no_argument,       0, 'y'}, // SNP GuestRequest ReportRequest
+    {"validate_cert_chain_vcek", no_argument,       0, 'z'},
 
     /* Run tests */
     {"test_all",             no_argument,       0, 'T'},
@@ -264,6 +274,21 @@ int main(int argc, char **argv)
             case 'w': {         // PACKAGE_SECRET
                 Command cmd(output_folder, verbose_flag);
                 cmd_ret = cmd.package_secret();
+                break;
+            }
+            case 'x': {         // VALIDATE_ATTESTATION
+                Command cmd(output_folder, verbose_flag);
+                cmd_ret = cmd.validate_attestation();
+                break;
+            }
+            case 'y': {         // VALIDATE_GUEST_REPORT
+                Command cmd(output_folder, verbose_flag);
+                cmd_ret = cmd.validate_guest_report();
+                break;
+            }
+            case 'z': {         // VALIDATE_CERT_CHAIN_VCEK
+                Command cmd(output_folder, verbose_flag);
+                cmd_ret = cmd.validate_cert_chain_vcek();
                 break;
             }
             case 'T': {         // Run Tests

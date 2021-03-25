@@ -36,6 +36,12 @@ const std::string ASK_READABLE_FILENAME = "ask_readable.cert";
 const std::string ARK_FILENAME          = "ark.cert";      // ARK self-signed
 const std::string ARK_READABLE_FILENAME = "ark_readable.cert";
 
+const std::string VCEK_DER_FILENAME               = "vcek.der";
+const std::string VCEK_PEM_FILENAME               = "vcek.pem";
+const std::string VCEK_CERT_CHAIN_PEM_FILENAME    = "cert_chain.pem";
+const std::string VCEK_ASK_PEM_FILENAME           = "ask.pem";
+const std::string VCEK_ARK_PEM_FILENAME           = "ark.pem";
+
 const std::string CERTS_ZIP_FILENAME              = "certs_export";             // export_cert_chain
 const std::string ASK_ARK_FILENAME                = "ask_ark.cert";             // get_ask_ark
 const std::string PEK_CSR_HEX_FILENAME            = "pek_csr.cert";             // pek_csr
@@ -50,7 +56,9 @@ const std::string GUEST_OWNER_DH_FILENAME         = "godh.cert";                
 const std::string GUEST_TK_FILENAME               = "tmp_tk.bin";               // generate_launch_blob
 const std::string SECRET_FILENAME                 = "secret.txt";               // package_secret
 const std::string PACKAGED_SECRET_FILENAME        = "packaged_secret.bin";      // package_secret
-const std::string PACKAGED_SECRET_HEADER_FILENAME = "packaged_secret_header.bin"; // package_secret
+const std::string PACKAGED_SECRET_HEADER_FILENAME = "packaged_secret_header.bin";// package_secret
+const std::string ATTESTATION_REPORT_FILENAME     = "attestation_report.bin";   // validate_attestation
+const std::string GUEST_REPORT_FILENAME           = "guest_report.bin";         // validate_guest_report
 
 constexpr uint32_t BITS_PER_BYTE    = 8;
 constexpr uint32_t NIST_KDF_H_BYTES = 32;
@@ -140,6 +148,9 @@ public:
     int validate_cert_chain(void);
     int generate_launch_blob(uint32_t policy);
     int package_secret(void);
+    int validate_attestation(void);
+    int validate_guest_report(void);
+    int validate_cert_chain_vcek(void);
 };
 
 #endif /* COMMANDS_H */

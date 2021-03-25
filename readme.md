@@ -1,7 +1,7 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v16
-Updated: 2019-10-03
+Version: v17
+Updated: 2021-03-24
 &nbsp;
 &nbsp;
 
@@ -340,6 +340,36 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --package_secret
+         ```
+18. validate_attestation
+     - This command imports the attestation report (attestation_report.bin) sent by the ATTESTATION command and the PEK certificate (pek.cert)(exported during generate_all_certs) and validates that the attestion report was signed by the PEK.
+     - Optional input args: --ofolder [folder_path]
+         - This allows the user to specify the folder where the tool will look for the attestation report and the pek cert file
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --validate_attestation
+         ```
+19. validate_guest_report
+     - This command imports the attestation report (guest_report.bin) generated from the Attestation guest message, sent through SNP_GUEST_REQUEST along with the current VCEK (vcek.pem)(exported during export_cert_chain_vcek) of the Platform and validates that the attestation report was signed by the VCEK.
+     - Optional input args: --ofolder [folder_path]
+         - This allows the user to specify the folder where the tool will look for the attestation report and the vcek cert file
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --validate_guest_report
+         ```
+20. validate_cert_chain_vcek
+     - This function imports the entire cert chain as separate pem cert files and validates it.
+     - When calling this command, please unzip the certs into the folder you expect the tool to use.
+     - The steps are as follows:
+        - Imports the VCEK, ASK, and ARK .pem certs
+        - Validates the ARK using the ARK (self-signed)
+        - Validates the ASK using the ARK
+        - Validates the VCEK using the ASK
+     - Optional input args: --ofolder [folder_path]
+         - This allows the user to specify the folder where the tool will import the certs from, otherwise it will use the same folder as the SEV-Tool executable
+     - Example
+         ```sh
+         $ sudo ./sevtool --ofolder ./certs --validate_cert_chain_vcek
          ```
 
 ## Running tests

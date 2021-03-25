@@ -3,7 +3,7 @@ bin_PROGRAMS = sevtool
 
 sevtool_SOURCES = amdcert.cpp commands.cpp crypto.cpp\
 				  main.cpp sevcert.cpp\
-				  utilities.cpp tests.cpp
+				  utilities.cpp tests.cpp x509cert.cpp
 if LINUX
 sevtool_SOURCES += sevcore_linux.cpp
 else
