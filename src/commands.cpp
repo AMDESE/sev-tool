@@ -588,6 +588,8 @@ int Command::calc_measurement(measurement_t *user_data)
 {
     int cmd_ret = -1;
     hmac_sha_256 final_meas;
+    std::string meas_path = m_output_folder + CALC_MEASUREMENT_FILENAME;
+    std::string meas_readable_path = m_output_folder + CALC_MEASUREMENT_READABLE_FILENAME;
 
     cmd_ret = calculate_measurement(user_data, &final_meas);
 
@@ -622,8 +624,8 @@ int Command::calc_measurement(measurement_t *user_data)
             printf("\n\n%s\n", meas_str.c_str());
         }
         if (m_output_folder != "") {     // Print the IDs to a text file
-            std::string meas_path = m_output_folder+CALC_MEASUREMENT_FILENAME;
-            sev::write_file(meas_path, (void *)meas_str.c_str(), meas_str.size());
+            sev::write_file(meas_readable_path, (void *)meas_str.c_str(), meas_str.size());
+            sev::write_file(meas_path, (void *)final_meas, sizeof(final_meas));
         }
     }
 

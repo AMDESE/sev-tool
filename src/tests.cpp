@@ -638,7 +638,10 @@ bool Tests::test_calc_measurement(void)
     sev::str_to_array("4fbe0bedbad6c86ae8f68971d103e554", (uint8_t *)&data.mnonce, sizeof(data.mnonce));
     sev::str_to_array("66320db73158a35a255d051758e95ed4", (uint8_t *)&data.tik, sizeof(data.tik));
 
-    std::string expected_output = "6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea";
+    std::string expected_output_readable = "6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea";
+    uint8_t expected_output[32] = {0x6f, 0xaa, 0xb2, 0xda, 0xae, 0x38, 0x9b, 0xcd, 0x34, 0x05, 0xa0,
+                                   0x5d, 0x6c, 0xaf, 0xe3, 0x3c, 0x04, 0x14, 0xf7, 0xbe, 0xdd, 0x0b,
+                                   0xae, 0x19, 0xba, 0x5f, 0x38, 0xb7, 0xfd, 0x16, 0x64, 0xea};
 
     do {
         printf("*Starting calc_measurement tests\n");
@@ -646,15 +649,26 @@ bool Tests::test_calc_measurement(void)
         if (cmd.calc_measurement(&data) != STATUS_SUCCESS)
             break;
 
-        // Read in the actual output
-        uint8_t actual_output[2*sizeof(hmac_sha_256)];  // 2 chars per byte +1 for null term
+        // Read in the actual output as a readable hex string
+        uint8_t actual_output_readable[2*sizeof(hmac_sha_256)];  // 2 chars per byte +1 for null term
+        std::string meas_out_readable_full = m_output_folder + CALC_MEASUREMENT_READABLE_FILENAME;
+        if (sev::read_file(meas_out_readable_full, actual_output_readable, sizeof(actual_output_readable)) != sizeof(actual_output_readable))
+            break;
+
+        // Read in the actual output as binary
+        hmac_sha_256 actual_output;
         std::string meas_out_full = m_output_folder + CALC_MEASUREMENT_FILENAME;
         if (sev::read_file(meas_out_full, actual_output, sizeof(actual_output)) != sizeof(actual_output))
             break;
 
         // Make sure the actual output is equal to the expected
-        printf("Expected: %s\nActual  : %s\n", expected_output.c_str(), actual_output);
-        if (memcmp(expected_output.c_str(), actual_output, sizeof(hmac_sha_256)) != 0)
+        printf("Expected: %s\nActual  : %s\n", expected_output_readable.c_str(), actual_output_readable);
+        if (memcmp(expected_output_readable.c_str(), actual_output_readable, sizeof(actual_output_readable)) != 0)
+            break;
+
+        // Make sure the actual output is equal to the expected
+        // printf("Expected: %s\nActual  : %s\n", expected_output, actual_output);
+        if (memcmp(expected_output, actual_output, sizeof(actual_output)) != 0)
             break;
 
         ret = true;
@@ -719,7 +733,10 @@ bool Tests::test_package_secret(void)
             break;
 
         // Export a 'calculated measurement' that package_secret can read in for the header
-        sys_cmd = "echo 6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea > " + m_output_folder + CALC_MEASUREMENT_FILENAME;
+        sys_cmd = "echo 6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea > " + m_output_folder + CALC_MEASUREMENT_READABLE_FILENAME;
+        if (!sev::execute_system_command(sys_cmd, &output))
+            return false;
+        sys_cmd = "xxd -r -p " + m_output_folder + CALC_MEASUREMENT_READABLE_FILENAME + " " + m_output_folder + CALC_MEASUREMENT_FILENAME;
         if (!sev::execute_system_command(sys_cmd, &output))
             return false;
 
