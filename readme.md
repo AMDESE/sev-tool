@@ -12,19 +12,19 @@ Updated: 2021-03-25
   - Your Kernel must support SEV.
   - SME/SEV OS Support
      ```
-                          SEV Guest      SEV Host 
+                          SEV Guest      SEV Host
                              (VM)       (Hypervisor)
      Linux® 4.15              Y
      Linux® 4.16              Y              Y
      RHEL 7.6                 Y
-     RHEL 8                   Y              Y     
+     RHEL 8                   Y              Y
      Fedora 28                Y              Y
      SLES 15                  Y              Y
      Ubuntu 18.04             Y
      Ubuntu 10.10, 19.04      Y              Y
      Oracle Linux UEK 5       Y              Y
      VMWare    - Support in Upcoming version of vSphere
-     OpenStack - Support Upstream    
+     OpenStack - Support Upstream
      ```
   - If running Linux, the ccp Kernel driver must be running and supported, as that is how the SEV-Tool communicates to the firmware. To tell if your Kernel supports SEV and the ccp driver is working correctly, run a dmesg and look for the following line:
      ```sh

@@ -97,6 +97,8 @@ int Command::pek_csr(void)
 {
     uint8_t data[sizeof(sev_pek_csr_cmd_buf)];
     int cmd_ret = -1;
+    std::string pek_csr_readable_path = m_output_folder + PEK_CSR_READABLE_FILENAME;
+    std::string pek_csr_hex_path = m_output_folder + PEK_CSR_HEX_FILENAME;
 
     // Populate PEKCSR buffer with CSRLength = 0
     sev_cert *pek_mem = new sev_cert_t;
@@ -114,8 +116,6 @@ int Command::pek_csr(void)
         }
         if (m_output_folder != "") {     // Print off the cert to a text file
             std::string pek_csr_readable = "";
-            std::string pek_csr_readable_path = m_output_folder+PEK_CSR_READABLE_FILENAME;
-            std::string pek_csr_hex_path = m_output_folder+PEK_CSR_HEX_FILENAME;
 
             print_sev_cert_readable(&pek_csr, pek_csr_readable);
             sev::write_file(pek_csr_readable_path, (void *)pek_csr_readable.c_str(), pek_csr_readable.size());
@@ -142,6 +142,10 @@ int Command::pdh_cert_export(void)
 {
     uint8_t data[sizeof(sev_pdh_cert_export_cmd_buf)];
     int cmd_ret = -1;
+    std::string PDH_readable_path = m_output_folder + PDH_READABLE_FILENAME;
+    std::string PDH_path          = m_output_folder + PDH_FILENAME;
+    std::string cc_readable_path  = m_output_folder + CERT_CHAIN_READABLE_FILENAME;
+    std::string cc_path           = m_output_folder + CERT_CHAIN_HEX_FILENAME;
 
     sev_cert *pdh_cert_mem = new sev_cert_t;
     sev_cert_chain_buf_t *cert_chain_mem = new sev_cert_chain_buf_t();
@@ -160,10 +164,6 @@ int Command::pdh_cert_export(void)
         if (m_output_folder != "") {     // Print off the cert to a text file
             std::string PDH_readable = "";
             std::string cc_readable = "";
-            std::string PDH_readable_path = m_output_folder+PDH_READABLE_FILENAME;
-            std::string PDH_path          = m_output_folder+PDH_FILENAME;
-            std::string cc_readable_path  = m_output_folder+CERT_CHAIN_READABLE_FILENAME;
-            std::string cc_path           = m_output_folder+CERT_CHAIN_HEX_FILENAME;
 
             print_sev_cert_readable((sev_cert *)pdh_cert_mem, PDH_readable);
             print_cert_chain_buf_readable((sev_cert_chain_buf *)cert_chain_mem, cc_readable);
@@ -261,6 +261,8 @@ int Command::get_id(void)
     sev_get_id_cmd_buf *data_buf = (sev_get_id_cmd_buf *)&data;
     int cmd_ret = -1;
     uint32_t default_id_length = 0;
+    std::string id0_path = m_output_folder + GET_ID_S0_FILENAME;
+    std::string id1_path = m_output_folder + GET_ID_S1_FILENAME;
 
     // Send the first command with a length of 0, then use the returned length
     // as the input parameter for the 'real' command which will succeed
@@ -292,8 +294,6 @@ int Command::get_id(void)
             printf("\n");
         }
         if (m_output_folder != "") {     // Print the IDs to a text file
-            std::string id0_path = m_output_folder+GET_ID_S0_FILENAME;
-            std::string id1_path = m_output_folder+GET_ID_S1_FILENAME;
             sev::write_file(id0_path, (void *)id0_buf, sizeof(id0_buf)-1);  // Don't write null term
             sev::write_file(id1_path, (void *)id1_buf, sizeof(id1_buf)-1);
         }
@@ -749,6 +749,9 @@ int Command::generate_launch_blob(uint32_t policy)
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     sev_session_buf session_data_buf;
+    std::string pdh_full = m_output_folder + PDH_FILENAME;
+    std::string godh_cert_file = m_output_folder + GUEST_OWNER_DH_FILENAME;
+    std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
     std::string buf_file = m_output_folder + LAUNCH_BLOB_FILENAME;
     sev_cert pdh;
     EVP_PKEY *godh_key_pair = NULL;      // Guest Owner Diffie-Hellman
@@ -758,7 +761,6 @@ int Command::generate_launch_blob(uint32_t policy)
 
     do {
         // Read in the PDH (Platform Owner Diffie-Hellman Public Key)
-        std::string pdh_full = m_output_folder+PDH_FILENAME;
         if (sev::read_file(pdh_full, &pdh, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
@@ -780,7 +782,6 @@ int Command::generate_launch_blob(uint32_t policy)
         memcpy(&godh_pubkey_cert, cert_obj.data(), sizeof(sev_cert)); // TODO, shouldn't need this?
 
         // Write the cert to file
-        std::string godh_cert_file = m_output_folder + GUEST_OWNER_DH_FILENAME;
         if (sev::write_file(godh_cert_file, &godh_pubkey_cert, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
@@ -817,7 +818,6 @@ int Command::generate_launch_blob(uint32_t policy)
 
             // Write the unencrypted TK (TIK and TEK) to a tmp file so it can be
             // read in during package_secret
-            std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
             sev::write_file(tmp_tk_file, &m_tk, sizeof(m_tk));
 
             sev::write_file(buf_file, (void *)&session_data_buf, sizeof(sev_session_buf));
@@ -836,6 +836,8 @@ int Command::package_secret(void)
     std::string launch_blob_file = m_output_folder + LAUNCH_BLOB_FILENAME;
     std::string packaged_secret_file = m_output_folder + PACKAGED_SECRET_FILENAME;
     std::string packaged_secret_header_file = m_output_folder + PACKAGED_SECRET_HEADER_FILENAME;
+    std::string measurement_file = m_output_folder + CALC_MEASUREMENT_FILENAME;
+    std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
 
     uint32_t flags = 0;
     iv_128 iv;
@@ -862,7 +864,6 @@ int Command::package_secret(void)
             break;
 
         // Read in the unencrypted TK (TIK and TEK) created in build_session_buffer
-        std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
         if (sev::read_file(tmp_tk_file, &m_tk, sizeof(m_tk)) != sizeof(m_tk)) {
             printf("Error reading in %s\n", tmp_tk_file.c_str());
             break;
@@ -880,7 +881,6 @@ int Command::package_secret(void)
         }
 
         // Read in the measurement, to be used as part of the launch secret header hmac
-        std::string measurement_file = m_output_folder + CALC_MEASUREMENT_FILENAME;
         if (sev::read_file(measurement_file, &m_measurement, sizeof(m_measurement)) != sizeof(m_measurement)) {
             printf("Error reading in %s\n", measurement_file.c_str());
             break;
@@ -908,6 +908,7 @@ int Command::validate_attestation(void)
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     std::string report_file = m_output_folder + ATTESTATION_REPORT_FILENAME;
+    std::string pek_full = m_output_folder + PEK_FILENAME;
     bool success = false;
     EVP_PKEY *pek_pub_key = NULL;
     sev_cert pek;
@@ -928,7 +929,6 @@ int Command::validate_attestation(void)
             break;
 
         // Read in the PEK (Platform Encryption Public Key)
-        std::string pek_full = m_output_folder+PEK_FILENAME;
         if (sev::read_file(pek_full, &pek, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
