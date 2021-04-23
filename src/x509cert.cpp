@@ -14,13 +14,10 @@
  * limitations under the License.
  **************************************************************************/
 
-#include "commands.h"///////////////TODO REMOVE
 #include "utilities.h"
 #include "x509cert.h"
 #include <openssl/bn.h>
 #include <openssl/pem.h>
-#include <openssl/x509.h>
-#include <openssl/x509v3.h>
 #include <cstring>  // memset
 #include <fstream>
 #include <stdio.h>

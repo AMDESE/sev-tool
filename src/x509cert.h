@@ -18,6 +18,8 @@
 #define X509CERT_H
 
 #include "sevapi.h"
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
 #include <string>
 
 // Public global functions
