@@ -35,7 +35,7 @@ const char help_array[] =  "The following commands are supported:\n" \
                     "      Input params:\n" \
                     "          [oca private key].pem file\n" \
                     "  get_id\n" \
-                    "  set_self_owed\n" \
+                    "  set_self_owned\n" \
                     "  set_externally_owned\n" \
                     "      Input params:\n" \
                     "          [oca private key].pem file\n" \

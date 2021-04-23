@@ -15,4 +15,3 @@ sevtool_LDADD = -lcrypto -lssl -lvirt -lvirt-qemu -luuid
 
 # Compilation flags
 sevtool_CXXFLAGS = -g -Wall -Wextra -Wconversion -pthread -std=c++11 -I../lib
-
