@@ -277,12 +277,12 @@ int main(int argc, char **argv)
                 }
 
                 uint32_t guest_policy = (uint8_t)strtol(argv[optind++], NULL, 16);
-                Command cmd(output_folder, verbose_flag);
+                Command cmd(output_folder, verbose_flag, CCP_NOT_REQ);
                 cmd_ret = cmd.generate_launch_blob(guest_policy);
                 break;
             }
             case 'w': {         // PACKAGE_SECRET
-                Command cmd(output_folder, verbose_flag);
+                Command cmd(output_folder, verbose_flag, CCP_NOT_REQ);
                 cmd_ret = cmd.package_secret();
                 break;
             }

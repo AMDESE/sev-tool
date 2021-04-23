@@ -832,14 +832,14 @@ int Command::generate_launch_blob(uint32_t policy)
 int Command::package_secret(void)
 {
     int cmd_ret = ERROR_UNSUPPORTED;
-    sev_session_buf session_data_buf;
     sev_hdr_buf packaged_secret_header;
     std::string secret_file = m_output_folder + SECRET_FILENAME;
-    std::string launch_blob_file = m_output_folder + LAUNCH_BLOB_FILENAME;
+    std::string pek_file = m_output_folder + PEK_FILENAME;
     std::string packaged_secret_file = m_output_folder + PACKAGED_SECRET_FILENAME;
     std::string packaged_secret_header_file = m_output_folder + PACKAGED_SECRET_HEADER_FILENAME;
     std::string measurement_file = m_output_folder + CALC_MEASUREMENT_FILENAME;
     std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
+    sev_cert pek;
 
     uint32_t flags = 0;
     iv_128 iv;
@@ -861,8 +861,8 @@ int Command::package_secret(void)
             break;
 
         // Read in the blob to import the TEK
-        // printf("Attempting to read in LaunchBlob file to import TEK\n");
-        if (sev::read_file(launch_blob_file, &session_data_buf, sizeof(sev_session_buf)) != sizeof(sev_session_buf))
+        // printf("Attempting to read in PEK file to get the API Maj/Min versions\n");
+        if (sev::read_file(pek_file, &pek, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Read in the unencrypted TK (TIK and TEK) created in build_session_buffer
@@ -893,7 +893,8 @@ int Command::package_secret(void)
 
         // Set up the Launch_Secret packet header
         if (!create_launch_secret_header(&packaged_secret_header, &iv, encrypted_mem,
-                                         sizeof(encrypted_mem), flags)) {
+                                         sizeof(encrypted_mem), flags,
+                                         pek.api_major, pek.api_minor)) {
             break;
         }
 
@@ -1409,7 +1410,8 @@ int Command::encrypt_with_tek(uint8_t *encrypted_mem, const uint8_t *secret_mem,
 
 bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
                                           uint8_t *buf, size_t buffer_len,
-                                          uint32_t hdr_flags)
+                                          uint32_t hdr_flags,
+                                          uint8_t api_major, uint8_t api_minor)
 {
     bool ret = false;
 
@@ -1427,16 +1429,7 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
     if (!(ctx = HMAC_CTX_new()))
         return ret;
 
-    // Need platform_status to determine API version
-    uint8_t status_data[sizeof(sev_platform_status_cmd_buf)];
-    sev_platform_status_cmd_buf *status_data_buf = (sev_platform_status_cmd_buf *)&status_data;
-    int cmd_ret = -1;
-
     do {
-        cmd_ret = m_sev_device->platform_status(status_data);
-        if (cmd_ret != STATUS_SUCCESS)
-            break;
-
         if (HMAC_Init_ex(ctx, m_tk.tik, sizeof(m_tk.tik), EVP_sha256(), NULL) != 1)
             break;
         if (HMAC_Update(ctx, &meas_ctx, sizeof(meas_ctx)) != 1)
@@ -1451,7 +1444,7 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
             break;
         if (HMAC_Update(ctx, buf, buf_len) != 1)                        // Data
             break;
-        if (sev::min_api_version(status_data_buf->api_major, status_data_buf->api_minor, 0, 17)) {
+        if (sev::min_api_version(api_major, api_minor, 0, 17)) {
             if (HMAC_Update(ctx, m_measurement, sizeof(m_measurement)) != 1) // Measure
                 break;
         }
