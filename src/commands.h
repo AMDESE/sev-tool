@@ -134,6 +134,7 @@ public:
     int platform_status(void);
     int pek_gen(void);
     int pek_csr(void);
+    int pek_csr_unique(void);
     int pdh_gen(void);
     int pdh_cert_export(void);
     int pek_cert_import(std::string oca_priv_key_file);

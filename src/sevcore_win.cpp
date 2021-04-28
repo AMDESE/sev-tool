@@ -100,6 +100,13 @@ bool SEVDevice::validate_pek_csr(sev_cert *pek_csr)
     }
 }
 
+int SEVDevice::pek_csr(uint8_t *data, std::unique_ptr<sev_cert> pek_mem, sev_cert *csr)
+{
+    int cmd_ret = -1;
+
+    return cmd_ret;
+}
+
 int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 {
     int cmd_ret = -1;

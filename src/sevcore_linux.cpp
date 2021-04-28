@@ -14,6 +14,7 @@
  * limitations under the License.
  **************************************************************************/
 
+#include <memory>
 #ifdef __linux__
 #include "sevcore.h"
 #include "utilities.h"
@@ -391,6 +392,46 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
     } while (0);
 
     return (int)cmd_ret;
+}
+
+int SEVDevice::pek_csr(uint8_t *data, std::unique_ptr<sev_cert> pek_mem, sev_cert *csr)
+{
+    int cmd_ret = SEV_RET_UNSUPPORTED;
+    int ioctl_ret = -1;
+    sev_user_data_pek_csr *data_buf = reinterpret_cast<sev_user_data_pek_csr *>(data);
+
+    // Set struct to 0
+    memset(data_buf, 0, sizeof(sev_user_data_pek_csr));
+
+    do {
+        // Populate PEKCSR buffer with CSRLength = 0
+        data_buf->address = reinterpret_cast<uint64_t>(pek_mem.get());
+        data_buf->length = 0;
+
+        // Send the command. This is to get the MinSize length. If you
+        // already know it, then you don't have to send the command twice
+        ioctl_ret = sev_ioctl(SEV_PEK_CSR, data_buf, &cmd_ret);
+        if (ioctl_ret != -1)
+            break;
+
+        // Verify the results. Now the CSRLength will be updated to MinSize
+        if (cmd_ret != SEV_RET_INVALID_LEN)
+            break;
+
+        // Send the command again with CSRLength=MinSize
+        ioctl_ret = sev_ioctl(SEV_PEK_CSR, data_buf, &cmd_ret);
+        if (ioctl_ret != 0)
+            break;
+
+        // Verify the CSR complies to API specification
+        memcpy(csr, reinterpret_cast<sev_cert *>(data_buf->address), sizeof(sev_cert));
+        if (!validate_pek_csr(csr)) {
+            cmd_ret = SEV_RET_INVALID_CERTIFICATE;
+            break;
+        }
+    } while (0);
+
+    return static_cast<int>(cmd_ret);
 }
 
 int SEVDevice::pdh_gen()
