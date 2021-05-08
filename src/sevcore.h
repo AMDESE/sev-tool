@@ -20,6 +20,7 @@
 #include "sevcert.h"
 #include <cstddef>
 #include <cstring>
+#include <memory>
 #include <sys/stat.h>
 #include <fstream>
 #include <libvirt/libvirt.h>
@@ -182,6 +183,9 @@ public:
     int factory_reset(void);
     int platform_status(uint8_t *data);
     int pek_gen(void);
+    int pek_csr(uint8_t *data,
+                std::unique_ptr<sev_cert_t> pek_mem,
+                sev_cert *csr);
     int pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr);
     int pdh_gen(void);
     int pdh_cert_export(uint8_t *data, void *pdh_cert_mem,

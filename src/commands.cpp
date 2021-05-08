@@ -21,6 +21,7 @@
 #include "sevcert.h"
 #include "utilities.h"      // for WriteToFile
 #include "x509cert.h"
+#include <memory>
 #include <openssl/hmac.h>   // for calc_measurement
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
@@ -91,6 +92,44 @@ int Command::pek_gen(void)
     cmd_ret = m_sev_device->pek_gen();
 
     return (int)cmd_ret;
+}
+
+int Command::pek_csr_unique(void)
+{
+    uint8_t data[sizeof(sev_pek_csr_cmd_buf)];
+    int cmd_ret = -1;
+    std::string pek_csr_readable_path = m_output_folder + PEK_CSR_READABLE_FILENAME;
+    std::string pek_csr_hex_path = m_output_folder + PEK_CSR_HEX_FILENAME;
+
+    // Populate PEKCSR buffer with CSRLength = 0
+    std::unique_ptr<sev_cert> pek_mem(new sev_cert_t);
+    sev_cert pek_csr;
+
+    if (!pek_mem)
+        return -1;
+
+    cmd_ret = m_sev_device->pek_csr(data, std::move(pek_mem), &pek_csr);
+
+    if (cmd_ret == STATUS_SUCCESS) {
+        if (m_verbose_flag) {            // Print off the cert to stdout
+            // print_sev_cert_hex(&pek_csr);
+            print_sev_cert_readable(&pek_csr);
+        }
+        if (m_output_folder != "") {     // Print off the cert to a text file
+            std::string pek_csr_readable = "";
+
+            print_sev_cert_readable(&pek_csr, pek_csr_readable);
+
+            /*
+             * If we decide this is a good route, we will want to refactor these calls when we refactor
+             * the write_file method.
+             */
+            sev::write_file(pek_csr_readable_path, (void *)pek_csr_readable.c_str(), pek_csr_readable.size());
+            sev::write_file(pek_csr_hex_path, (void *)&pek_csr, sizeof(pek_csr));
+        }
+    }
+
+    return static_cast<int>(cmd_ret);
 }
 
 int Command::pek_csr(void)
