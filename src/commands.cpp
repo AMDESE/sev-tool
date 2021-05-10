@@ -253,6 +253,58 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
     return (int)cmd_ret;
 }
 
+int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_file)
+{
+    int cmd_ret = ERROR_UNSUPPORTED;
+
+    EVP_PKEY *oca_priv_key = NULL;
+    sev_cert oca_cert;
+    SEVCert cert_obj(&oca_cert);
+    sev_cert pek_csr;
+
+    std::string pek_oca_path = m_output_folder + OCA_FILENAME;
+    std::string pek_csr_signed_path = m_output_folder + SIGNED_PEK_CSR_FILENAME;
+
+    do {
+        // Read in the pek_csr (has sev_cert format)
+        if (sev::read_file(pek_csr_file, &pek_csr, sizeof(sev_cert)) != sizeof(sev_cert)) {
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
+        SEVCert csr_obj(&pek_csr);
+        if (csr_obj.validate_pek_csr() != STATUS_SUCCESS) {
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
+
+        // Import the OCA pem file and turn it into an sev_cert
+        if (!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key)) {
+            printf("Error importing OCA Priv Key\n");
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
+        if (!cert_obj.create_oca_cert(&oca_priv_key, SEV_SIG_ALGO_ECDSA_SHA256)) {
+            printf("Error creating OCA cert\n");
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
+
+        // Sign CSR
+        if (!csr_obj.sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_PEK, SEV_SIG_ALGO_ECDSA_SHA256,
+                              &oca_priv_key, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256)) {
+            printf("Error self-signing OCA cert.\n");
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
+
+        sev::write_file(pek_oca_path, (void *)&oca_cert, sizeof(oca_cert));
+        sev::write_file(pek_csr_signed_path, (void *)&pek_csr, sizeof(pek_csr));
+        cmd_ret = STATUS_SUCCESS;
+    } while (0);
+    EVP_PKEY_free(oca_priv_key);
+    return cmd_ret;
+}
+
 // Must always pass in 128 bytes array, because of Linux /dev/sev ioctl
 // doesn't follow the API
 int Command::get_id(void)

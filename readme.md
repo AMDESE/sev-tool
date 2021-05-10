@@ -361,7 +361,22 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          ```sh
          $ sudo ./sevtool --ofolder ./certs --package_secret
          ```
-18. validate_attestation
+18. sign_pek_csr
+    - This command reads the CSR and signs it with the provided OCA private key. Additionally, the oca.cert is created, which specifies the public key in AMD certificate format.
+    - Required input args:
+        - The CSR to be signed (pek_csr.cert)
+        - The private key of the OCA in pem format [oca_priv_key].pem
+    - Optional input args: --ofolder [folder_path]
+        - This allows the user to specify the folder where the tool will export the signed CSR and OCA certificate to
+    - Outputs:
+       - oca.cert: The public certificate belonging to the private key, in AMD certificate format
+       - pek_csr.signed.cert: The signed CSR containing the OCA signature but still missing the PEK signature.
+    - Example
+        ```sh
+        $ sudo ./sevtool --sign_pek_csr [pek_csr.cert] [oca_priv_key]
+        $ sudo ./sevtool --sign_pek_csr pek_csr.cert oca_priv.pem
+        ```
+19. validate_attestation
      - This command imports the attestation report (attestation_report.bin) sent by the ATTESTATION command and the PEK certificate (pek.cert)(exported during generate_all_certs) and validates that the attestion report was signed by the PEK.
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will look for the attestation report and the pek cert file
@@ -371,7 +386,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_attestation
          ```
-19. validate_guest_report
+20. validate_guest_report
      - This command imports the attestation report (guest_report.bin) generated from the Attestation guest message, sent through SNP_GUEST_REQUEST along with the current VCEK (vcek.pem)(exported during export_cert_chain_vcek) of the Platform and validates that the attestation report was signed by the VCEK.
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will look for the attestation report and the vcek cert file
@@ -381,7 +396,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_guest_report
          ```
-20. validate_cert_chain_vcek
+21. validate_cert_chain_vcek
      - This function imports the entire cert chain as separate pem cert files and validates it.
      - When calling this command, please unzip the certs into the folder you expect the tool to use.
      - The steps are as follows:
@@ -397,7 +412,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_cert_chain_vcek
          ```
-21. export_cert_chain_vcek
+22. export_cert_chain_vcek
      - This command exports all of the certs (VCEK, ASK, ARK) as .pem files and zips them up so that the Platform Owner can send them to the Guest Owner to allow the Guest Owner to validate the vcek cert chain and the SNP guest message's Attestation report from SNP_GUEST_REQUEST. The tool gets the VCEK and ASK_ARK certificates from the AMD KDS server.
      - Required input args: TCBVersion returned from SNPPlatformStatus as a decimal string
      - Optional input args: --ofolder [folder_path]
