@@ -135,7 +135,6 @@ private:
     inline int get_fd(void) { return mFd; }
     int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
-    bool validate_pek_csr(sev_cert *pek_csr);
     std::string display_build_info(void);
 
     bool kvm_amd_sev_enabled(void);

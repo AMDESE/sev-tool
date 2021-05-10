@@ -981,3 +981,22 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
 
     return cmd_ret;
 }
+
+SEV_ERROR_CODE SEVCert::validate_pek_csr()
+{
+    if (m_child_cert->version        == 1                         &&
+        m_child_cert->pub_key_usage  == SEV_USAGE_PEK             &&
+        m_child_cert->pub_key_algo   == SEV_SIG_ALGO_ECDSA_SHA256 &&
+        m_child_cert->sig_1_usage    == SEV_USAGE_INVALID         &&
+        m_child_cert->sig_1_algo     == SEV_SIG_ALGO_INVALID      &&
+        m_child_cert->sig_2_usage    == SEV_USAGE_INVALID         &&
+        m_child_cert->sig_2_algo     == SEV_SIG_ALGO_INVALID ) {
+        char testblock [SEV_SIG_SIZE];
+        memset (testblock, 0, SEV_SIG_SIZE);
+        // if both signatures 0
+        if (!memcmp(testblock, &m_child_cert->sig_1, SEV_SIG_SIZE) || !memcmp(testblock, &m_child_cert->sig_2, SEV_SIG_SIZE)) {
+            return STATUS_SUCCESS;
+        }
+    }
+    return ERROR_INVALID_CERTIFICATE;
+}

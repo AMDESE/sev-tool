@@ -72,6 +72,7 @@ public:
                                                          EVP_PKEY *evp_pubkey);
     SEV_ERROR_CODE verify_sev_cert(const sev_cert *parent_cert1,
                                    const sev_cert *parent_cert2 = NULL);
+    SEV_ERROR_CODE validate_pek_csr();
 };
 
 #endif /* SEVCERT_H */
