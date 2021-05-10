@@ -327,27 +327,13 @@ int SEVDevice::pek_gen()
     return (int)cmd_ret;
 }
 
-bool SEVDevice::validate_pek_csr(sev_cert *pek_csr)
-{
-    if (pek_csr->version       == 1                         &&
-        pek_csr->pub_key_usage == SEV_USAGE_PEK             &&
-        pek_csr->pub_key_algo  == SEV_SIG_ALGO_ECDSA_SHA256 &&
-        pek_csr->sig_1_usage   == SEV_USAGE_INVALID         &&
-        pek_csr->sig_1_algo    == SEV_SIG_ALGO_INVALID      &&
-        pek_csr->sig_2_usage   == SEV_USAGE_INVALID         &&
-        pek_csr->sig_2_algo    == SEV_SIG_ALGO_INVALID) {
-        return true;
-    }
-    else {
-        return false;
-    }
-}
 
 int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
     sev_user_data_pek_csr *data_buf = (sev_user_data_pek_csr *)data;
+    SEVCert csr_obj(csr);
 
     // Set struct to 0
     memset(data_buf, 0, sizeof(sev_user_data_pek_csr));
@@ -374,7 +360,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 
         // Verify the CSR complies to API specification
         memcpy(csr, (sev_cert*)data_buf->address, sizeof(sev_cert));
-        if (!validate_pek_csr(csr)) {
+        if (csr_obj.validate_pek_csr() != STATUS_SUCCESS) {
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
         }
@@ -429,6 +415,7 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *pek_csr,
     int ioctl_ret = -1;
     sev_user_data_pek_cert_import *data_buf = (sev_user_data_pek_cert_import *)data;
     sev_user_data_status status_data;  // Platform Status
+    SEVCert csr_obj(pek_csr);
 
     EVP_PKEY *oca_priv_key = NULL;
     sev_cert *oca_cert = new sev_cert_t;
@@ -440,7 +427,7 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *pek_csr,
 
     do {
         // Verify the CSR complies to API specification
-        if (!validate_pek_csr(pek_csr)) {
+        if (csr_obj.validate_pek_csr() != STATUS_SUCCESS) {
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
         }
