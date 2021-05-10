@@ -341,15 +341,10 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
  *                LaunchStart
  * Parameters:    [oca_key_pair] the input pub/priv key pair used to populate
  *                  and sign the cert
- *                [api_major] the api_major returned from a PlatformStatus
- *                  command as input to this function, to help populate the cert
- *                [api_minor] the api_minor returned from a PlatformStatus
- *                  command as input to this function, to help populate the cert
  *                [algo] the algorithm with which to create the pubkey and
  *                  signature, ECDSA or RSA, and SHA256 or SHA384
  */
-bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
-                              uint8_t api_minor, SEV_SIG_ALGO algo)
+bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, SEV_SIG_ALGO algo)
 {
     bool cmd_ret = false;
 
@@ -360,8 +355,8 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, uint8_t api_major,
         memset(m_child_cert, 0, sizeof(sev_cert));
 
         m_child_cert->version = SEV_CERT_MAX_VERSION;
-        m_child_cert->api_major = api_major;
-        m_child_cert->api_minor = api_minor;
+        m_child_cert->api_major = 0;
+        m_child_cert->api_minor = 0;
         m_child_cert->pub_key_usage = SEV_USAGE_OCA;
         m_child_cert->pub_key_algo = algo;
         m_child_cert->sig_1_usage = SEV_USAGE_OCA;
@@ -534,6 +529,8 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
     sev_sig cert_sig[SEV_CERT_MAX_SIGNATURES] = {child_cert->sig_1, child_cert->sig_2};
+    uint32_t cert_sig_algo[SEV_CERT_MAX_SIGNATURES] = {child_cert->sig_1_algo, child_cert->sig_2_algo};
+    uint32_t cert_sig_usage[SEV_CERT_MAX_SIGNATURES] = {child_cert->sig_1_usage, child_cert->sig_2_usage};
     hmac_sha_256 sha_digest_256;        // Hash on the cert from Version to PubKey
     hmac_sha_512 sha_digest_384;        // Hash on the cert from Version to PubKey
     SHA_TYPE sha_type;
@@ -573,7 +570,8 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
         // 2. Use the pub_key in sig[i] arg to decrypt the sig in child_cert arg
         // Try both sigs in child_cert, to see if either of them match. In PEK, CEK and OCA can be in any order
         bool found_match = false;
-        for (int i = 0; i < SEV_CERT_MAX_SIGNATURES; i++) {
+        int i;
+        for (i = 0; i < SEV_CERT_MAX_SIGNATURES; i++) {
             if ((parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
                 (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
                 uint32_t sig_len = parent_cert->pub_key.rsa.modulus_size/8; // Should be child_cert but SEV_RSA_SIG doesn't have a size param
@@ -652,7 +650,13 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
             break;
 
         // 3. Compare
-
+        // Check if:
+        // 1. sig algo and parent key algo and
+        // 2. sig usage and parent key usage match
+        if ((cert_sig_algo[i] != parent_cert->pub_key_algo) ||
+           (cert_sig_usage[i] != parent_cert->pub_key_usage)) {
+               break;
+        }
         cmd_ret = STATUS_SUCCESS;
     } while (0);
 
