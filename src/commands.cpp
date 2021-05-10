@@ -860,7 +860,7 @@ int Command::package_secret(void)
         if (sev::read_file(secret_file, secret_mem, secret_size) != secret_size)
             break;
 
-        // Read in the blob to import the TEK
+        // Read in the PEK to obtain API major/minor version
         // printf("Attempting to read in PEK file to get the API Maj/Min versions\n");
         if (sev::read_file(pek_file, &pek, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
