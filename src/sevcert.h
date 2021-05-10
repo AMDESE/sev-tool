@@ -73,6 +73,7 @@ public:
     SEV_ERROR_CODE verify_sev_cert(const sev_cert *parent_cert1,
                                    const sev_cert *parent_cert2 = NULL);
     SEV_ERROR_CODE validate_pek_csr();
+    SEV_ERROR_CODE verify_signed_pek_csr(const sev_cert *oca_cert);
 };
 
 #endif /* SEVCERT_H */
