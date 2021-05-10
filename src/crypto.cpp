@@ -155,7 +155,7 @@ bool derive_master_secret(aes_128_key master_secret,
 
     sev_cert dummy;
     memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-    SEVCert temp_obj(dummy);           // TODO. Hack b/c just want to call function later
+    SEVCert temp_obj(&dummy);           // TODO. Hack b/c just want to call function later
     bool ret = false;
     EVP_PKEY *plat_pub_key = NULL;   // Peer key
     size_t shared_key_len = 0;
