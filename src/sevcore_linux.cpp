@@ -451,7 +451,7 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *pek_csr,
             break;
 
         // Import the OCA pem file and turn it into an sev_cert
-        SEVCert cert_obj(*(sev_cert *)oca_cert);
+        SEVCert cert_obj(oca_cert);
         if (!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key)) {
             printf("Error importing OCA Priv Key\n");
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
@@ -463,11 +463,10 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *pek_csr,
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
         }
-        memcpy(oca_cert, cert_obj.data(), sizeof(sev_cert)); // TODO, shouldn't need this?
         // print_sev_cert_readable((sev_cert *)oca_cert);
 
         // Sign the PEK CSR with the OCA private key
-        SEVCert CSRCert(*pek_csr);
+        SEVCert CSRCert(pek_csr);
         CSRCert.sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_PEK, SEV_SIG_ALGO_ECDSA_SHA256,
                               &oca_priv_key, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256);
 

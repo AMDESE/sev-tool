@@ -705,9 +705,9 @@ int Command::validate_cert_chain(void)
             break;
 
         // Temp structs because they are class functions
-        SEVCert tmp_sev_cek(cek);   // Pass in child cert in constructor
-        SEVCert tmp_sev_pek(pek);
-        SEVCert tmp_sev_pdh(pdh);
+        SEVCert tmp_sev_cek(&cek);   // Pass in child cert in constructor
+        SEVCert tmp_sev_pek(&pek);
+        SEVCert tmp_sev_pdh(&pdh);
         AMDCert tmp_amd;
 
         // Validate the ARK
@@ -767,7 +767,7 @@ int Command::generate_launch_blob(uint32_t policy)
             break;
 
         // Launch Start needs the GODH Pubkey as a cert, so need to create it
-        SEVCert cert_obj(godh_pubkey_cert);
+        SEVCert cert_obj(&godh_pubkey_cert);
 
         // Generate a new GODH Public/Private keypair
         if (!generate_ecdh_key_pair(&godh_key_pair)) {
@@ -938,7 +938,7 @@ int Command::validate_attestation(void)
         // Build up a pek_pub_key so we can verify the signature on the report
         sev_cert dummy;
         memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-        SEVCert temp_obj(dummy);                // TODO. Hack b/c just want to call function later
+        SEVCert temp_obj(&dummy);               // TODO. Hack b/c just want to call function later
 
         // New up the pek_pub_key
         if (!(pek_pub_key = EVP_PKEY_new()))
@@ -1225,7 +1225,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
 
     sev_cert dummy;
     memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-    SEVCert temp_obj(dummy);                // TODO. Hack b/c just want to call function later
+    SEVCert temp_obj(&dummy);                // TODO. Hack b/c just want to call function later
     bool ret = false;
     EVP_PKEY *plat_pub_key = NULL;    // Platform public key
     size_t shared_key_len = 0;

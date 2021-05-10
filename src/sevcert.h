@@ -50,13 +50,13 @@ private:
                                       EVP_PKEY *parent_signing_key);
     SEV_ERROR_CODE validate_body(const sev_cert *cert);
 
-    sev_cert m_child_cert;
+    sev_cert *m_child_cert;
 
 public:
-    SEVCert(sev_cert& cert) { m_child_cert = cert; }
+    SEVCert(sev_cert *cert) { m_child_cert = cert; }
     ~SEVCert() {};
 
-    const sev_cert *data() { return &m_child_cert; }
+    const sev_cert *data() { return m_child_cert; }
 
     bool create_godh_cert(EVP_PKEY **godh_key_pair,
                           uint8_t api_major,
