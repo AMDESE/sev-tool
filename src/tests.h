@@ -32,6 +32,7 @@ public:
     bool test_platform_status(void);
     bool test_pek_gen(void);
     bool test_pek_csr(void);
+    bool test_sign_pek_csr(void);
     bool test_pdh_gen(void);
     bool test_pdh_cert_export(void);
     bool test_pek_cert_import(void);

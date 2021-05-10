@@ -950,9 +950,15 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
             }
         }
         else if (m_child_cert->pub_key_usage == SEV_USAGE_PEK) {
-            // The PEK certificate must be signed by the CEK and the OCA
+            // Checks parent certs for
+            // 1. If OCA parent1 and CEK parent2 or
+            // 2. If CEK parent1 and OCA parent2 or
+            // 3. If OCA parent1 only certificate (signed CSR)
+            // 4. If OCA parent2 only certificate (signed CSR)
             if (((parent_cert1->pub_key_usage != SEV_USAGE_OCA) && (parent_cert2->pub_key_usage != SEV_USAGE_CEK)) &&
-                ((parent_cert2->pub_key_usage != SEV_USAGE_OCA) && (parent_cert1->pub_key_usage != SEV_USAGE_CEK))) {
+                ((parent_cert1->pub_key_usage != SEV_USAGE_CEK) && (parent_cert2->pub_key_usage != SEV_USAGE_OCA)) &&
+                ((numSigs == 1) && (parent_cert1->pub_key_usage != SEV_USAGE_OCA)) &&
+                ((numSigs == 1) && (parent_cert2->pub_key_usage != SEV_USAGE_OCA)))  {
                 break;
             }
         }
@@ -998,5 +1004,42 @@ SEV_ERROR_CODE SEVCert::validate_pek_csr()
             return STATUS_SUCCESS;
         }
     }
+    return ERROR_INVALID_CERTIFICATE;
+}
+
+SEV_ERROR_CODE SEVCert::verify_signed_pek_csr(const sev_cert *oca_cert)
+{
+    do {
+        if (m_child_cert->version        != 1                         ||
+            m_child_cert->pub_key_usage  != SEV_USAGE_PEK             ||
+            m_child_cert->pub_key_algo   != SEV_SIG_ALGO_ECDSA_SHA256 ||
+            oca_cert->api_minor          != 0                         ||
+            oca_cert->api_major          != 0                         ||
+            oca_cert->version            != 1                         ||
+            oca_cert->pub_key_usage      != SEV_USAGE_OCA ) {
+                break;
+        }
+        uint32_t usage1 = m_child_cert->sig_1_usage, usage2 = m_child_cert->sig_2_usage;
+        uint32_t algo1 = m_child_cert->sig_1_algo, algo2 = m_child_cert->sig_2_algo;
+
+        char testblock [SEV_SIG_SIZE];
+        memset (testblock, 0, SEV_SIG_SIZE);
+        // Check that exactly one field empty
+        if ((algo1 == SEV_SIG_ALGO_INVALID) && (usage1 == SEV_USAGE_INVALID))
+        {
+            if (memcmp(testblock, &m_child_cert->sig_1, SEV_SIG_SIZE) != 0) {
+                break;
+            }
+        }
+        else if ((algo2 == SEV_SIG_ALGO_INVALID) && (usage2 == SEV_USAGE_INVALID)) {
+            if (memcmp(testblock, &m_child_cert->sig_2, SEV_SIG_SIZE) != 0) {
+                break;
+            }
+        } else {
+            break;
+        }
+        // Check subsequent signature flags
+        return verify_sev_cert(oca_cert, NULL);
+    } while(0);
     return ERROR_INVALID_CERTIFICATE;
 }
