@@ -457,8 +457,7 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *pek_csr,
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
         }
-        if (!cert_obj.create_oca_cert(&oca_priv_key, status_data.api_major,
-                                      status_data.api_minor, SEV_SIG_ALGO_ECDSA_SHA256)) {
+        if (!cert_obj.create_oca_cert(&oca_priv_key, SEV_SIG_ALGO_ECDSA_SHA256)) {
             printf("Error creating OCA cert\n");
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
