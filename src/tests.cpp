@@ -382,12 +382,17 @@ bool Tests::test_pek_cert_import(void)
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
-    std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
-    std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
     sev_cert_chain_buf cert_chain_orig;
     sev_cert_chain_buf cert_chain_new;
     sev_cert pdh_orig;
     sev_cert pdh_new;
+
+    std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
+    std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
+    std::string pekcsr_full = m_output_folder + PEK_CSR_HEX_FILENAME;
+    std::string signed_pekcsr_full = m_output_folder + SIGNED_PEK_CSR_FILENAME;
+    std::string oca_cert_full = m_output_folder + OCA_FILENAME;
+    std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
 
     do {
         printf("*Starting pek_cert_import tests\n");
@@ -416,11 +421,25 @@ bool Tests::test_pek_cert_import(void)
             break;
 
         // Export the priv key to a pem file
-        std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
         write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
 
-        // Call pek_cert_import and pass in the pem file's location
-        if (cmd.pek_cert_import(oca_priv_key_pem) != STATUS_SUCCESS)
+        // Export the new PEK/PDH certs from the Platform
+        if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
+            printf("Error: Failed to export new PEK/PDH certificates\n");
+            break;
+        }
+
+        // Generate CSR
+        if (cmd.pek_csr() != STATUS_SUCCESS)
+            break;
+
+        // Sign CSR
+        // (creates OCA cert)
+        if (cmd.sign_pek_csr(pekcsr_full, oca_priv_key_pem) != STATUS_SUCCESS)
+            break;
+
+        // Call pek_cert_import and pass in the signed CSR and newly created oca cert file's location
+        if (cmd.pek_cert_import(signed_pekcsr_full, oca_cert_full) != STATUS_SUCCESS)
             break;
 
         // Export the new PEK/PDH certs from the Platform

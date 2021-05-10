@@ -137,7 +137,7 @@ public:
     int pek_csr(void);
     int pdh_gen(void);
     int pdh_cert_export(void);
-    int pek_cert_import(std::string oca_priv_key_file);
+    int pek_cert_import(std::string signed_pek_csr_file, std::string oca_cert_file);
     int get_id(void);
 
     // Non-ioctl (custom) commands
