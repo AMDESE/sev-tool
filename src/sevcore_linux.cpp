@@ -90,14 +90,13 @@ int sev::get_ask_ark(const std::string output_folder, const std::string cert_fil
     std::string output = "";
     ePSP_DEVICE_TYPE device_type = PSP_DEVICE_TYPE_INVALID;
     std::string cert_w_path = "";
-    std::string to_cert_w_path = output_folder + cert_file;
 
     do {
-        cmd += "-P " + output_folder + " ";
-        cert_w_path = output_folder;
+        cmd += "-O " + output_folder + cert_file + " ";
+        cert_w_path = output_folder + cert_file;
 
         // Don't re-download the CEK from the KDS server if you already have it
-        if (sev::get_file_size(to_cert_w_path) != 0) {
+        if (sev::get_file_size(cert_w_path) != 0) {
             // printf("ASK_ARK already exists, not re-downloading\n");
             cmd_ret = SEV_RET_SUCCESS;
             break;
@@ -106,15 +105,12 @@ int sev::get_ask_ark(const std::string output_folder, const std::string cert_fil
         device_type = get_device_type();
         if (device_type == PSP_DEVICE_TYPE_NAPLES) {
             cmd += ASK_ARK_NAPLES_SITE;
-            cert_w_path += ASK_ARK_NAPLES_FILE;
         }
         else if (device_type == PSP_DEVICE_TYPE_ROME) {
             cmd += ASK_ARK_ROME_SITE;
-            cert_w_path += ASK_ARK_ROME_FILE;
         }
         else if (device_type == PSP_DEVICE_TYPE_MILAN) {
             cmd += ASK_ARK_MILAN_SITE;
-            cert_w_path += ASK_ARK_MILAN_FILE;
         }
         else {
             printf("Error: Unable to determine Platform type. " \
@@ -136,12 +132,6 @@ int sev::get_ask_ark(const std::string output_folder, const std::string cert_fil
             break;
         }
 
-        // Rename the file (_PlatformType) to something known (cert_file)
-        if (std::rename(cert_w_path.c_str(), to_cert_w_path.c_str()) != 0) {
-            printf("Error: renaming ask_ark cert file\n");
-            cmd_ret = SEV_RET_UNSUPPORTED;
-            break;
-        }
         cmd_ret = SEV_RET_SUCCESS;
     } while (0);
 
