@@ -762,7 +762,7 @@ int Command::generate_launch_blob(uint32_t policy)
     memset(&session_data_buf, 0, sizeof(sev_session_buf));
 
     do {
-        // Read in the PDH (Platform Owner Diffie-Hellman Public Key)
+        // Read in the PDH (Platform Diffie-Hellman Public Key)
         if (sev::read_file(pdh_full, &pdh, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
@@ -1227,25 +1227,25 @@ bool Command::derive_master_secret(aes_128_key master_secret,
     memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
     SEVCert temp_obj(dummy);                // TODO. Hack b/c just want to call function later
     bool ret = false;
-    EVP_PKEY *plat_owner_pub_key = NULL;    // Platform owner public key
+    EVP_PKEY *plat_pub_key = NULL;    // Platform public key
     size_t shared_key_len = 0;
 
     do {
-        // New up the Platform Owner's public EVP_PKEY
-        if (!(plat_owner_pub_key = EVP_PKEY_new()))
+        // New up the Platform's public EVP_PKEY
+        if (!(plat_pub_key = EVP_PKEY_new()))
             break;
 
         // Get the friend's Public EVP_PKEY from the certificate
         // This function allocates memory and attaches an EC_Key
         //  to your EVP_PKEY so, to prevent mem leaks, make sure
         //  the EVP_PKEY is freed at the end of this function
-        if (temp_obj.compile_public_key_from_certificate(pdh_public, plat_owner_pub_key) != STATUS_SUCCESS)
+        if (temp_obj.compile_public_key_from_certificate(pdh_public, plat_pub_key) != STATUS_SUCCESS)
             break;
 
         // Calculate the shared secret
         // This function is allocating memory for this uint8_t[],
         //  must free it at the end of this function
-        uint8_t *shared_key = calculate_shared_secret(godh_priv_key, plat_owner_pub_key, shared_key_len);
+        uint8_t *shared_key = calculate_shared_secret(godh_priv_key, plat_pub_key, shared_key_len);
         if (!shared_key)
             break;
 
@@ -1262,7 +1262,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
     } while (0);
 
     // Free memory
-    EVP_PKEY_free(plat_owner_pub_key);
+    EVP_PKEY_free(plat_pub_key);
 
     return ret;
 }
