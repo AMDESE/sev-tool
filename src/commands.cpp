@@ -181,7 +181,7 @@ int Command::pdh_cert_export(void)
     return (int)cmd_ret;
 }
 
-int Command::pek_cert_import(std::string oca_priv_key_file)
+int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_cert_file)
 {
     int cmd_ret = -1;
 
@@ -191,10 +191,9 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
     sev_cert *pdh_cert_mem = new sev_cert_t;
     sev_cert_chain_buf *cert_chain_mem = new sev_cert_chain_buf_t;
 
-    // The certificate signing request
-    uint8_t pek_csr_data[sizeof(sev_pek_csr_cmd_buf)];                  // pek_csr
-    sev_cert *pek_mem = new sev_cert_t;
-    sev_cert pek_csr;
+    // The signed CSR
+    sev_cert signed_pek_csr;
+    sev_cert oca_cert;
 
     // The actual pek_cert_import command
     uint8_t pek_cert_import_data[sizeof(sev_pek_cert_import_cmd_buf)];  // pek_cert_import
@@ -206,27 +205,30 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
     sev_cert_chain_buf *cert_chain_mem2 = new sev_cert_chain_buf_t;
 
     do {
-        if (!pdh_cert_mem || !cert_chain_mem || !pek_mem || !pdh_cert_mem2 || !cert_chain_mem2) {
+        if (!pdh_cert_mem || !cert_chain_mem || !pdh_cert_mem2 || !cert_chain_mem2) {
             cmd_ret = -1;
             break;
         }
 
-        cmd_ret = m_sev_device->set_self_owned();
-        if (cmd_ret != 0)
+        // Read in the signed pek_csr (has sev_cert format)
+        if (sev::read_file(signed_pek_csr_file, &signed_pek_csr, sizeof(sev_cert)) != sizeof(sev_cert)) {
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
+        }
+
+        // Read in the oca_cert
+        if (sev::read_file(oca_cert_file, &oca_cert, sizeof(sev_cert)) != sizeof(sev_cert)) {
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
 
         // Just used to confirm afterwards that the cert chain has changed
         cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh_cert_mem, cert_chain_mem);
         if (cmd_ret != 0)
             break;
 
-        // Run the PEK certificate signing request
-        cmd_ret = m_sev_device->pek_csr(pek_csr_data, pek_mem, &pek_csr);
-        if (cmd_ret != 0)
-            break;
-
         // Run the pek_cert_import command
-        cmd_ret = m_sev_device->pek_cert_import(pek_cert_import_data, &pek_csr, oca_priv_key_file);
+        cmd_ret = m_sev_device->pek_cert_import(pek_cert_import_data, &signed_pek_csr, &oca_cert);
         if (cmd_ret != 0)
             break;
 
@@ -240,13 +242,12 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
         if (0 != memcmp(pdh_cert_export_data2, pdh_cert_export_data, sizeof(sev_pdh_cert_export_cmd_buf)))
             break;
 
-        printf("PEK Cert Import SUCCESS!!!\n");
+        printf("PEK Cert Import SUCCESS.\n");
     } while (0);
 
     // Free memory
     delete pdh_cert_mem;
     delete cert_chain_mem;
-    delete pek_mem;
     delete pdh_cert_mem2;
     delete cert_chain_mem2;
 
@@ -406,9 +407,28 @@ int Command::set_externally_owned(std::string oca_priv_key_file)
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device->set_externally_owned(oca_priv_key_file);
+    std::string pek_oca_path = m_output_folder + OCA_FILENAME;
+    std::string pek_csr_signed_path = m_output_folder + SIGNED_PEK_CSR_FILENAME;
+    std::string pek_csr_hex_path = m_output_folder + PEK_CSR_HEX_FILENAME;
 
-    return (int)cmd_ret;
+    // set self-owned before exporting PEK CSR
+    cmd_ret = set_self_owned();
+    if (cmd_ret != STATUS_SUCCESS)
+        return cmd_ret;
+
+    // export PEK CSR
+    cmd_ret = pek_csr();
+    if (cmd_ret != STATUS_SUCCESS)
+        return cmd_ret;
+
+    // sign PEK CSR
+    cmd_ret = sign_pek_csr(pek_csr_hex_path, oca_priv_key_file);
+    if (cmd_ret != STATUS_SUCCESS)
+        return cmd_ret;
+
+    // import CSR
+    cmd_ret = pek_cert_import(pek_csr_signed_path, pek_oca_path);
+    return cmd_ret;
 }
 
 int Command::generate_cek_ask(void)

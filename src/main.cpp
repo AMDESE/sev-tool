@@ -33,7 +33,8 @@ const char help_array[] =  "The following commands are supported:\n" \
                     "  pdh_cert_export\n" \
                     "  pek_cert_import\n" \
                     "      Input params:\n" \
-                    "          [oca private key].pem file\n" \
+                    "          pek_csr.signed.cert file\n" \
+                    "          oca.cert file\n" \
                     "  get_id\n" \
                     "  sign_pek_csr\n" \
                     "      Input params:\n" \
@@ -190,14 +191,15 @@ int main(int argc, char **argv)
             }
             case 'g': {         // PEK_CERT_IMPORT
                 optind--;   // Can't use option_index because it doesn't account for '-' flags
-                if (argc - optind != 1) {
-                    printf("Error: Expecting exactly 1 arg for pek_cert_import\n");
+                if (argc - optind != 2) {
+                    printf("Error: Expecting exactly 2 args for pek_cert_import\n");
                     return false;
                 }
+                std::string signed_pek_csr_file = argv[optind++];
+                std::string oca_cert_file = argv[optind++];
 
-                std::string oca_priv_key_file = argv[optind++];
                 Command cmd(output_folder, verbose_flag);
-                cmd_ret = cmd.pek_cert_import(oca_priv_key_file);
+                cmd_ret = cmd.pek_cert_import(signed_pek_csr_file, oca_cert_file);
                 break;
             }
             case 'j': {         // GET_ID

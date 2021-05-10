@@ -408,55 +408,23 @@ int SEVDevice::pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
     return (int)cmd_ret;
 }
 
-int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *pek_csr,
-                               const std::string oca_priv_key_file)
+int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *signed_pek_csr,
+                               sev_cert *oca_cert)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
     sev_user_data_pek_cert_import *data_buf = (sev_user_data_pek_cert_import *)data;
-    sev_user_data_status status_data;  // Platform Status
-    SEVCert csr_obj(pek_csr);
-
-    EVP_PKEY *oca_priv_key = NULL;
-    sev_cert *oca_cert = new sev_cert_t;
-    if (!oca_cert)
-        return SEV_RET_HWSEV_RET_PLATFORM;
-
-    // Submit the signed cert to PEKCertImport
-    memset(data_buf, 0, sizeof(sev_user_data_pek_cert_import)); // Set struct to 0
+    memset(data_buf, 0, sizeof(sev_user_data_pek_cert_import));
 
     do {
-        // Verify the CSR complies to API specification
-        if (csr_obj.validate_pek_csr() != STATUS_SUCCESS) {
+        // Verify signed CSR complies to API specification
+        SEVCert cert_obj(signed_pek_csr);
+        if (cert_obj.verify_signed_pek_csr(oca_cert) != STATUS_SUCCESS) {
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
         }
 
-        // Do a platform_status to get api_major and api_minor to create oca cert
-        cmd_ret = platform_status((uint8_t *)&status_data);
-        if (cmd_ret != 0)
-            break;
-
-        // Import the OCA pem file and turn it into an sev_cert
-        SEVCert cert_obj(oca_cert);
-        if (!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key)) {
-            printf("Error importing OCA Priv Key\n");
-            cmd_ret = SEV_RET_INVALID_CERTIFICATE;
-            break;
-        }
-        if (!cert_obj.create_oca_cert(&oca_priv_key, SEV_SIG_ALGO_ECDSA_SHA256)) {
-            printf("Error creating OCA cert\n");
-            cmd_ret = SEV_RET_INVALID_CERTIFICATE;
-            break;
-        }
-        // print_sev_cert_readable((sev_cert *)oca_cert);
-
-        // Sign the PEK CSR with the OCA private key
-        SEVCert CSRCert(pek_csr);
-        CSRCert.sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_PEK, SEV_SIG_ALGO_ECDSA_SHA256,
-                              &oca_priv_key, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256);
-
-        data_buf->pek_cert_address = (uint64_t)CSRCert.data();
+        data_buf->pek_cert_address = (uint64_t)signed_pek_csr;
         data_buf->pek_cert_len = sizeof(sev_cert);
         data_buf->oca_cert_address = (uint64_t)oca_cert;
         data_buf->oca_cert_len = sizeof(sev_cert);
@@ -467,9 +435,6 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *pek_csr,
             break;
 
     } while (0);
-
-    // Free memory
-    delete oca_cert;
 
     return (int)cmd_ret;
 }
@@ -1175,64 +1140,6 @@ int SEVDevice::set_self_owned()
                 break;              // Unrecognized Platform state!
         }
     }
-
-    return (int)cmd_ret;
-}
-
-/**
- * Note: You can not change the Platform Owner if Guests are running.
- *       That means the Platform cannot be in the WORKING state here.
- *       The ccp Kernel Driver will do its best to set the Platform state
- *       to whatever is required to run each command, but that does not
- *       include shutting down Guests to do so.
- */
-int SEVDevice::set_externally_owned(const std::string oca_priv_key_file)
-{
-    sev_user_data_status platform_status_data;
-
-    int cmd_ret = SEV_RET_UNSUPPORTED;
-    sev_cert *PEKMem = new sev_cert_t;
-
-    if (!PEKMem)
-        return SEV_RET_HWSEV_RET_PLATFORM;
-
-    do {
-        // Send platform_status command to get ownership status
-        cmd_ret = platform_status((uint8_t *)&platform_status_data);
-        if (cmd_ret != SEV_RET_SUCCESS)
-            break;
-
-        // Check if we're already externally owned
-        if (get_platform_owner(&platform_status_data) != PLATFORM_STATUS_OWNER_EXTERNAL) {
-            // Get the CSR
-            sev_user_data_pek_csr pek_csr_data;                  // pek_csr
-            sev_cert PEKcsr;
-            cmd_ret = pek_csr((uint8_t *)&pek_csr_data, PEKMem, &PEKcsr);
-            if (cmd_ret != SEV_RET_SUCCESS)
-                break;
-
-            // Sign the CSR
-            // Fetch the OCA certificate
-            // Submit the signed cert to PEKCertImport
-            sev_user_data_pek_cert_import pek_cert_import_data;
-            cmd_ret = pek_cert_import((uint8_t *)&pek_cert_import_data, &PEKcsr,
-                                      oca_priv_key_file);
-            if (cmd_ret != SEV_RET_SUCCESS)
-                break;
-
-            // Send platform_status command to get new ownership status
-            cmd_ret = platform_status((uint8_t *)&platform_status_data);
-            if (cmd_ret != SEV_RET_SUCCESS)
-                break;
-
-            // Confirm that we are now ext owned
-            if (get_platform_owner(&platform_status_data) != PLATFORM_STATUS_OWNER_EXTERNAL)
-                cmd_ret = SEV_RET_HWSEV_RET_PLATFORM;
-        }
-    } while (0);
-
-    // Free memory
-    delete PEKMem;
 
     return (int)cmd_ret;
 }

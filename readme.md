@@ -122,7 +122,7 @@ Updated: 2021-04-23
 7. Get the CEK_ASK from the AMD KDS server by running the generate_cek_ask command
    - Note: the CEK certificate will be different every time you pull it from the KDS sever. The server re-generates/re-signs the cert every time instead of storing a static cert
 8. Run the pek_csr command to generate a certificate signing request for your PEK. This will allow you to take ownership of the platform.
-9. Sign PEK with OCA (see pek_cert_import() command in sevcore_xx.cc)
+9. Run the sign_pek_csr command to sign the CSR with the provided OCA private key (can be performed on OCA platform).
 10. Run the pek_cert_import command
 11. Run the pdh_cert_export command
 12. Run the get_ask_ark command
@@ -225,14 +225,15 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          $ sudo ./sevtool --ofolder ./certs --pdh_cert_export
          ```
 7. pek_cert_import
-This command imports an OCA private key from the user, runs a platform_status command to get the API major/minor used to create the certificate, runs the pek_csr to create the PEK certificate signing request, signs the PEK signing request with the OCA private key, and calls pek_cert_import to import the PEK and OCA certificates.
-     - Required input args: The unencrypted OCA Private key file (.pem).
-     - Files read in: [oca_priv_key_file]
+     - This command imports a signed PEK CSR together with the corresponding OCA certificate. Import will not be successful if the platform is not self-owned at this stage.
+     - Required input args:
+         - The signed PEK CSR
+         - The OCA certificate that signed the CSR (in AMD certificate format)
+     - Files read in: [signed PEK CSR] [oca_cert_file]
      - Outputs: none
      - Example
          ```sh
-         $ sudo ./sevtool --pek_cert_import [oca_priv_key_file]
-         $ sudo ./sevtool --pek_cert_import ../psp-sev-assets/oca_key_in.pem
+         $ sudo ./sevtool --pek_cert_import pek_csr.signed.cert oca.cert
          ```
 8. get_id
      - Optional input args: --ofolder [folder_path]
@@ -255,7 +256,8 @@ This command imports an OCA private key from the user, runs a platform_status co
          $ sudo ./sevtool --ofolder ./certs --set_self_owned
          ```
 10. set_externally_owned
-     - Required input args: This function, among other things, calls pek_cert_import, so the OCA Private key file (.pem) is a required argument.
+     - This function sets the platform as self-owned, exports a PEK CSR, signs it and re-imports it in one go. A Private key file (.pem) is a required argument.
+     - Required input args: The private key of the OCA (.pem format)
      - Files read in: [oca_priv_key_file]
      - Outputs: none
      - Example

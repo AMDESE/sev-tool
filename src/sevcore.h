@@ -186,7 +186,7 @@ public:
     int pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
                         void *cert_chain_mem);
     int pek_cert_import(uint8_t *data, sev_cert *pek_csr,
-                        const std::string oca_priv_key_file);
+                        sev_cert *oca_cert);
     int get_id(void *data, void *id_mem, uint32_t id_length = 0);
 
     void check_dependencies(void);
@@ -195,7 +195,6 @@ public:
     int set_self_owned(void);
     int get_platform_owner(void *data);
     int get_platform_es(void *data);
-    int set_externally_owned(const std::string oca_priv_key_file);
     int generate_cek_ask(const std::string output_folder,
                          const std::string cert_file);
     int generate_vcek_ask(const std::string output_folder,
