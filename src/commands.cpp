@@ -95,6 +95,7 @@ int Command::pek_gen(void)
 
 int Command::pek_csr(void)
 {
+    sev_platform_status_cmd_buf data_buf;
     uint8_t data[sizeof(sev_pek_csr_cmd_buf)];
     int cmd_ret = -1;
     std::string pek_csr_readable_path = m_output_folder + PEK_CSR_READABLE_FILENAME;
@@ -106,6 +107,15 @@ int Command::pek_csr(void)
 
     if (!pek_mem)
         return -1;
+
+    cmd_ret = m_sev_device->platform_status((uint8_t *) &data_buf);
+
+    if (cmd_ret != STATUS_SUCCESS)
+            return cmd_ret;
+    if (data_buf.owner != PLATFORM_STATUS_OWNER_SELF) {
+            printf("Error: Platform must be self-owned first for the obtaining ownership procedure to work.");
+            return -1;
+    }
 
     cmd_ret = m_sev_device->pek_csr(data, pek_mem, &pek_csr);
 

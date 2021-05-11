@@ -195,6 +195,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
          $ sudo ./sevtool --pek_gen
          ```
 4. pek_csr
+     - This command exports a CSR for the PEK of the platform. Signed CSR can only be re-imported successfully after the platform has been configured as self-owned. Changing ownership voids any existing CSR. As a result, this CSR export only works if the platform is self-owned to begin with.
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export the certificate signing request
      - Files read in: none
