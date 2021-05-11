@@ -210,7 +210,7 @@ int sev::zip_certs(const std::string output_folder, const std::string zip_name,
     std::string output = "";
     std::string error = "zip error";
 
-    cmd = "zip " + output_folder + zip_name + " " + files_to_zip;
+    cmd = "zip -j " + output_folder + zip_name + " " + files_to_zip;
     sev::execute_system_command(cmd, &output);
 
     if (output.find(error) != std::string::npos) {
