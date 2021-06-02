@@ -322,6 +322,59 @@ bool Tests::test_pdh_cert_export(void)
 }
 
 /**
+ * Generates OCA priv/pub key and CSR, signs CSR and checks if signature valid.
+ */
+bool Tests::test_sign_pek_csr()
+{
+    bool ret = false;
+    Command cmd(m_output_folder, m_verbose_flag);
+
+    std::string signed_pekcsr_full = m_output_folder + SIGNED_PEK_CSR_FILENAME;
+    std::string pekcsr_full = m_output_folder + PEK_CSR_HEX_FILENAME;
+    std::string oca_cert_full = m_output_folder + OCA_FILENAME;
+    std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
+    sev_cert signed_csr;
+    SEVCert SignedCSR(&signed_csr);
+    sev_cert oca_cert;
+    EVP_PKEY *oca_key_pair = NULL;
+
+    do {
+        printf("*Starting sign_pek_csr tests\n");
+
+        // Generate a new random ECDH keypair
+        if (!generate_ecdh_key_pair(&oca_key_pair))
+            break;
+        // Export the priv key to a pem file
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+
+        // Set self-Owned
+        if (cmd.set_self_owned() != STATUS_SUCCESS)
+            break;
+
+        // Generate CSR
+        if (cmd.pek_csr() != STATUS_SUCCESS)
+            break;
+
+        // Sign CSR
+        // (creates OCA cert)
+        if (cmd.sign_pek_csr(pekcsr_full, oca_priv_key_pem) != STATUS_SUCCESS)
+            break;
+
+        // Read in output from previous sign command
+        if (sev::read_file(signed_pekcsr_full, &signed_csr, sizeof(sev_cert)) != sizeof(sev_cert))
+            break;
+        if (sev::read_file(oca_cert_full, &oca_cert, sizeof(sev_cert)) != sizeof(sev_cert))
+            break;
+
+        // Check if signature is valid
+        if (SignedCSR.verify_signed_pek_csr((const sev_cert*) &oca_cert) != STATUS_SUCCESS)
+            break;
+        ret = true;
+    } while (0);
+    return ret;
+}
+
+/**
  * Compare PEK and PDH certs before and after calling test_pek_cert_import, they
  * should both be new.
  */
@@ -329,12 +382,17 @@ bool Tests::test_pek_cert_import(void)
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
-    std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
-    std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
     sev_cert_chain_buf cert_chain_orig;
     sev_cert_chain_buf cert_chain_new;
     sev_cert pdh_orig;
     sev_cert pdh_new;
+
+    std::string cert_chain_full = m_output_folder + CERT_CHAIN_HEX_FILENAME;
+    std::string pdh_cert_full = m_output_folder + PDH_FILENAME;
+    std::string pekcsr_full = m_output_folder + PEK_CSR_HEX_FILENAME;
+    std::string signed_pekcsr_full = m_output_folder + SIGNED_PEK_CSR_FILENAME;
+    std::string oca_cert_full = m_output_folder + OCA_FILENAME;
+    std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
 
     do {
         printf("*Starting pek_cert_import tests\n");
@@ -363,11 +421,25 @@ bool Tests::test_pek_cert_import(void)
             break;
 
         // Export the priv key to a pem file
-        std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
         write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
 
-        // Call pek_cert_import and pass in the pem file's location
-        if (cmd.pek_cert_import(oca_priv_key_pem) != STATUS_SUCCESS)
+        // Export the new PEK/PDH certs from the Platform
+        if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
+            printf("Error: Failed to export new PEK/PDH certificates\n");
+            break;
+        }
+
+        // Generate CSR
+        if (cmd.pek_csr() != STATUS_SUCCESS)
+            break;
+
+        // Sign CSR
+        // (creates OCA cert)
+        if (cmd.sign_pek_csr(pekcsr_full, oca_priv_key_pem) != STATUS_SUCCESS)
+            break;
+
+        // Call pek_cert_import and pass in the signed CSR and newly created oca cert file's location
+        if (cmd.pek_cert_import(signed_pekcsr_full, oca_cert_full) != STATUS_SUCCESS)
             break;
 
         // Export the new PEK/PDH certs from the Platform
@@ -839,6 +911,9 @@ bool Tests::test_all(void)
             break;
 
         if (!test_pek_csr())
+            break;
+
+        if (!test_sign_pek_csr())
             break;
 
         if (!test_pdh_gen())
