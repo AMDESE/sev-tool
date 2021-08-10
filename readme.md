@@ -1,14 +1,19 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v18
-Updated: 2021-04-23
+Version: v19
+Updated: 2021-08-10
 &nbsp;
 &nbsp;
 
 ## Related Docs
 - The SEV API can be found here: https://developer.amd.com/sev/
 
-## OS Requirements
+## Uses
+- SEV-Tool may be used by either a Guest Owner or a Platform Owner. Guest Owner commands will not talk to the SEV firmware and therefore are not required to be running on a Platform that supports SEV. Platform Owner commands talk directly to the SEV firmware and therefore must be running on an OS and Platform that supports SEV.
+
+## OS Requirements for Guest Owners
+  - All Linux distros are supported. Communication with the SEV firmware through the Linux ccp kernel driver is not required.
+## OS Requirements for Platform Owners
   - Your Kernel must support SEV.
   - SME/SEV OS Support
      ```
@@ -159,11 +164,12 @@ This is the flow that the Hypervisor will take to prepare the guest
 
 ## Command List
 The following commands are supported by the SEV-Tool. Please see the SEV-API for info on each specific command
-Note: All input and output cert's mentioned below are SEV (special format) Certs. See SEV API for details
+    - Note: All input and output cert's mentioned below are SEV (special format) Certs. See SEV API for details
 1. factory_reset
      - Input args: none
      - Files read in: none
      - Outputs: none
+     - Platform/Guest Owner: Platform Owner
      - Note: in the current SEV API, this command was renamed to PLATFORM_RESET
      - Example
          ```sh
@@ -173,6 +179,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
      - Input args: none
      - Files read in: none
      - Outputs: The current platform status will be printed to the screen
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --platform_status
@@ -181,6 +188,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
      - Input args: none
      - Files read in: none
      - Outputs: none
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --pek_gen
@@ -192,6 +200,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
      - Outputs:
          - If --[verbose] flag used: The pek_csr will be printed out to the screen as a hex dump and as a readable format
          - If --[ofolder] flag used: The pek_csr will be written as files to the specified folder as a hex dump and as a readable format. Files: pek_csr_out.cert and pek_csr_out_readable.cert
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --pek_csr
@@ -200,6 +209,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
      - Input args: none
      - Files read in: none
      - Outputs: none
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --pdh_gen
@@ -211,6 +221,7 @@ Note: All input and output cert's mentioned below are SEV (special format) Certs
      - Outputs:
          - If --[verbose] flag used: The PDH cert and Cert Chain will be printed out to the screen as hex dumps and as readable formats
          - If --[ofolder] flag used: The PDH cert and Cert Chain will be written as files to the specified folder as hex dumps and as readable formats. Files: pdh_out.cert, pdh_readable_out.cert, cert_chain_out.cert, cert_chain_readable_out.cert
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --pdh_cert_export
@@ -220,6 +231,7 @@ This command imports an OCA private key from the user, runs a platform_status co
      - Required input args: The unencrypted OCA Private key file (.pem).
      - Files read in: [oca_priv_key_file]
      - Outputs: none
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --pek_cert_import [oca_priv_key_file]
@@ -233,6 +245,7 @@ This command imports an OCA private key from the user, runs a platform_status co
          - If --[verbose] flag used: The IDs for Socket0 and Socket1 will be printed out to the screen
          - If --[ofolder] flag used: The IDs for Socket0 and Socket1 will be written as files to the specified folder.
             - Files: getid_s0_out.txt and getid_s1_out.txt
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --get_id
@@ -241,6 +254,7 @@ This command imports an OCA private key from the user, runs a platform_status co
      - Input args: none
      - Files read in: none
      - Outputs: none
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --set_self_owned
@@ -249,6 +263,7 @@ This command imports an OCA private key from the user, runs a platform_status co
      - Required input args: This function, among other things, calls pek_cert_import, so the OCA Private key file (.pem) is a required argument.
      - Files read in: [oca_priv_key_file]
      - Outputs: none
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --set_externally_owned [oca_priv_key_file]
@@ -261,6 +276,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Files read in: none
      - Outputs:
         - If --[ofolder] flag used: The cek_ask.cert file for your specific platform (processor in socket0) will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: cek_ask.cert
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --generate_cek_ask
@@ -271,6 +287,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Files read in: none
      - Outputs:
         - If --[ofolder] flag used: The ark_ark certificate will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: ask_ark.cert
+     - Platform/Guest Owner: Guest Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --get_ask_ark
@@ -282,6 +299,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Files read in: none
      - Outputs:
         - If --[ofolder] flag used: The certificates will be exported to and zipped up in the folder specified. Otherwise, they will be exported to and zipped up in the same directory as the SEV-Tool executable. Files: pdh.cert, pek.cert, oca.cert, cek.cert, ask.cert, ark.cert, certs_export.zip
+     - Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --export_cert_chain
@@ -297,6 +315,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Outputs:
          - If --[verbose] flag used: The input data and calculated measurement will be printed out to the screen
          - If --[ofolder] flag used: The calculated measurement will be written to the specified folder as both binary and readable hex data. File: calc_measurement_out.bin, calc_measurement_out.txt
+     - Platform/Guest Owner: Guest Owner
      - Example
          ```sh
          $ sudo ./sevtool --calc_measurement [Context] [Api Major] [Api Minor] [Build ID] [Policy] [Digest] [MNonce] [TIK]
@@ -333,6 +352,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          - This allows the user to specify the folder where the tool will import the certs from, otherwise it will use the same folder as the SEV-Tool executable
      - Files read in: ask.cert, ask.cert, cek.cert, oca.cert, pek.cert, pdh.cert
      - Outputs: none
+     - Platform/Guest Owner: Guest Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_cert_chain
@@ -345,6 +365,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Files read in: pdh.cert
      - Outputs:
         - If --[ofolder] flag used: The blob file and Guest Owner DH public key certificate will be exported to the folder specified. The Guest Owner DH public and private keys are also exported during the process and are only to be used by the SEV-Tool. Otherwise, all files will be exported to the same directory as the SEV-Tool executable. Files: launch_blob.bin, godh.cert, (ignore these: godh_pubkey.pem, godh_privkey.pem). Note that the output blob file is a binary file; to import to qemu, the file needs to be manually converted to base64.
+     - Platform/Guest Owner: Guest Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --generate_launch_blob [guest policy]
@@ -357,6 +378,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Files read in: secret.txt, launch_blob.bin, tmp_tk.bin, calc_measurement_out.bin
      - Outputs:
         - If --[ofolder] flag used: The blob file will be exported to the folder specified. Otherwise, it will be exported to the same directory as the SEV-Tool executable. File: packaged_secret.txt
+     - Platform/Guest Owner: Guest Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --package_secret
@@ -367,6 +389,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          - This allows the user to specify the folder where the tool will look for the attestation report and the pek cert file
      - Files read in: attestation_report.bin, pek.cert
      - Outputs: none
+     - Platform/Guest Owner: Guest Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_attestation
@@ -377,6 +400,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          - This allows the user to specify the folder where the tool will look for the attestation report and the vcek cert file
      - Files read in: guest_report.bin, vcek.pem
      - Outputs: none
+     - Platform/Guest Owner: Guest Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_guest_report
@@ -393,6 +417,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          - This allows the user to specify the folder where the tool will import the certs from, otherwise it will use the same folder as the SEV-Tool executable
      - Files read in: vcek.pem, ask.pem, ark.pem
      - Outputs: none
+     - Platform/Guest Owner: Guest Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --validate_cert_chain_vcek
@@ -405,6 +430,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      - Files read in: none
      - Outputs:
         - If --[ofolder] flag used: The certificates will be exported to and zipped up in the folder specified. Otherwise, they will be exported to and zipped up in the same directory as the SEV-Tool executable. Files: vcek.der, vcek.pem, cert_chain.pem, ask.pem, ark.pem, certs_export_vcek.zip
+     -  Platform/Guest Owner: Platform Owner
      - Example
          ```sh
          $ sudo ./sevtool --ofolder ./certs --export_cert_chain_vcek [tcb_version]

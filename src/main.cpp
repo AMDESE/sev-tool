@@ -88,10 +88,10 @@ static struct option long_options[] =
     {"set_self_owned",           no_argument,       0, 'k'},
     {"set_externally_owned",     required_argument, 0, 'l'},
     {"generate_cek_ask",         no_argument,       0, 'm'},
-    {"get_ask_ark",              no_argument,       0, 'n'},
     {"export_cert_chain",        no_argument,       0, 'p'},
     {"export_cert_chain_vcek",   required_argument, 0, 'q'},
     /* Guest Owner commands */
+    {"get_ask_ark",              no_argument,       0, 'n'},
     {"calc_measurement",         required_argument, 0, 't'},
     {"validate_cert_chain",      no_argument,       0, 'u'},
     {"generate_launch_blob",     required_argument, 0, 'v'},
