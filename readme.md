@@ -306,7 +306,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          ```
 14. calc_measurement
      - The purpose of the calc_measurement command is for the user to be able to validate that they are calculating the HMAC/measurement correctly when they would be calling Launch_Measure during the normal API flow. The user can input all of the parameters used to calculate the HMAC and an output will be generated that the user can compare to their calculated measurement.
-     - The digest parameter is the SHA256 (Naples) or SHA384 (Rome) output digest of the data passed into LaunchUpdateData and LaunchUpdateVMSA
+     - The digest parameter is the SHA256 output digest of the data passed into LaunchUpdateData and LaunchUpdateVMSA
      - Required input args: [Context] [Api Major] [Api Minor] [Build ID] [Policy] [Digest] [MNonce] [TIK]
          - The format of the input parameters are ascii-encoded hex bytes.
      - Files read in: none
