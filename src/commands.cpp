@@ -614,6 +614,12 @@ int Command::export_cert_chain_vcek(const std::string tcb_version)
                              m_output_folder + VCEK_ARK_PEM_FILENAME;
 
     do {
+        if (sev::get_device_type() != PSP_DEVICE_TYPE_MILAN) {
+            printf("Error: export_cert_chain_vcek() is only supported on Milan platforms\n");
+            cmd_ret = ERROR_UNSUPPORTED;
+            break;
+        }
+
         cmd_ret = generate_all_certs_vcek(tcb_version);
         if (cmd_ret != STATUS_SUCCESS)
             break;
