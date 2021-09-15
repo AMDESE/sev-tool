@@ -47,6 +47,7 @@ const std::string CERTS_VCEK_ZIP_FILENAME         = "certs_export_vcek";        
 const std::string ASK_ARK_FILENAME                = "ask_ark.cert";             // get_ask_ark
 const std::string PEK_CSR_HEX_FILENAME            = "pek_csr.cert";             // pek_csr
 const std::string PEK_CSR_READABLE_FILENAME       = "pek_csr_readable.txt";     // pek_csr
+const std::string SIGNED_PEK_CSR_FILENAME         = "pek_csr.signed.cert";      // sign_pek_csr
 const std::string CERT_CHAIN_HEX_FILENAME         = "cert_chain.cert";          // pdh_cert_export
 const std::string CERT_CHAIN_READABLE_FILENAME    = "cert_chain_readable.txt";  // pdh_cert_export
 const std::string GET_ID_S0_FILENAME              = "getid_s0_out.txt";         // get_id
@@ -136,13 +137,14 @@ public:
     int pek_csr(void);
     int pdh_gen(void);
     int pdh_cert_export(void);
-    int pek_cert_import(std::string oca_priv_key_file);
+    int pek_cert_import(std::string signed_pek_csr_file, std::string oca_cert_file);
     int get_id(void);
 
     // Non-ioctl (custom) commands
     int sys_info(void);
     int get_platform_owner(void);
     int get_platform_es(void);
+    int sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_file);
     int set_self_owned(void);
     int set_externally_owned(std::string oca_priv_key_file);
     int generate_cek_ask(void);

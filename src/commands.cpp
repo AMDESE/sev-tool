@@ -95,6 +95,7 @@ int Command::pek_gen(void)
 
 int Command::pek_csr(void)
 {
+    sev_platform_status_cmd_buf data_buf;
     uint8_t data[sizeof(sev_pek_csr_cmd_buf)];
     int cmd_ret = -1;
     std::string pek_csr_readable_path = m_output_folder + PEK_CSR_READABLE_FILENAME;
@@ -106,6 +107,15 @@ int Command::pek_csr(void)
 
     if (!pek_mem)
         return -1;
+
+    cmd_ret = m_sev_device->platform_status((uint8_t *) &data_buf);
+
+    if (cmd_ret != STATUS_SUCCESS)
+            return cmd_ret;
+    if (data_buf.owner != PLATFORM_STATUS_OWNER_SELF) {
+            printf("Error: Platform must be self-owned first for the obtaining ownership procedure to work.");
+            return -1;
+    }
 
     cmd_ret = m_sev_device->pek_csr(data, pek_mem, &pek_csr);
 
@@ -181,7 +191,7 @@ int Command::pdh_cert_export(void)
     return (int)cmd_ret;
 }
 
-int Command::pek_cert_import(std::string oca_priv_key_file)
+int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_cert_file)
 {
     int cmd_ret = -1;
 
@@ -191,10 +201,9 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
     sev_cert *pdh_cert_mem = new sev_cert_t;
     sev_cert_chain_buf *cert_chain_mem = new sev_cert_chain_buf_t;
 
-    // The certificate signing request
-    uint8_t pek_csr_data[sizeof(sev_pek_csr_cmd_buf)];                  // pek_csr
-    sev_cert *pek_mem = new sev_cert_t;
-    sev_cert pek_csr;
+    // The signed CSR
+    sev_cert signed_pek_csr;
+    sev_cert oca_cert;
 
     // The actual pek_cert_import command
     uint8_t pek_cert_import_data[sizeof(sev_pek_cert_import_cmd_buf)];  // pek_cert_import
@@ -206,27 +215,30 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
     sev_cert_chain_buf *cert_chain_mem2 = new sev_cert_chain_buf_t;
 
     do {
-        if (!pdh_cert_mem || !cert_chain_mem || !pek_mem || !pdh_cert_mem2 || !cert_chain_mem2) {
+        if (!pdh_cert_mem || !cert_chain_mem || !pdh_cert_mem2 || !cert_chain_mem2) {
             cmd_ret = -1;
             break;
         }
 
-        cmd_ret = m_sev_device->set_self_owned();
-        if (cmd_ret != 0)
+        // Read in the signed pek_csr (has sev_cert format)
+        if (sev::read_file(signed_pek_csr_file, &signed_pek_csr, sizeof(sev_cert)) != sizeof(sev_cert)) {
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
+        }
+
+        // Read in the oca_cert
+        if (sev::read_file(oca_cert_file, &oca_cert, sizeof(sev_cert)) != sizeof(sev_cert)) {
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
 
         // Just used to confirm afterwards that the cert chain has changed
         cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh_cert_mem, cert_chain_mem);
         if (cmd_ret != 0)
             break;
 
-        // Run the PEK certificate signing request
-        cmd_ret = m_sev_device->pek_csr(pek_csr_data, pek_mem, &pek_csr);
-        if (cmd_ret != 0)
-            break;
-
         // Run the pek_cert_import command
-        cmd_ret = m_sev_device->pek_cert_import(pek_cert_import_data, &pek_csr, oca_priv_key_file);
+        cmd_ret = m_sev_device->pek_cert_import(pek_cert_import_data, &signed_pek_csr, &oca_cert);
         if (cmd_ret != 0)
             break;
 
@@ -240,17 +252,68 @@ int Command::pek_cert_import(std::string oca_priv_key_file)
         if (0 != memcmp(pdh_cert_export_data2, pdh_cert_export_data, sizeof(sev_pdh_cert_export_cmd_buf)))
             break;
 
-        printf("PEK Cert Import SUCCESS!!!\n");
+        printf("PEK Cert Import SUCCESS.\n");
     } while (0);
 
     // Free memory
     delete pdh_cert_mem;
     delete cert_chain_mem;
-    delete pek_mem;
     delete pdh_cert_mem2;
     delete cert_chain_mem2;
 
     return (int)cmd_ret;
+}
+
+int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_file)
+{
+    int cmd_ret = ERROR_UNSUPPORTED;
+
+    EVP_PKEY *oca_priv_key = NULL;
+    sev_cert oca_cert;
+    SEVCert cert_obj(&oca_cert);
+    sev_cert pek_csr;
+
+    std::string pek_oca_path = m_output_folder + OCA_FILENAME;
+    std::string pek_csr_signed_path = m_output_folder + SIGNED_PEK_CSR_FILENAME;
+
+    do {
+        // Read in the pek_csr (has sev_cert format)
+        if (sev::read_file(pek_csr_file, &pek_csr, sizeof(sev_cert)) != sizeof(sev_cert)) {
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
+        SEVCert csr_obj(&pek_csr);
+        if (csr_obj.validate_pek_csr() != STATUS_SUCCESS) {
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
+
+        // Import the OCA pem file and turn it into an sev_cert
+        if (!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key)) {
+            printf("Error importing OCA Priv Key\n");
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
+        if (!cert_obj.create_oca_cert(&oca_priv_key, SEV_SIG_ALGO_ECDSA_SHA256)) {
+            printf("Error creating OCA cert\n");
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
+
+        // Sign CSR
+        if (!csr_obj.sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_PEK, SEV_SIG_ALGO_ECDSA_SHA256,
+                              &oca_priv_key, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256)) {
+            printf("Error self-signing OCA cert.\n");
+            cmd_ret = ERROR_INVALID_CERTIFICATE;
+            break;
+        }
+
+        sev::write_file(pek_oca_path, (void *)&oca_cert, sizeof(oca_cert));
+        sev::write_file(pek_csr_signed_path, (void *)&pek_csr, sizeof(pek_csr));
+        cmd_ret = STATUS_SUCCESS;
+    } while (0);
+    EVP_PKEY_free(oca_priv_key);
+    return cmd_ret;
 }
 
 // Must always pass in 128 bytes array, because of Linux /dev/sev ioctl
@@ -354,9 +417,28 @@ int Command::set_externally_owned(std::string oca_priv_key_file)
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device->set_externally_owned(oca_priv_key_file);
+    std::string pek_oca_path = m_output_folder + OCA_FILENAME;
+    std::string pek_csr_signed_path = m_output_folder + SIGNED_PEK_CSR_FILENAME;
+    std::string pek_csr_hex_path = m_output_folder + PEK_CSR_HEX_FILENAME;
 
-    return (int)cmd_ret;
+    // set self-owned before exporting PEK CSR
+    cmd_ret = set_self_owned();
+    if (cmd_ret != STATUS_SUCCESS)
+        return cmd_ret;
+
+    // export PEK CSR
+    cmd_ret = pek_csr();
+    if (cmd_ret != STATUS_SUCCESS)
+        return cmd_ret;
+
+    // sign PEK CSR
+    cmd_ret = sign_pek_csr(pek_csr_hex_path, oca_priv_key_file);
+    if (cmd_ret != STATUS_SUCCESS)
+        return cmd_ret;
+
+    // import CSR
+    cmd_ret = pek_cert_import(pek_csr_signed_path, pek_oca_path);
+    return cmd_ret;
 }
 
 int Command::generate_cek_ask(void)
@@ -711,9 +793,9 @@ int Command::validate_cert_chain(void)
             break;
 
         // Temp structs because they are class functions
-        SEVCert tmp_sev_cek(cek);   // Pass in child cert in constructor
-        SEVCert tmp_sev_pek(pek);
-        SEVCert tmp_sev_pdh(pdh);
+        SEVCert tmp_sev_cek(&cek);   // Pass in child cert in constructor
+        SEVCert tmp_sev_pek(&pek);
+        SEVCert tmp_sev_pdh(&pdh);
         AMDCert tmp_amd;
 
         // Validate the ARK
@@ -768,12 +850,12 @@ int Command::generate_launch_blob(uint32_t policy)
     memset(&session_data_buf, 0, sizeof(sev_session_buf));
 
     do {
-        // Read in the PDH (Platform Owner Diffie-Hellman Public Key)
+        // Read in the PDH (Platform Diffie-Hellman Public Key)
         if (sev::read_file(pdh_full, &pdh, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
         // Launch Start needs the GODH Pubkey as a cert, so need to create it
-        SEVCert cert_obj(godh_pubkey_cert);
+        SEVCert cert_obj(&godh_pubkey_cert);
 
         // Generate a new GODH Public/Private keypair
         if (!generate_ecdh_key_pair(&godh_key_pair)) {
@@ -866,7 +948,7 @@ int Command::package_secret(void)
         if (sev::read_file(secret_file, secret_mem, secret_size) != secret_size)
             break;
 
-        // Read in the blob to import the TEK
+        // Read in the PEK to obtain API major/minor version
         // printf("Attempting to read in PEK file to get the API Maj/Min versions\n");
         if (sev::read_file(pek_file, &pek, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
@@ -944,7 +1026,7 @@ int Command::validate_attestation(void)
         // Build up a pek_pub_key so we can verify the signature on the report
         sev_cert dummy;
         memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-        SEVCert temp_obj(dummy);                // TODO. Hack b/c just want to call function later
+        SEVCert temp_obj(&dummy);               // TODO. Hack b/c just want to call function later
 
         // New up the pek_pub_key
         if (!(pek_pub_key = EVP_PKEY_new()))
@@ -1231,27 +1313,27 @@ bool Command::derive_master_secret(aes_128_key master_secret,
 
     sev_cert dummy;
     memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-    SEVCert temp_obj(dummy);                // TODO. Hack b/c just want to call function later
+    SEVCert temp_obj(&dummy);                // TODO. Hack b/c just want to call function later
     bool ret = false;
-    EVP_PKEY *plat_owner_pub_key = NULL;    // Platform owner public key
+    EVP_PKEY *plat_pub_key = NULL;    // Platform public key
     size_t shared_key_len = 0;
 
     do {
-        // New up the Platform Owner's public EVP_PKEY
-        if (!(plat_owner_pub_key = EVP_PKEY_new()))
+        // New up the Platform's public EVP_PKEY
+        if (!(plat_pub_key = EVP_PKEY_new()))
             break;
 
         // Get the friend's Public EVP_PKEY from the certificate
         // This function allocates memory and attaches an EC_Key
         //  to your EVP_PKEY so, to prevent mem leaks, make sure
         //  the EVP_PKEY is freed at the end of this function
-        if (temp_obj.compile_public_key_from_certificate(pdh_public, plat_owner_pub_key) != STATUS_SUCCESS)
+        if (temp_obj.compile_public_key_from_certificate(pdh_public, plat_pub_key) != STATUS_SUCCESS)
             break;
 
         // Calculate the shared secret
         // This function is allocating memory for this uint8_t[],
         //  must free it at the end of this function
-        uint8_t *shared_key = calculate_shared_secret(godh_priv_key, plat_owner_pub_key, shared_key_len);
+        uint8_t *shared_key = calculate_shared_secret(godh_priv_key, plat_pub_key, shared_key_len);
         if (!shared_key)
             break;
 
@@ -1268,7 +1350,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
     } while (0);
 
     // Free memory
-    EVP_PKEY_free(plat_owner_pub_key);
+    EVP_PKEY_free(plat_pub_key);
 
     return ret;
 }
