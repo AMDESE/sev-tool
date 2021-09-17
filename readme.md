@@ -1,7 +1,7 @@
 # How to Download and Run SEV-Tool
 &nbsp;
-Version: v19
-Updated: 2021-09-09
+Version: v20
+Updated: 2021-09-17
 &nbsp;
 &nbsp;
 
@@ -43,7 +43,7 @@ Updated: 2021-09-09
     Note: You might also see a dmesg line noting that "Direct firmware load for amd/sev.fw failed with error -2". This just means that the firmware file is not there for the ccp driver to run the Download_Firmware command on startup, and you will be running with the SEV firmware that is provided in the BIOS. This is totally normal.
   - Note if running Linux, it is recommended that your OS come with a Kernel that supports SEV by default (Ubuntu 18.10 or later, etc) to have the latest Kernel headers and libc. If you start with an older Kernel and use a Kernel upgrade utility (ex: ukuu in Ubuntu) to update the Kernel manually, this will give you the newest Kernel headers, but you will have an old version of libc, which processed the older Kernel headers, not the new ones. It’s (probably) possible to update libc and have it process the new Kernel Headers, but it’s a lot of work.
 #### User Space Requirements
-  - OpenSSL 1.1.0 or newer is required to compile the SEV-Tool.
+  - OpenSSL 1.1.1 or newer is required to compile the SEV-Tool. Not that OpenSSL 3.x changed the RSA is handled and is not currently supported.
   - Ubuntu 16.04's user space only officially supports OpenSSL 1.0.x. It is possible to manually download and install the OpenSSL libraries to work around this issue. Go to the following links to download the packages and run the following command to install them.
     - https://packages.ubuntu.com/bionic-updates/amd64/libssl-dev/download
     - https://packages.ubuntu.com/bionic-updates/amd64/libssl1.1/download
