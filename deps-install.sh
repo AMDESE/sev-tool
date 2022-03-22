@@ -21,7 +21,6 @@ NEED_DEPS=0
 INSTALLER=""
 SSL_DEV=""
 AUTO_CONF="autoconf"
-LIBVIRT_NAME="libvirt-devel"
 UUID_NAME="libuuid-devel"
 
 # Set to 1 to enable debugging or pass -d or --debug.
@@ -76,7 +75,6 @@ find_distribution_details()
 
 		INSTALLER="apt-get"
 		SSL_DEV="libssl-dev"
-		LIBVIRT_NAME="libvirt-dev"
 		UUID_NAME="uuid-dev"
 		GCC_CPP="g++"
 	elif [ "$(echo ${DIST_BASE} | grep 'fedora')" != "" ] ||
@@ -91,14 +89,13 @@ find_distribution_details()
 	else
 		debug $LINENO ":" "Regular expression could not match: \n" "${OS_RELEASE}"
 		echo "Distribution not recognized. Please manually install "\
-			"libelf libraries, libvirt-devel, make, zip, gcc, g++, git, wget, automake, autoconf, and libssl-dev." >&2
+			"libelf libraries, make, zip, gcc, g++, git, wget, automake, autoconf, and libssl-dev." >&2
 		exit 1
 	fi
 
 	debug $LINENO ":" "INSTALLER    => ${INSTALLER}"
 	debug $LINENO ":" "SSL_DEV      => ${SSL_DEV}"
 	debug $LINENO ":" "GCC_CPP      => ${GCC_CPP}"
-	debug $LINENO ":" "LIBVIRT_NAME => ${LIBVIRT_NAME}"
 	debug $LINENO ":" "UUID_NAME    => ${UUID_NAME}"
 }
 
@@ -130,7 +127,6 @@ check_dependencies()
 		[ "$(rpm -q 'gcc' 2>&1 | grep 'not installed')" != "" ]            ||
 		[ "$(rpm -q 'zip' 2>&1 | grep 'not installed')" != "" ]            ||
 		[ "$(rpm -q 'wget' 2>&1 | grep 'not installed')" != "" ]           ||
-		[ "$(rpm -q ${LIBVIRT_NAME} 2>&1 | grep 'not installed')" != "" ]  ||
 		[ "$(rpm -q ${UUID_NAME} 2>&1 | grep 'not installed')" != "" ]     ||
 		[ "$(rpm -q 'automake' 2>&1 | grep 'not installed')" != "" ]       ||
 		[ "$(rpm -q ${AUTO_CONF} 2>&1 | grep 'not installed')" != "" ]     ||
@@ -153,7 +149,6 @@ check_dependencies()
 		[ "$(dpkg -l 'gcc' 2>&1 | grep 'no packages')" != "" ]            ||
 		[ "$(dpkg -l 'zip' 2>&1 | grep 'no packages')" != "" ]            ||
 		[ "$(dpkg -l 'wget' 2>&1 | grep 'no packages')" != "" ]           ||
-		[ "$(dpkg -l ${LIBVIRT_NAME} 2>&1 | grep 'no packages')" != "" ]  ||
 		[ "$(dpkg -l ${UUID_NAME} 2>&1 | grep 'no packages')" != "" ]     ||
 		[ "$(dpkg -l 'automake' 2>&1 | grep 'no packages')" != "" ]       ||
 		[ "$(dpkg -l ${AUTO_CONF} 2>&1 | grep 'no packages')" != "" ]     ||
@@ -252,7 +247,7 @@ check_ssl()
 
 				# Add local ssl libraries to the src Makefile.am
 				echo "SSL_DIR=../openssl" >> src/Makefile.am
-				echo "sevtool_LDADD = \$(SSL_DIR)/libcrypto.a -ldl -lvirt -lvirt-qemu -luuid" >> src/Makefile.am
+				echo "sevtool_LDADD = \$(SSL_DIR)/libcrypto.a -ldl -luuid" >> src/Makefile.am
 				echo "sevtool_CXXFLAGS += -isystem \$(SSL_DIR)/include -isystem \$(SSL_DIR)" >> src/Makefile.am
 				;;
 			*)
@@ -305,8 +300,8 @@ main()
 			[yY]*)
 				debug $LINENO ":" "User responded with YES."
 				debug $LINENO ":" "Running Command: \"sudo ${INSTALLER} install -y git make gcc "\
-					"zip wget ${LIBVIRT_NAME} ${UUID_NAME} automake ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}\""
-				sudo ${INSTALLER} install -y git make gcc zip wget ${UUID_NAME} ${LIBVIRT_NAME} automake ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}
+					"zip wget ${UUID_NAME} automake ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}\""
+				sudo ${INSTALLER} install -y git make gcc zip wget ${UUID_NAME} automake ${AUTO_CONF} ${SSL_DEV} ${GCC_CPP}
 				;;
 			*)
 				debug $LINENO ":" "User responded with no."

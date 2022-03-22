@@ -11,7 +11,7 @@ sevtool_SOURCES += sevcore_win.cpp
 endif
 
 # linked libraries
-sevtool_LDADD = -lcrypto -lssl -lvirt -lvirt-qemu -luuid
+sevtool_LDADD = -lcrypto -lssl -luuid
 
 # Compilation flags
 sevtool_CXXFLAGS = -g -Wall -Wextra -Wconversion -pthread -std=c++11 -I../lib
