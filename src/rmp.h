@@ -331,7 +331,17 @@ typedef struct snp_attestation_report
     snp_tcb_version_t reported_tcb; /* 180h */
     uint8_t reserved3[0x1A0-0x188]; /* 188h-19Fh */
     uint8_t chip_id[64];            /* 1A0h */
-    uint8_t reserved4[0x2A0-0x1E0]; /* 1E0h */
+    uint64_t committed_tcb;         /* 1E0h */
+    uint8_t current_build;          /* 1E8h */
+    uint8_t current_minor;          /* 1E9h */
+    uint8_t current_major;          /* 1EAh */
+    uint8_t reserved4;              /* 1EBh */
+    uint8_t committed_build;         /* 1ECh */
+    uint8_t committed_minor;         /* 1EDh */
+    uint8_t committed_major;         /* 1EEh */
+    uint8_t reserved5;              /* 1EFh */
+    uint64_t launch_tcb;            /* 1F0h */
+    uint8_t reserved6[0x2A0-0x1F8];  /* 1F8h-29Fh */
     uint8_t signature[0x4A0-0x2A0]; /* 2A0h-49Fh */
 } __attribute__((packed)) snp_attestation_report_t;
 static_assert(sizeof(snp_attestation_report_t) == 0x4A0, "Error, static assertion failed");
