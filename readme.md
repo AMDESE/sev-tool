@@ -53,14 +53,14 @@ Updated: 2021-09-17
 
 ## Downloading the SEV-Tool
 1. Boot into a Kernel that supports SEV (see above to confirm your Kernel supports SEV)
-2. Install git, make, gcc, g++, libvirt-dev, and openssl dependencies
+2. Install git, make, gcc, g++, and openssl dependencies
    - In most cases, you can run `deps-install.sh`.
      ```sh
      $ sh deps-install.sh
      ```
    - If you would like to manually install dependencies, and are running Debian, Ubuntu
      ```sh
-     $ sudo apt install git make gcc g++ libvirt-dev -y --allow-unauthenticated
+     $ sudo apt install git make gcc g++ -y --allow-unauthenticated
      ```
     - Otherwise, use the method that is supported by your OS
 2. The Github is located at: [SEV-Tool Github](https://github.com/AMDESE/SEV-Tool). Do a git clone with SSH
