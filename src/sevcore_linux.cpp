@@ -142,6 +142,7 @@ int sev::get_ask_ark_pem(const std::string output_folder, const std::string cert
                          const std::string ask_file, const std::string ark_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
+    struct stat file_details;
     std::string cmd = "wget ";
     std::string output = "";
     std::string cert_chain_w_path = output_folder + cert_chain_file;
@@ -175,6 +176,17 @@ int sev::get_ask_ark_pem(const std::string output_folder, const std::string cert
             printf("Error: command to get ask_ark cert failed\n");
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
+        }
+
+        // Create the required SEV assets directory if it doesn't exist.
+        if (stat(SEV_DEFAULT_DIR.c_str(), &file_details) == -1) {
+            if (errno == ENOENT) {
+                if (mkdir(SEV_DEFAULT_DIR.c_str(), 0755) != -1) {
+                    printf("Info: Created missing directory: %s\n", SEV_DEFAULT_DIR);
+                } else {
+                    fprintf(stderr, "Error: Unable to create required directory: %s\n", SEV_DEFAULT_DIR);
+                }
+            }
         }
 
         // Split it from ask_ark into 2 separate pem files
