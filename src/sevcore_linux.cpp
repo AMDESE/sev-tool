@@ -181,7 +181,7 @@ int sev::get_ask_ark_pem(const std::string output_folder, const std::string cert
         // Create the required SEV assets directory if it doesn't exist.
         if (stat(SEV_DEFAULT_DIR.c_str(), &file_details) == -1) {
             if (errno == ENOENT) {
-                if (mkdir(SEV_DEFAULT_DIR.c_str(), 0755) != -1) {
+                if (mkdir(SEV_DEFAULT_DIR.c_str(), 0775) != -1) {
                     printf("Info: Created missing directory: %s\n", SEV_DEFAULT_DIR);
                 } else {
                     fprintf(stderr, "Error: Unable to create required directory: %s\n", SEV_DEFAULT_DIR);
