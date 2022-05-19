@@ -573,7 +573,7 @@ int Command::export_cert_chain(void)
     return (int)cmd_ret;
 }
 
-int Command::generate_all_certs_vcek(const std::string tcb_version)
+int Command::generate_all_certs_vcek(void)
 {
     int cmd_ret = -1;
 
@@ -586,7 +586,7 @@ int Command::generate_all_certs_vcek(const std::string tcb_version)
     do {
         // Generate the vcek from the AMD KDS server
         cmd_ret = m_sev_device->generate_vcek_ask(m_output_folder, vcek_der_file,
-                                                  vcek_pem_file, tcb_version);
+                                                  vcek_pem_file);
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -602,7 +602,7 @@ int Command::generate_all_certs_vcek(const std::string tcb_version)
     return (int)cmd_ret;
 }
 
-int Command::export_cert_chain_vcek(const std::string tcb_version)
+int Command::export_cert_chain_vcek(void)
 {
     int cmd_ret = -1;
     std::string zip_name = CERTS_VCEK_ZIP_FILENAME;
@@ -620,7 +620,7 @@ int Command::export_cert_chain_vcek(const std::string tcb_version)
             break;
         }
 
-        cmd_ret = generate_all_certs_vcek(tcb_version);
+        cmd_ret = generate_all_certs_vcek();
         if (cmd_ret != STATUS_SUCCESS)
             break;
 

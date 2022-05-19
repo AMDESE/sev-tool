@@ -67,8 +67,6 @@ const char help_array[] =  "The following commands are supported:\n" \
                     "  validate_guest_report\n" \
                     "  validate_cert_chain_vcek\n" \
                     "  export_cert_chain_vcek\n" \
-                    "      Input params:\n" \
-                    "          std::string tcb_version\n" \
                     ;
 
 /* Flag set by '--verbose' */
@@ -94,7 +92,7 @@ static struct option long_options[] =
     {"set_externally_owned",     required_argument, 0, 'l'},
     {"generate_cek_ask",         no_argument,       0, 'm'},
     {"export_cert_chain",        no_argument,       0, 'p'},
-    {"export_cert_chain_vcek",   required_argument, 0, 'q'},
+    {"export_cert_chain_vcek",   no_argument,       0, 'q'},
     {"sign_pek_csr",             required_argument, 0, 's'},
     /* Guest Owner commands */
     {"get_ask_ark",              no_argument,       0, 'n'},
@@ -240,15 +238,8 @@ int main(int argc, char **argv)
                 break;
             }
             case 'q': {         // EXPORT_CERT_CHAIN_VCEK
-                optind--;   // Can't use option_index because it doesn't account for '-' flags
-                if (argc - optind != 1) {
-                    printf("Error: Expecting exactly 1 arg for export_cert_chain_vcek\n");
-                    return false;
-                }
-
-                const std::string tcb_version = argv[optind++];
                 Command cmd(output_folder, verbose_flag);
-                cmd_ret = cmd.export_cert_chain_vcek(tcb_version);
+                cmd_ret = cmd.export_cert_chain_vcek();
                 break;
             }
            case 's': {         // SIGN_PEK_CSR

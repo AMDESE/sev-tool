@@ -14,6 +14,7 @@
  * limitations under the License.
  **************************************************************************/
 
+#include "sevapi.h"
 #ifdef __linux__
 #include "sevcore.h"
 #include "utilities.h"
@@ -674,13 +675,13 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
 
 int SEVDevice::generate_vcek_ask(const std::string output_folder,
                                  const std::string vcek_der_file,
-                                 const std::string vcek_pem_file,
-                                 const std::string tcb_version)
+                                 const std::string vcek_pem_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
     sev_user_data_get_id id_buf;
-    std::string cmd = "wget ";
+    char cmd[235];
+    std::string fmt;
     std::string output = "";
     std::string der_cert_w_path = output_folder + vcek_der_file;
     std::string pem_cert_w_path = output_folder + vcek_pem_file;
@@ -688,11 +689,12 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
     // Set struct to 0
     memset(&id_buf, 0, sizeof(sev_user_data_get_id));
 
+    // Zero the memory used for the URL, just in case.
+    memset(&cmd, 0, sizeof(cmd));
+
     do {
-        cmd += "-O " + der_cert_w_path;
-        cmd += " \"";
-        cmd += KDS_VCEK;
-        cmd += "Milan/";
+
+        fmt = "wget -O %s \"%sMilan/%s?blSPL=%02d&teeSPL=%02d&snpSPL=%02d&ucodeSPL=%02d\"";
 
         // Get the ID of the Platform
         // Send the command
@@ -708,33 +710,25 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
         {
             sprintf(id0_buf+strlen(id0_buf), "%02x", id_buf.socket1[i]);
         }
-        cmd += id0_buf;
+
+        // Create a container to store the TCB Version in.
+        snp_tcb_version tcb_data = {.val = 0};
 
         // Get the TCB version of the Platform
-        // (passed in right now, not getting it from SNPPlatformStatus here)
+        request_tcb_data(tcb_data);      
 
-        // Convert the TCB buffer to decimal bytes
-        std::string TCBStringArray[8];
-        TCBStringArray[0] = "blSPL=";
-        TCBStringArray[1] = "teeSPL=";
-        TCBStringArray[2] = "reserved0SPL=";
-        TCBStringArray[3] = "reserved1SPL=";
-        TCBStringArray[4] = "reserved2SPL=";
-        TCBStringArray[5] = "reserved3SPL=";
-        TCBStringArray[6] = "snpSPL=";
-        TCBStringArray[7] = "ucodeSPL=";
-        for (uint8_t i = 0; i < sizeof(snp_tcb_version_t); i++) {
-            TCBStringArray[i] += tcb_version[(i*2)];
-            TCBStringArray[i] += tcb_version[(i*2)+1];
-            printf("%d, %s\n", i, TCBStringArray[i].c_str());
-        }
-
-        cmd += "?";
-        cmd += TCBStringArray[0] + "&" + TCBStringArray[1] + "&" +
-            //    TCBStringArray[2] + "&" + TCBStringArray[3] + "&" +
-            //    TCBStringArray[4] + "&" + TCBStringArray[5] + "&" +
-               TCBStringArray[6] + "&" + TCBStringArray[7];
-        cmd += "\"";
+        // Build the URL string.
+        sprintf(
+            cmd,
+            fmt.c_str(),
+            der_cert_w_path,
+            KDS_VCEK,
+            id0_buf,
+            tcb_data.f.boot_loader,
+            tcb_data.f.tee,
+            tcb_data.f.snp,
+            tcb_data.f.microcode
+        );
 
         // Don't re-download the VCEK from the KDS server if you already have it
         if (sev::get_file_size(pem_cert_w_path) != 0) {
@@ -776,5 +770,28 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
 
     return cmd_ret;
 }
+
+int SEVDevice::request_platform_status(snp_platform_status_buffer &plat_status) {
+    int ioctl_return = 0;
+    snp_platform_status_cmd_buf buf = { .status_p_addr = (uint64_t)&plat_status };
+    sev_ioctl(SEV_SNP_PLATFORM_STATUS, &buf, &ioctl_return);
+
+    return ioctl_return;
+}
+
+void SEVDevice::request_tcb_data(snp_tcb_version &tcb_data) {
+    snp_platform_status_buffer plat_status;
+    int ioctl_return = request_platform_status(plat_status);
+    if (ioctl_return != 0) {
+        fprintf(
+            stderr,
+            "Error: SNP_PLATFORM_STATUS failure: %s\n",
+            std::strerror(ioctl_return)
+        );
+    } else {
+        tcb_data.val = plat_status.tcb_version;
+    }
+}
+
 
 #endif
