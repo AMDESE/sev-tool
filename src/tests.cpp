@@ -844,7 +844,6 @@ bool Tests::test_export_cert_chain_vcek(void)
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
-    const std::string tcb_version = "0000000000000163";
 
     do {
         if (sev::get_device_type() != PSP_DEVICE_TYPE_MILAN) {
@@ -855,7 +854,7 @@ bool Tests::test_export_cert_chain_vcek(void)
 
         printf("*Starting export_cert_chain_vcek tests\n");
 
-        if (cmd.export_cert_chain_vcek(tcb_version) != STATUS_SUCCESS)
+        if (cmd.export_cert_chain_vcek() != STATUS_SUCCESS)
             break;
 
         ret = true;

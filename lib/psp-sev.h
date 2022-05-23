@@ -20,14 +20,20 @@
  */
 enum {
     SEV_FACTORY_RESET = 0,
-    SEV_PLATFORM_STATUS,
-    SEV_PEK_GEN,
-    SEV_PEK_CSR,
-    SEV_PDH_GEN,
-    SEV_PDH_CERT_EXPORT,
-    SEV_PEK_CERT_IMPORT,
+    SEV_PLATFORM_STATUS,   // 0x1
+    SEV_PEK_GEN,           // 0x2
+    SEV_PEK_CSR,           // 0x3
+    SEV_PDH_GEN,           // 0x4
+    SEV_PDH_CERT_EXPORT,   // 0x5
+    SEV_PEK_CERT_IMPORT,   // 0x6
     SEV_GET_ID,    /* This command is deprecated, use SEV_GET_ID2 */
-    SEV_GET_ID2,
+    SEV_GET_ID2,           // 0x8
+
+    // Subject to change. Current info based on the sev-snp-part2 branch AMDESE/Linux fork.
+    // https://github.com/AMDESE/linux/blob/sev-snp-part2-v6/include/uapi/linux/psp-sev.h
+    SEV_SNP_PLATFORM_STATUS,   // 0x9
+    SEV_SNP_SET_EXT_CONFIG,    // 0xA
+    SEV_SNP_GET_EXT_CONFIG,    // 0xB
 
     SEV_MAX,
 };

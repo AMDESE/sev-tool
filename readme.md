@@ -468,7 +468,6 @@ This command calls the get_id command and passes that ID into the AMD KDS server
          ```
 22. export_cert_chain_vcek
      - This command exports all of the certs (VCEK, ASK, ARK) as .pem files and zips them up so that the Platform Owner can send them to the Guest Owner to allow the Guest Owner to validate the vcek cert chain and the SNP guest message's Attestation report from SNP_GUEST_REQUEST. The tool gets the VCEK and ASK_ARK certificates from the AMD KDS server.
-     - Required input args: TCBVersion returned from SNPPlatformStatus as a decimal string
      - Optional input args: --ofolder [folder_path]
          - This allows the user to specify the folder where the tool will export all of the certificates to and the zip folder in
      - Files read in: none
@@ -477,8 +476,7 @@ This command calls the get_id command and passes that ID into the AMD KDS server
      -  Platform/Guest Owner: Platform Owner
      - Example
          ```sh
-         $ sudo ./sevtool --ofolder ./certs --export_cert_chain_vcek [tcb_version]
-         $ sudo ./sevtool --ofolder ./certs --export_cert_chain_vcek 0000000000000163
+         $ sudo ./sevtool --ofolder ./certs --export_cert_chain_vcek
          ```
 
 ## Running tests

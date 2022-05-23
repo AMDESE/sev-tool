@@ -17,6 +17,8 @@
 #ifndef SEVCORE_H
 #define SEVCORE_H
 
+#include "rmp.h"
+#include "sevapi.h"
 #include "sevcert.h"
 #include <cstddef>
 #include <cstring>
@@ -136,8 +138,9 @@ public:
                          const std::string cert_file);
     int generate_vcek_ask(const std::string output_folder,
                           const std::string vcek_der_file,
-                          const std::string vcek_pem_file,
-                          const std::string tcb_version);
+                          const std::string vcek_pem_file);
+    int request_platform_status(snp_platform_status_buffer &plat_status);
+    void request_tcb_data(snp_tcb_version &tcb_data);
 };
 
 #endif /* SEVCORE_H */
