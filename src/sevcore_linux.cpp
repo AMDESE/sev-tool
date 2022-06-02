@@ -715,13 +715,13 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
         snp_tcb_version tcb_data = {.val = 0};
 
         // Get the TCB version of the Platform
-        request_tcb_data(tcb_data);      
+        request_tcb_data(tcb_data);
 
         // Build the URL string.
         sprintf(
             cmd,
             fmt.c_str(),
-            der_cert_w_path,
+            der_cert_w_path.c_str(),
             KDS_VCEK,
             id0_buf,
             tcb_data.f.boot_loader,
