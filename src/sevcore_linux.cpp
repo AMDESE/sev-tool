@@ -37,9 +37,9 @@ void sev::get_family_model(uint32_t *family, uint32_t *model)
     std::string fam_str = "";
     std::string model_str = "";
 
-    cmd = "lscpu | grep -E \"CPU family:\" | awk {'print $3'}";
+    cmd = "lscpu | grep -E \"^CPU family:\" | awk {'print $3'}";
     sev::execute_system_command(cmd, &fam_str);
-    cmd = "lscpu | grep -E \"Model:\" | awk {'print $2'}";
+    cmd = "lscpu | grep -E \"^Model:\" | awk {'print $2'}";
     sev::execute_system_command(cmd, &model_str);
 
     *family = std::stoi(fam_str, NULL, 10);
