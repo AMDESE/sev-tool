@@ -545,7 +545,7 @@ int SEVDevice::sys_info()
     printf("Firmware Version: %s\n", build_info.c_str());
 
     sev::get_family_model(&family, &model);
-    printf("Platform Family %02x, Model %02x\n", family, model);
+    printf("Platform Family 0x%02x, Model 0x%02x\n", family, model);
 
     printf("-------------------------------------------------------------\n\n");
 
