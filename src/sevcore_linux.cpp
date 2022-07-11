@@ -37,9 +37,9 @@ void sev::get_family_model(uint32_t *family, uint32_t *model)
     std::string fam_str = "";
     std::string model_str = "";
 
-    cmd = "lscpu | grep -E \"CPU family:\" | awk {'print $3'}";
+    cmd = "lscpu | grep -E \"^CPU family:\" | awk {'print $3'}";
     sev::execute_system_command(cmd, &fam_str);
-    cmd = "lscpu | grep -E \"Model:\" | awk {'print $2'}";
+    cmd = "lscpu | grep -E \"^Model:\" | awk {'print $2'}";
     sev::execute_system_command(cmd, &model_str);
 
     *family = std::stoi(fam_str, NULL, 10);
@@ -545,7 +545,7 @@ int SEVDevice::sys_info()
     printf("Firmware Version: %s\n", build_info.c_str());
 
     sev::get_family_model(&family, &model);
-    printf("Platform Family %02x, Model %02x\n", family, model);
+    printf("Platform Family 0x%02x, Model 0x%02x\n", family, model);
 
     printf("-------------------------------------------------------------\n\n");
 
