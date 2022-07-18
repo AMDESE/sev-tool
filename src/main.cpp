@@ -298,17 +298,17 @@ int main(int argc, char **argv)
                 break;
             }
             case 'x': {         // VALIDATE_ATTESTATION
-                Command cmd(output_folder, verbose_flag);
+                Command cmd(output_folder, verbose_flag, CCP_NOT_REQ);
                 cmd_ret = cmd.validate_attestation();
                 break;
             }
             case 'y': {         // VALIDATE_GUEST_REPORT
-                Command cmd(output_folder, verbose_flag);
+                Command cmd(output_folder, verbose_flag, CCP_NOT_REQ);
                 cmd_ret = cmd.validate_guest_report();
                 break;
             }
             case 'z': {         // VALIDATE_CERT_CHAIN_VCEK
-                Command cmd(output_folder, verbose_flag);
+                Command cmd(output_folder, verbose_flag, CCP_NOT_REQ);
                 cmd_ret = cmd.validate_cert_chain_vcek();
                 break;
             }
