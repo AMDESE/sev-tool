@@ -771,17 +771,19 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
     return cmd_ret;
 }
 
-int SEVDevice::request_platform_status(snp_platform_status_buffer &plat_status) {
-    int ioctl_return = 0;
-    snp_platform_status_cmd_buf buf = { .status_p_addr = (uint64_t)&plat_status };
-    sev_ioctl(SEV_SNP_PLATFORM_STATUS, &buf, &ioctl_return);
+int SEVDevice::request_platform_status(snp_platform_status_buffer *plat_status) {
+    int cmd_ret = SEV_RET_UNSUPPORTED;
 
-    return ioctl_return;
+    memset(plat_status, 0, sizeof(snp_platform_status_buffer));
+
+    sev_ioctl(SEV_SNP_PLATFORM_STATUS, plat_status, &cmd_ret);
+
+    return cmd_ret;
 }
 
 void SEVDevice::request_tcb_data(snp_tcb_version &tcb_data) {
     snp_platform_status_buffer plat_status;
-    int ioctl_return = request_platform_status(plat_status);
+    int ioctl_return = request_platform_status(&plat_status);
     if (ioctl_return != 0) {
         fprintf(
             stderr,
