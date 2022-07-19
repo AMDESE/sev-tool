@@ -11,8 +11,21 @@ dnl in this dir (build-aux)
 AC_CONFIG_AUX_DIR(build-aux)
 
 dnl Check that OpenSSL is >= 1.1.0 by looking for version specific APIs
-AC_SEARCH_LIBS(EVP_PKEY_base_id, crypto, [],
-			   [AC_MSG_ERROR([Incompatible version of OpenSSL found])])
+dnl OpenSSL 1.1.1.x uses EVP_PKEY_base_id
+dnl OpenSSL 3.0.x renamed to EVP_PKEY_get_base_id
+AC_SEARCH_LIBS(
+	EVP_PKEY_base_id,
+	crypto,
+	[],
+	[AC_SEARCH_LIBS(
+		EVP_PKEY_get_base_id,
+		crypto,
+		[],
+		[AC_MSG_ERROR(
+			[Incompatible version of OpenSSL found]
+		)]
+	)]
+)
 
 dnl Commented out because we are currently using sev-tool/lib/psp-sev.h
 dnl
