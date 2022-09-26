@@ -82,7 +82,7 @@ Updated: 2021-09-17
      ```sh
      $ cd sev-tool
      $ git pull
-     $ autoreconf -vif && ./configure && make
+     $ autoreconf -vif && ./configure && make && mv src/sevtool .
      ```
 2. Run the tool with the help flag (-h or --help):
      ```sh
