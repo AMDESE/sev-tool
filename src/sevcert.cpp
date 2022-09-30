@@ -575,8 +575,12 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
             if ((parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
                 (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
                 uint32_t sig_len = parent_cert->pub_key.rsa.modulus_size/8; // Should be child_cert but SEV_RSA_SIG doesn't have a size param
-                uint8_t decrypted[parent_cert->pub_key.rsa.modulus_size] = {0}; // TODO wrong length
-                uint8_t signature[parent_cert->pub_key.rsa.modulus_size] = {0};
+                uint8_t decrypted[parent_cert->pub_key.rsa.modulus_size]; // TODO wrong length
+                uint8_t signature[parent_cert->pub_key.rsa.modulus_size];
+                for(auto &i : decrypted)
+                    i = 0;
+                for(auto &i : signature)
+                    i = 0;
 
                 RSA *rsa_pub_key = EVP_PKEY_get1_RSA(parent_signing_key);   // Signer's (parent's) public key
                 if (!rsa_pub_key) {

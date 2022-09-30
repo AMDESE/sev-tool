@@ -347,8 +347,12 @@ int Command::get_id(void)
     cmd_ret = m_sev_device->get_id(data, id_mem, 2*default_id_length);
 
     if (cmd_ret == STATUS_SUCCESS) {
-        char id0_buf[default_id_length*2+1] = {0};  // 2 chars per byte +1 for null term
-        char id1_buf[default_id_length*2+1] = {0};
+        char id0_buf[default_id_length*2+1];  // 2 chars per byte +1 for null term
+        char id1_buf[default_id_length*2+1];
+        for(auto &i : id0_buf)
+            i = 0;
+        for(auto &i : id1_buf)
+            i = 0;
         for (uint8_t i = 0; i < default_id_length; i++) {
             sprintf(id0_buf+strlen(id0_buf), "%02x", ((uint8_t *)(data_buf->id_p_addr))[i]);
             sprintf(id1_buf+strlen(id1_buf), "%02x", ((uint8_t *)(data_buf->id_p_addr))[i+default_id_length]);
