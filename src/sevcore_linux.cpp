@@ -342,7 +342,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_pek_csr *data_buf = (sev_user_data_pek_csr *)data;
+    auto *data_buf = (sev_user_data_pek_csr *)data;
     SEVCert csr_obj(csr);
 
     // Set struct to 0
@@ -397,7 +397,7 @@ int SEVDevice::pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_pdh_cert_export *data_buf = (sev_user_data_pdh_cert_export *)data;
+    auto *data_buf = (sev_user_data_pdh_cert_export *)data;
 
     // Set struct to 0
     memset(data_buf, 0, sizeof(sev_user_data_pdh_cert_export));
@@ -423,7 +423,7 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *signed_pek_csr,
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_pek_cert_import *data_buf = (sev_user_data_pek_cert_import *)data;
+    auto *data_buf = (sev_user_data_pek_cert_import *)data;
     memset(data_buf, 0, sizeof(sev_user_data_pek_cert_import));
 
     do {
@@ -489,7 +489,7 @@ std::string SEVDevice::display_build_info(void)
 {
     SEVDevice sev_device;
     uint8_t status_data[sizeof(sev_platform_status_cmd_buf)];
-    sev_platform_status_cmd_buf *status_data_buf = (sev_platform_status_cmd_buf *)&status_data;
+    auto *status_data_buf = (sev_platform_status_cmd_buf *)&status_data;
     int cmd_ret = -1;
 
     std::string api_major_ver = "API_Major: xxx";

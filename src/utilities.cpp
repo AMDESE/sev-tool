@@ -56,7 +56,7 @@ size_t sev::read_file(const std::string file_name, void *buffer, size_t len)
         printf("read_file Error: Input length too long\n");
         return 0;
     }
-    std::streamsize slen = (std::streamsize)len;
+    auto slen = (std::streamsize)len;
 
     if (!file.is_open()) {
         printf("read_file Error: Could not open file. " \
@@ -66,7 +66,7 @@ size_t sev::read_file(const std::string file_name, void *buffer, size_t len)
     }
 
     file.read((char *)buffer, slen);
-    size_t count = (size_t)file.gcount();
+    auto count = (size_t)file.gcount();
     file.close();
 
     return count;
@@ -84,7 +84,7 @@ size_t sev::write_file(const std::string file_name, const void *buffer, size_t l
         printf("write_file Error: Input length too long\n");
         return 0;
     }
-    std::streamsize slen = (std::streamsize)len;
+    auto slen = (std::streamsize)len;
 
     if (!file.is_open()) {
         printf("write_file Error: Could not open/create file. " \
@@ -126,7 +126,7 @@ void sev::gen_random_bytes(void *bytes, size_t num_bytes)
     if (num_gen_bytes != (ssize_t)num_bytes) {
         printf("Warning: getrandom failed. Generating random bytes manually\n");
         // Do it manually
-        uint8_t *addr = (uint8_t *)bytes;
+        auto *addr = (uint8_t *)bytes;
         srand((unsigned int)time(nullptr));
         while (num_bytes--) {
             *addr++ = (uint8_t)(rand() & 0xff);

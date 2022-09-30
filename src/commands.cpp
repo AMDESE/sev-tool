@@ -58,7 +58,7 @@ int Command::factory_reset(void)
 int Command::platform_status(void)
 {
     uint8_t data[sizeof(sev_platform_status_cmd_buf)];
-    sev_platform_status_cmd_buf *data_buf = (sev_platform_status_cmd_buf *)&data;
+    auto *data_buf = (sev_platform_status_cmd_buf *)&data;
     int cmd_ret = -1;
 
     cmd_ret = m_sev_device->platform_status(data);
@@ -102,7 +102,7 @@ int Command::pek_csr(void)
     std::string pek_csr_hex_path = m_output_folder + PEK_CSR_HEX_FILENAME;
 
     // Populate PEKCSR buffer with CSRLength = 0
-    sev_cert *pek_mem = new sev_cert_t;
+    auto *pek_mem = new sev_cert_t;
     sev_cert pek_csr;
 
     if (!pek_mem)
@@ -160,8 +160,8 @@ int Command::pdh_cert_export(void)
     std::string cc_readable_path  = m_output_folder + CERT_CHAIN_READABLE_FILENAME;
     std::string cc_path           = m_output_folder + CERT_CHAIN_HEX_FILENAME;
 
-    sev_cert *pdh_cert_mem = new sev_cert_t;
-    sev_cert_chain_buf_t *cert_chain_mem = new sev_cert_chain_buf_t();
+    auto *pdh_cert_mem = new sev_cert_t;
+    auto *cert_chain_mem = new sev_cert_chain_buf_t();
 
     if (!pdh_cert_mem || !cert_chain_mem)
         return -1;
@@ -201,8 +201,8 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
     // Initial PDH cert chain export, so we can confirm that it
     // changed after running the pek_cert_import
     uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
-    sev_cert *pdh_cert_mem = new sev_cert_t;
-    sev_cert_chain_buf *cert_chain_mem = new sev_cert_chain_buf_t;
+    auto *pdh_cert_mem = new sev_cert_t;
+    auto *cert_chain_mem = new sev_cert_chain_buf_t;
 
     // The signed CSR
     sev_cert signed_pek_csr;
@@ -214,8 +214,8 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
     // Afterwards PDH cert chain export, to verify that the certs
     // have changed after running pek_cert_import
     uint8_t pdh_cert_export_data2[sizeof(sev_pdh_cert_export_cmd_buf)]; // pdh_cert_export
-    sev_cert *pdh_cert_mem2 = new sev_cert_t;
-    sev_cert_chain_buf *cert_chain_mem2 = new sev_cert_chain_buf_t;
+    auto *pdh_cert_mem2 = new sev_cert_t;
+    auto *cert_chain_mem2 = new sev_cert_chain_buf_t;
 
     do {
         if (!pdh_cert_mem || !cert_chain_mem || !pdh_cert_mem2 || !cert_chain_mem2) {
@@ -324,7 +324,7 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
 int Command::get_id(void)
 {
     uint8_t data[sizeof(sev_get_id_cmd_buf)];
-    sev_get_id_cmd_buf *data_buf = (sev_get_id_cmd_buf *)&data;
+    auto *data_buf = (sev_get_id_cmd_buf *)&data;
     int cmd_ret = -1;
     uint32_t default_id_length = 0;
     std::string id0_path = m_output_folder + GET_ID_S0_FILENAME;
@@ -474,8 +474,8 @@ int Command::generate_all_certs(void)
 {
     int cmd_ret = -1;
     uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
-    sev_cert_t *pdh = new sev_cert_t;
-    sev_cert_chain_buf *cert_chain = new sev_cert_chain_buf_t; // PEK, OCA, CEK
+    auto *pdh = new sev_cert_t;
+    auto *cert_chain = new sev_cert_chain_buf_t; // PEK, OCA, CEK
     amd_cert ask;
     amd_cert ark;
 
@@ -1019,7 +1019,7 @@ int Command::validate_attestation(void)
             break;
         }
         uint8_t report_mem[report_size];
-        attestation_report *report = (attestation_report *)report_mem;
+        auto *report = (attestation_report *)report_mem;
 
         // Read in the report
         // printf("Attempting to read in Report file\n");
@@ -1083,7 +1083,7 @@ int Command::validate_guest_report(void)
             break;
         }
         uint8_t report_mem[report_size];
-        snp_attestation_report_t *report = (snp_attestation_report_t *)report_mem;
+        auto *report = (snp_attestation_report_t *)report_mem;
 
         // Read in the report
         // printf("Attempting to read in Report file\n");
@@ -1203,7 +1203,7 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
     uint8_t prf_out[NIST_KDF_H_BYTES];      // Buffer to collect PRF output
 
     // length in bits of derived key
-    uint32_t l = (uint32_t)(key_out_length * BITS_PER_BYTE);
+    auto l = (uint32_t)(key_out_length * BITS_PER_BYTE);
 
     // number of iterations to produce enough derived key bits
     uint32_t n = ((l - 1) / NIST_KDF_H) + 1;
@@ -1514,7 +1514,7 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
     const uint8_t meas_ctx = 0x01;
     sev_hdr_buf header;
     uint32_t measurement_length = sizeof(header.mac);
-    const uint32_t buf_len = (uint32_t)buffer_len;
+    const auto buf_len = (uint32_t)buffer_len;
 
     memcpy(header.iv, iv, sizeof(iv_128));
     header.flags = hdr_flags;

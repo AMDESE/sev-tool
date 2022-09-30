@@ -38,7 +38,7 @@ bool kdf(uint8_t *key_out,       size_t key_out_length,
     uint8_t prf_out[NIST_KDF_H_BYTES];      // Buffer to collect PRF output
 
     // Length in bits of derived key
-    uint32_t l = (uint32_t)(key_out_length * BITS_PER_BYTE);
+    auto l = (uint32_t)(key_out_length * BITS_PER_BYTE);
 
     // Number of iterations to produce enough derived key bits
     uint32_t n = ((l - 1) / NIST_KDF_H) + 1;
