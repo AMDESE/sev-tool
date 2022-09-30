@@ -89,7 +89,7 @@ int zip_certs(const std::string output_folder, const std::string zip_name,
 // Class to access the special SEV FW API test suite driver.
 class SEVDevice {
 private:
-    int mFd;
+    int mFd{-1};
 
     inline int get_fd(void) { return mFd; }
     int sev_ioctl(int cmd, void *data, int *cmd_ret);
