@@ -17,6 +17,8 @@
 #ifndef TESTS_H
 #define TESTS_H
 
+#include <string>
+
 class Tests {
 private:
     std::string m_output_folder = "";
