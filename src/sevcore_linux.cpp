@@ -29,6 +29,7 @@
 #include <unistd.h>         // for close()
 #include <uuid/uuid.h>
 #include <stdexcept>        // for std::runtime_error()
+#include <memory>
 
 // -------------- Global Functions that don't require ioctls -------------- //
 void sev::get_family_model(uint32_t *family, uint32_t *model)
@@ -392,8 +393,8 @@ int SEVDevice::pdh_gen()
     return (int)cmd_ret;
 }
 
-int SEVDevice::pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
-                               void *cert_chain_mem)
+int SEVDevice::pdh_cert_export(uint8_t *data, sev_cert_t const *pdh_cert_mem,
+                               sev_cert_chain_buf_t const *cert_chain_mem)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;

@@ -124,8 +124,8 @@ public:
     int pek_gen(void);
     int pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr);
     int pdh_gen(void);
-    int pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
-                        void *cert_chain_mem);
+    int pdh_cert_export(uint8_t *data, sev_cert_t const *pdh_cert_mem,
+                               sev_cert_chain_buf_t const *cert_chain_mem);
     int pek_cert_import(uint8_t *data, sev_cert *pek_csr,
                         sev_cert *oca_cert);
     int get_id(void *data, void *id_mem, uint32_t id_length = 0);

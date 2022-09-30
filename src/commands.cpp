@@ -26,6 +26,7 @@
 #include <openssl/x509v3.h>
 #include <stdio.h>          // printf
 #include <stdlib.h>         // malloc
+#include <memory>
 
 Command::Command(void)
        : m_sev_device(&SEVDevice::get_sev_device())
@@ -41,7 +42,7 @@ Command::Command(std::string output_folder, int verbose_flag, ccp_required_t ccp
     // Intentionally Empty
 }
 
-Command::~Command(void)
+Command::~Command()
 {
     //delete m_sev_device;
 }
@@ -102,7 +103,7 @@ int Command::pek_csr(void)
     std::string pek_csr_hex_path = m_output_folder + PEK_CSR_HEX_FILENAME;
 
     // Populate PEKCSR buffer with CSRLength = 0
-    auto *pek_mem = new sev_cert_t;
+    auto pek_mem = std::make_unique<sev_cert_t>();
     sev_cert pek_csr;
 
     if (!pek_mem)
@@ -111,16 +112,14 @@ int Command::pek_csr(void)
     cmd_ret = m_sev_device->platform_status((uint8_t *) &data_buf);
 
     if (cmd_ret != STATUS_SUCCESS) {
-            delete pek_mem;
             return cmd_ret;
     }
     if (data_buf.owner != PLATFORM_STATUS_OWNER_SELF) {
-            delete pek_mem;
             printf("Error: Platform must be self-owned first for the obtaining ownership procedure to work.");
             return -1;
     }
 
-    cmd_ret = m_sev_device->pek_csr(data, pek_mem, &pek_csr);
+    cmd_ret = m_sev_device->pek_csr(data, pek_mem.get(), &pek_csr);
 
     if (cmd_ret == STATUS_SUCCESS) {
         if (m_verbose_flag) {            // Print off the cert to stdout
@@ -135,9 +134,6 @@ int Command::pek_csr(void)
             sev::write_file(pek_csr_hex_path, (void *)&pek_csr, sizeof(pek_csr));
         }
     }
-
-    // Free memory
-    delete pek_mem;
 
     return (int)cmd_ret;
 }
@@ -160,36 +156,32 @@ int Command::pdh_cert_export(void)
     std::string cc_readable_path  = m_output_folder + CERT_CHAIN_READABLE_FILENAME;
     std::string cc_path           = m_output_folder + CERT_CHAIN_HEX_FILENAME;
 
-    auto *pdh_cert_mem = new sev_cert_t;
-    auto *cert_chain_mem = new sev_cert_chain_buf_t();
+    auto pdh_cert_mem = std::make_unique<sev_cert_t>();
+    auto cert_chain_mem = std::make_unique<sev_cert_chain_buf_t>();
 
     if (!pdh_cert_mem || !cert_chain_mem)
         return -1;
 
-    cmd_ret = m_sev_device->pdh_cert_export(data, pdh_cert_mem, cert_chain_mem);
+    cmd_ret = m_sev_device->pdh_cert_export(data, pdh_cert_mem.get(), cert_chain_mem.get());
 
     if (cmd_ret == STATUS_SUCCESS) {
         if (m_verbose_flag) {            // Print off the cert to stdout
             // print_sev_cert_readable((sev_cert *)pdh_cert_mem); printf("\n");
-            print_sev_cert_hex((sev_cert *)pdh_cert_mem); printf("\n");
-            print_cert_chain_buf_readable((sev_cert_chain_buf *)cert_chain_mem);
+            print_sev_cert_hex(pdh_cert_mem.get()); printf("\n");
+            print_cert_chain_buf_readable(cert_chain_mem.get());
         }
         if (m_output_folder != "") {     // Print off the cert to a text file
             std::string PDH_readable = "";
             std::string cc_readable = "";
 
-            print_sev_cert_readable((sev_cert *)pdh_cert_mem, PDH_readable);
-            print_cert_chain_buf_readable((sev_cert_chain_buf *)cert_chain_mem, cc_readable);
+            print_sev_cert_readable(pdh_cert_mem.get(), PDH_readable);
+            print_cert_chain_buf_readable(cert_chain_mem.get(), cc_readable);
             sev::write_file(PDH_readable_path, (void *)PDH_readable.c_str(), PDH_readable.size());
-            sev::write_file(PDH_path, pdh_cert_mem, sizeof(sev_cert));
+            sev::write_file(PDH_path, pdh_cert_mem.get(), sizeof(sev_cert));
             sev::write_file(cc_readable_path, (void *)cc_readable.c_str(), cc_readable.size());
-            sev::write_file(cc_path, cert_chain_mem, sizeof(sev_cert_chain_buf));
+            sev::write_file(cc_path, cert_chain_mem.get(), sizeof(sev_cert_chain_buf));
         }
     }
-
-    // Free memory
-    delete pdh_cert_mem;
-    delete cert_chain_mem;
 
     return (int)cmd_ret;
 }
@@ -201,8 +193,8 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
     // Initial PDH cert chain export, so we can confirm that it
     // changed after running the pek_cert_import
     uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
-    auto *pdh_cert_mem = new sev_cert_t;
-    auto *cert_chain_mem = new sev_cert_chain_buf_t;
+    auto pdh_cert_mem = std::make_unique<sev_cert_t>();
+    auto cert_chain_mem = std::make_unique<sev_cert_chain_buf_t>();
 
     // The signed CSR
     sev_cert signed_pek_csr;
@@ -214,8 +206,8 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
     // Afterwards PDH cert chain export, to verify that the certs
     // have changed after running pek_cert_import
     uint8_t pdh_cert_export_data2[sizeof(sev_pdh_cert_export_cmd_buf)]; // pdh_cert_export
-    auto *pdh_cert_mem2 = new sev_cert_t;
-    auto *cert_chain_mem2 = new sev_cert_chain_buf_t;
+    auto pdh_cert_mem2 = std::make_unique<sev_cert_t>();
+    auto cert_chain_mem2 = std::make_unique<sev_cert_chain_buf_t>();
 
     do {
         if (!pdh_cert_mem || !cert_chain_mem || !pdh_cert_mem2 || !cert_chain_mem2) {
@@ -236,7 +228,7 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
         }
 
         // Just used to confirm afterwards that the cert chain has changed
-        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh_cert_mem, cert_chain_mem);
+        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh_cert_mem.get(), cert_chain_mem.get());
         if (cmd_ret != 0)
             break;
 
@@ -247,7 +239,7 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
 
         // Export the cert chain again, so we can compare that it has changed
         // after running the pek_cert_import
-        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data2, pdh_cert_mem2, cert_chain_mem2);
+        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data2, pdh_cert_mem2.get(), cert_chain_mem2.get());
         if (cmd_ret != 0)
             break;
 
@@ -257,12 +249,6 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
 
         printf("PEK Cert Import SUCCESS.\n");
     } while (0);
-
-    // Free memory
-    delete pdh_cert_mem;
-    delete cert_chain_mem;
-    delete pdh_cert_mem2;
-    delete cert_chain_mem2;
 
     return (int)cmd_ret;
 }
@@ -474,8 +460,8 @@ int Command::generate_all_certs(void)
 {
     int cmd_ret = -1;
     uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
-    auto *pdh = new sev_cert_t;
-    auto *cert_chain = new sev_cert_chain_buf_t; // PEK, OCA, CEK
+    auto pdh = std::make_unique<sev_cert_t>();
+    auto cert_chain = std::make_unique<sev_cert_chain_buf_t>(); // PEK, OCA, CEK
     amd_cert ask;
     amd_cert ark;
 
@@ -494,7 +480,7 @@ int Command::generate_all_certs(void)
 
     do {
         // Get the pdh Cert Chain (pdh and pek, oca, cek)
-        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh, cert_chain);
+        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh.get(), cert_chain.get());
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -531,11 +517,11 @@ int Command::generate_all_certs(void)
         //   the one 'cached by the hypervisor' that's signed by the ask
         //   (the one from the AMD dev site)
         size_t ark_size = tmp_amd.amd_cert_get_size(&ark);
-        if (sev::write_file(pdh_full, pdh, sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::write_file(pdh_full, pdh.get(), sizeof(sev_cert)) != sizeof(sev_cert))
             break;
-        if (sev::write_file(pek_full, PEK_IN_CERT_CHAIN(cert_chain), sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::write_file(pek_full, PEK_IN_CERT_CHAIN(cert_chain.get()), sizeof(sev_cert)) != sizeof(sev_cert))
             break;
-        if (sev::write_file(oca_full, OCA_IN_CERT_CHAIN(cert_chain), sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::write_file(oca_full, OCA_IN_CERT_CHAIN(cert_chain.get()), sizeof(sev_cert)) != sizeof(sev_cert))
             break;
         print_amd_cert_hex(&ask, ask_string);       // TODO refactor this
         print_amd_cert_hex(&ark, ark_string);
@@ -550,10 +536,6 @@ int Command::generate_all_certs(void)
 
         cmd_ret = STATUS_SUCCESS;
     } while (0);
-
-    // Free memory
-    delete pdh;
-    delete cert_chain;
 
     return (int)cmd_ret;
 }
