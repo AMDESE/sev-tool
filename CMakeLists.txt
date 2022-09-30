@@ -4,7 +4,7 @@ project(networking CXX)
 
 find_package(OpenSSL REQUIRED COMPONENTS SSL)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 
 add_executable(sev-tool
     src/amdcert.cpp
