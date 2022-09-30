@@ -17,7 +17,6 @@
 #include "crypto.h"
 #include "sevcert.h"
 
-#include <fstream>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/ts.h>
