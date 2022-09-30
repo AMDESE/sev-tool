@@ -131,13 +131,13 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
     hmac_sha_256 sha_digest_256;
     hmac_sha_512 sha_digest_384;
     SHA_TYPE algo = SHA_TYPE_256;
-    uint8_t *sha_digest = NULL;
+    uint8_t *sha_digest = nullptr;
     size_t sha_length = 0;
 
-    RSA *rsa_pub_key = NULL;
-    BIGNUM *modulus = NULL;
-    BIGNUM *pub_exp = NULL;
-    EVP_MD_CTX* md_ctx = NULL;
+    RSA *rsa_pub_key = nullptr;
+    BIGNUM *modulus = nullptr;
+    BIGNUM *pub_exp = nullptr;
+    EVP_MD_CTX* md_ctx = nullptr;
     uint32_t sig_len = cert->modulus_size/8;
 
     uint32_t digest_len = 0;
@@ -172,9 +172,9 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
         rsa_pub_key = RSA_new();
 
         // Convert the parent to an RSA key to pass into RSA_verify
-        modulus = BN_lebin2bn((uint8_t *)&parent->modulus, parent->modulus_size/8, NULL);  // n    // New's up BigNum
-        pub_exp = BN_lebin2bn((uint8_t *)&parent->pub_exp, parent->pub_exp_size/8, NULL);   // e
-        if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, NULL) != 1)
+        modulus = BN_lebin2bn((uint8_t *)&parent->modulus, parent->modulus_size/8, nullptr);  // n    // New's up BigNum
+        pub_exp = BN_lebin2bn((uint8_t *)&parent->pub_exp, parent->pub_exp_size/8, nullptr);   // e
+        if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, nullptr) != 1)
             break;
 
         md_ctx = EVP_MD_CTX_create();
@@ -251,7 +251,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate(const amd_cert *cert,
                                           ePSP_DEVICE_TYPE device_type)
 {
     SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;
-    const uint8_t *key_id = NULL;
+    const uint8_t *key_id = nullptr;
 
     do {
         if (!cert || !usage_is_valid(expected_usage)) {
@@ -331,7 +331,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
     SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;
     hmac_sha_256 hash;
     hmac_sha_256 fused_hash;
-    const uint8_t *amd_root_key_id = NULL;
+    const uint8_t *amd_root_key_id = nullptr;
     ePSP_DEVICE_TYPE device_type = get_device_type(ark);
 
     do {
@@ -347,7 +347,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
         cmd_ret = amd_cert_validate(ark, ark, AMD_USAGE_ARK, device_type);       // Rome
         if (cmd_ret != STATUS_SUCCESS) {
             // Not a self-signed ARK. Check the ARK without a signature
-            cmd_ret = amd_cert_validate(ark, NULL, AMD_USAGE_ARK, device_type);  // Naples
+            cmd_ret = amd_cert_validate(ark, nullptr, AMD_USAGE_ARK, device_type);  // Naples
             if (cmd_ret != STATUS_SUCCESS)
                 break;
         }

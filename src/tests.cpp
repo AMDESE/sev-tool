@@ -59,7 +59,7 @@ bool Tests::test_factory_reset(void)
         printf("*Starting factory_reset tests\n");
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = NULL;
+        EVP_PKEY *oca_key_pair = nullptr;
         if (!generate_ecdh_key_pair(&oca_key_pair))
             break;
 
@@ -336,7 +336,7 @@ bool Tests::test_sign_pek_csr()
     sev_cert signed_csr;
     SEVCert SignedCSR(&signed_csr);
     sev_cert oca_cert;
-    EVP_PKEY *oca_key_pair = NULL;
+    EVP_PKEY *oca_key_pair = nullptr;
 
     do {
         printf("*Starting sign_pek_csr tests\n");
@@ -416,7 +416,7 @@ bool Tests::test_pek_cert_import(void)
             break;
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = NULL;
+        EVP_PKEY *oca_key_pair = nullptr;
         if (!generate_ecdh_key_pair(&oca_key_pair))
             break;
 
@@ -507,7 +507,7 @@ bool Tests::test_set_self_owned(void)
         printf("*Starting factory_reset tests\n");
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = NULL;
+        EVP_PKEY *oca_key_pair = nullptr;
         if (!generate_ecdh_key_pair(&oca_key_pair))
             break;
 
@@ -564,7 +564,7 @@ bool Tests::test_set_externally_owned(void)
         }
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = NULL;
+        EVP_PKEY *oca_key_pair = nullptr;
         if (!generate_ecdh_key_pair(&oca_key_pair))
             break;
 

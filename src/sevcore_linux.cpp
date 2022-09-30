@@ -42,8 +42,8 @@ void sev::get_family_model(uint32_t *family, uint32_t *model)
     cmd = "lscpu | grep -E \"^Model:\" | awk {'print $2'}";
     sev::execute_system_command(cmd, &model_str);
 
-    *family = std::stoi(fam_str, NULL, 10);
-    *model = std::stoi(model_str, NULL, 10);
+    *family = std::stoi(fam_str, nullptr, 10);
+    *model = std::stoi(model_str, nullptr, 10);
 }
 
 ePSP_DEVICE_TYPE sev::get_device_type(void)

@@ -34,7 +34,7 @@ Command::Command(void)
 }
 
 Command::Command(std::string output_folder, int verbose_flag, ccp_required_t ccp)
-       : m_sev_device((ccp == CCP_REQ) ? &SEVDevice::get_sev_device() : NULL),
+       : m_sev_device((ccp == CCP_REQ) ? &SEVDevice::get_sev_device() : nullptr),
          m_output_folder(output_folder),
          m_verbose_flag(verbose_flag)
 {
@@ -271,7 +271,7 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
 {
     int cmd_ret = ERROR_UNSUPPORTED;
 
-    EVP_PKEY *oca_priv_key = NULL;
+    EVP_PKEY *oca_priv_key = nullptr;
     sev_cert oca_cert;
     SEVCert cert_obj(&oca_cert);
     sev_cert pek_csr;
@@ -333,7 +333,7 @@ int Command::get_id(void)
     // Send the first command with a length of 0, then use the returned length
     // as the input parameter for the 'real' command which will succeed
     sev_get_id_cmd_buf data_buf_temp;
-    cmd_ret = m_sev_device->get_id((uint8_t *)&data_buf_temp, NULL); // Sets IDLength
+    cmd_ret = m_sev_device->get_id((uint8_t *)&data_buf_temp, nullptr); // Sets IDLength
     if (cmd_ret != ERROR_INVALID_LENGTH)     // What we expect to happen
         return cmd_ret;
     default_id_length = data_buf_temp.id_length;
@@ -650,7 +650,7 @@ int Command::calculate_measurement(measurement_t *user_data, hmac_sha_256 *final
         return ERROR_BAD_MEASUREMENT;
 
     do {
-        if (HMAC_Init_ex(ctx, user_data->tik, sizeof(user_data->tik), EVP_sha256(), NULL) != 1)
+        if (HMAC_Init_ex(ctx, user_data->tik, sizeof(user_data->tik), EVP_sha256(), nullptr) != 1)
             break;
         if (sev::min_api_version(user_data->api_major, user_data->api_minor, 0, 17)) {
             if (HMAC_Update(ctx, &user_data->meas_ctx, sizeof(user_data->meas_ctx)) != 1)
@@ -851,7 +851,7 @@ int Command::generate_launch_blob(uint32_t policy)
     std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
     std::string buf_file = m_output_folder + LAUNCH_BLOB_FILENAME;
     sev_cert pdh;
-    EVP_PKEY *godh_key_pair = NULL;      // Guest Owner Diffie-Hellman
+    EVP_PKEY *godh_key_pair = nullptr;      // Guest Owner Diffie-Hellman
     sev_cert godh_pubkey_cert;
 
     memset(&session_data_buf, 0, sizeof(sev_session_buf));
@@ -1008,7 +1008,7 @@ int Command::validate_attestation(void)
     std::string report_file = m_output_folder + ATTESTATION_REPORT_FILENAME;
     std::string pek_full = m_output_folder + PEK_FILENAME;
     bool success = false;
-    EVP_PKEY *pek_pub_key = NULL;
+    EVP_PKEY *pek_pub_key = nullptr;
     sev_cert pek;
 
     do {
@@ -1072,8 +1072,8 @@ int Command::validate_guest_report(void)
     std::string report_file = m_output_folder + GUEST_REPORT_FILENAME;
     std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;
     bool success = false;
-    EVP_PKEY *vcek_pub_key = NULL;
-    X509 *x509_vcek = NULL;
+    EVP_PKEY *vcek_pub_key = nullptr;
+    X509 *x509_vcek = nullptr;
 
     do {
         // Get the size of the report, so we can allocate that much memory
@@ -1133,10 +1133,10 @@ int Command::validate_cert_chain_vcek(void)
     std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;
     std::string ask_file = m_output_folder + VCEK_ASK_PEM_FILENAME;
     std::string ark_file = m_output_folder + VCEK_ARK_PEM_FILENAME;
-    X509 *x509_vcek = NULL;
-    X509 *x509_ask = NULL;
-    X509 *x509_ark = NULL;
-    EVP_PKEY *vcek_pub_key = NULL;
+    X509 *x509_vcek = nullptr;
+    X509 *x509_ask = nullptr;
+    X509 *x509_ark = nullptr;
+    EVP_PKEY *vcek_pub_key = nullptr;
 
     do {
         // Read in the ARK, ASK, and VCEK pem files
@@ -1154,12 +1154,12 @@ int Command::validate_cert_chain_vcek(void)
             break;
 
         // Verify the signatures of the certs
-        if (!x509_validate_signature(x509_ark, NULL, x509_ark)) {   // Verify the ARK self-signed the ARK
+        if (!x509_validate_signature(x509_ark, nullptr, x509_ark)) {   // Verify the ARK self-signed the ARK
             printf("Error validating signature of x509_ark certs\n");
             break;
         }
 
-        if (!x509_validate_signature(x509_ask, NULL, x509_ark)) {   // Verify the ARK signed the ASK
+        if (!x509_validate_signature(x509_ask, nullptr, x509_ark)) {   // Verify the ARK signed the ASK
             printf("Error validating signature of x509_ask certs\n");
             break;
         }
@@ -1222,7 +1222,7 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
             break;
 
         // calculate a chunk of random data from the PRF
-        if (HMAC_Init_ex(ctx, key_in, (int)key_in_length, EVP_sha256(), NULL) != 1)
+        if (HMAC_Init_ex(ctx, key_in, (int)key_in_length, EVP_sha256(), nullptr) != 1)
             break;
         if (HMAC_Update(ctx, (uint8_t *)&i, sizeof(i)) != 1)
             break;
@@ -1266,15 +1266,15 @@ uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_ke
                                            size_t& shared_key_len_out)
 {
     if (!priv_key || !peer_key)
-        return NULL;
+        return nullptr;
 
     bool success = false;
-    EVP_PKEY_CTX *ctx = NULL;
-    uint8_t *shared_key = NULL;
+    EVP_PKEY_CTX *ctx = nullptr;
+    uint8_t *shared_key = nullptr;
 
     do {
         // Create the context using your private key
-        if (!(ctx = EVP_PKEY_CTX_new(priv_key, NULL)))
+        if (!(ctx = EVP_PKEY_CTX_new(priv_key, nullptr)))
             break;
 
         // Calculate the intermediate secret
@@ -1284,7 +1284,7 @@ uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_ke
             break;
 
         // Determine buffer length
-        if (EVP_PKEY_derive(ctx, NULL, &shared_key_len_out) <= 0)
+        if (EVP_PKEY_derive(ctx, nullptr, &shared_key_len_out) <= 0)
             break;
 
         // Need to free shared_key using OPENSSL_FREE() in the calling function
@@ -1301,7 +1301,7 @@ uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_ke
 
     EVP_PKEY_CTX_free(ctx);
 
-    return success ? shared_key : NULL;
+    return success ? shared_key : nullptr;
 }
 
 /*
@@ -1322,7 +1322,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
     memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
     SEVCert temp_obj(&dummy);                // TODO. Hack b/c just want to call function later
     bool ret = false;
-    EVP_PKEY *plat_pub_key = NULL;    // Platform public key
+    EVP_PKEY *plat_pub_key = nullptr;    // Platform public key
     size_t shared_key_len = 0;
 
     do {
@@ -1365,14 +1365,14 @@ bool Command::derive_master_secret(aes_128_key master_secret,
 bool Command::derive_kek(aes_128_key kek, const aes_128_key master_secret)
 {
     bool ret = kdf((unsigned char*)kek, sizeof(aes_128_key), master_secret, sizeof(aes_128_key),
-                   (uint8_t *)SEV_KEK_LABEL, sizeof(SEV_KEK_LABEL)-1, NULL, 0);
+                   (uint8_t *)SEV_KEK_LABEL, sizeof(SEV_KEK_LABEL)-1, nullptr, 0);
     return ret;
 }
 
 bool Command::derive_kik(hmac_key_128 kik, const aes_128_key master_secret)
 {
     bool ret = kdf((unsigned char*)kik, sizeof(aes_128_key), master_secret, sizeof(aes_128_key),
-                   (uint8_t *)SEV_KIK_LABEL, sizeof(SEV_KIK_LABEL)-1, NULL, 0);
+                   (uint8_t *)SEV_KIK_LABEL, sizeof(SEV_KIK_LABEL)-1, nullptr, 0);
     return ret;
 }
 
@@ -1385,7 +1385,7 @@ bool Command::gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t
     HMAC(EVP_sha256(), key, sizeof(hmac_key_128), msg,    // Returns NULL or value of out
          msg_len, (uint8_t *)out, &out_len);
 
-    if ((out != NULL) && (out_len == sizeof(hmac_sha_256)))
+    if ((out != nullptr) && (out_len == sizeof(hmac_sha_256)))
         return true;
     else
         return false;
@@ -1411,7 +1411,7 @@ bool Command::encrypt(uint8_t *out, const uint8_t *in, size_t length,
 
         // Initialize the encryption operation. IMPORTANT - ensure you
         // use a key and IV size appropriate for your cipher
-        if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), NULL, Key, IV) != 1)
+        if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), nullptr, Key, IV) != 1)
             break;
 
         // Provide the message to be encrypted, and obtain the encrypted output
@@ -1525,7 +1525,7 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
         return ret;
 
     do {
-        if (HMAC_Init_ex(ctx, m_tk.tik, sizeof(m_tk.tik), EVP_sha256(), NULL) != 1)
+        if (HMAC_Init_ex(ctx, m_tk.tik, sizeof(m_tk.tik), EVP_sha256(), nullptr) != 1)
             break;
         if (HMAC_Update(ctx, &meas_ctx, sizeof(meas_ctx)) != 1)
             break;

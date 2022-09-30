@@ -80,37 +80,37 @@ static struct option long_options[] =
 
     /* These options don't set a flag. We distinguish them by their indices. */
     /* Platform Owner commands */
-    {"factory_reset",            no_argument,       0, 'a'},
-    {"platform_status",          no_argument,       0, 'b'},
-    {"pek_gen",                  no_argument,       0, 'c'},
-    {"pek_csr",                  no_argument,       0, 'd'},
-    {"pdh_gen",                  no_argument,       0, 'e'},
-    {"pdh_cert_export",          no_argument,       0, 'f'},
-    {"pek_cert_import",          required_argument, 0, 'g'},
-    {"get_id",                   no_argument,       0, 'j'},
-    {"set_self_owned",           no_argument,       0, 'k'},
-    {"set_externally_owned",     required_argument, 0, 'l'},
-    {"generate_cek_ask",         no_argument,       0, 'm'},
-    {"export_cert_chain",        no_argument,       0, 'p'},
-    {"export_cert_chain_vcek",   no_argument,       0, 'q'},
-    {"sign_pek_csr",             required_argument, 0, 's'},
+    {"factory_reset",            no_argument,       nullptr, 'a'},
+    {"platform_status",          no_argument,       nullptr, 'b'},
+    {"pek_gen",                  no_argument,       nullptr, 'c'},
+    {"pek_csr",                  no_argument,       nullptr, 'd'},
+    {"pdh_gen",                  no_argument,       nullptr, 'e'},
+    {"pdh_cert_export",          no_argument,       nullptr, 'f'},
+    {"pek_cert_import",          required_argument, nullptr, 'g'},
+    {"get_id",                   no_argument,       nullptr, 'j'},
+    {"set_self_owned",           no_argument,       nullptr, 'k'},
+    {"set_externally_owned",     required_argument, nullptr, 'l'},
+    {"generate_cek_ask",         no_argument,       nullptr, 'm'},
+    {"export_cert_chain",        no_argument,       nullptr, 'p'},
+    {"export_cert_chain_vcek",   no_argument,       nullptr, 'q'},
+    {"sign_pek_csr",             required_argument, nullptr, 's'},
     /* Guest Owner commands */
-    {"get_ask_ark",              no_argument,       0, 'n'},
-    {"calc_measurement",         required_argument, 0, 't'},
-    {"validate_cert_chain",      no_argument,       0, 'u'},
-    {"generate_launch_blob",     required_argument, 0, 'v'},
-    {"package_secret",           no_argument,       0, 'w'},
-    {"validate_attestation",     no_argument,       0, 'x'}, // SEV attestation command
-    {"validate_guest_report",    no_argument,       0, 'y'}, // SNP GuestRequest ReportRequest
-    {"validate_cert_chain_vcek", no_argument,       0, 'z'},
+    {"get_ask_ark",              no_argument,       nullptr, 'n'},
+    {"calc_measurement",         required_argument, nullptr, 't'},
+    {"validate_cert_chain",      no_argument,       nullptr, 'u'},
+    {"generate_launch_blob",     required_argument, nullptr, 'v'},
+    {"package_secret",           no_argument,       nullptr, 'w'},
+    {"validate_attestation",     no_argument,       nullptr, 'x'}, // SEV attestation command
+    {"validate_guest_report",    no_argument,       nullptr, 'y'}, // SNP GuestRequest ReportRequest
+    {"validate_cert_chain_vcek", no_argument,       nullptr, 'z'},
 
     /* Run tests */
-    {"test_all",             no_argument,       0, 'T'},
+    {"test_all",             no_argument,       nullptr, 'T'},
 
-    {"help",                 no_argument,       0, 'H'},
-    {"sys_info",             no_argument,       0, 'I'},
-    {"ofolder",              required_argument, 0, 'O'},
-    {0, 0, 0, 0}
+    {"help",                 no_argument,       nullptr, 'H'},
+    {"sys_info",             no_argument,       nullptr, 'I'},
+    {"ofolder",              required_argument, nullptr, 'O'},
+    {nullptr, 0, nullptr, 0}
 };
 
 int main(int argc, char **argv)
@@ -263,11 +263,11 @@ int main(int argc, char **argv)
                 }
 
                 measurement_t user_data;
-                user_data.meas_ctx  = (uint8_t)strtol(argv[optind++], NULL, 16);
-                user_data.api_major = (uint8_t)strtol(argv[optind++], NULL, 16);
-                user_data.api_minor = (uint8_t)strtol(argv[optind++], NULL, 16);
-                user_data.build_id  = (uint8_t)strtol(argv[optind++], NULL, 16);
-                user_data.policy    = (uint32_t)strtol(argv[optind++], NULL, 16);
+                user_data.meas_ctx  = (uint8_t)strtol(argv[optind++], nullptr, 16);
+                user_data.api_major = (uint8_t)strtol(argv[optind++], nullptr, 16);
+                user_data.api_minor = (uint8_t)strtol(argv[optind++], nullptr, 16);
+                user_data.build_id  = (uint8_t)strtol(argv[optind++], nullptr, 16);
+                user_data.policy    = (uint32_t)strtol(argv[optind++], nullptr, 16);
                 sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.digest, sizeof(user_data.digest));
                 sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.mnonce, sizeof(user_data.mnonce));
                 sev::str_to_array(std::string(argv[optind++]), (uint8_t *)&user_data.tik,    sizeof(user_data.tik));
@@ -287,7 +287,7 @@ int main(int argc, char **argv)
                     return EXIT_FAILURE;
                 }
 
-                uint32_t guest_policy = (uint8_t)strtol(argv[optind++], NULL, 16);
+                uint32_t guest_policy = (uint8_t)strtol(argv[optind++], nullptr, 16);
                 Command cmd(output_folder, verbose_flag, CCP_NOT_REQ);
                 cmd_ret = cmd.generate_launch_blob(guest_policy);
                 break;

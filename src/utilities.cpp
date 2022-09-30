@@ -126,7 +126,7 @@ void sev::gen_random_bytes(void *bytes, size_t num_bytes)
         printf("Warning: getrandom failed. Generating random bytes manually\n");
         // Do it manually
         uint8_t *addr = (uint8_t *)bytes;
-        srand((unsigned int)time(NULL));
+        srand((unsigned int)time(nullptr));
         while (num_bytes--) {
             *addr++ = (uint8_t)(rand() & 0xff);
         }
@@ -154,7 +154,7 @@ bool sev::str_to_array(const std::string in_string, uint8_t *array,
 
     for (size_t i = 0; i < in_string.size()/2; i++) {
         substring = in_string.substr(i*2, 2);
-        array[i] = (uint8_t)strtol(substring.c_str(), NULL, 16);
+        array[i] = (uint8_t)strtol(substring.c_str(), nullptr, 16);
     }
 
     // printf("\nSTRING TO ARRAY: ");
@@ -172,7 +172,7 @@ void sev::ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len)
 
     for (size_t i = 0; i < len; i++) {
         temp = {in_bytes[i*2], in_bytes[(i*2)+1], '\0'};
-        ((uint8_t *)out)[i] = (uint8_t)stoi(temp, NULL, 16);
+        ((uint8_t *)out)[i] = (uint8_t)stoi(temp, nullptr, 16);
     }
 }
 

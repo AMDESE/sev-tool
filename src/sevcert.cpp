@@ -164,7 +164,7 @@ void read_priv_key_pem_into_rsakey(const std::string file_name, RSA **rsa_priv_k
         FILE *pFile = fopen(file_name.c_str(), "r");
         if (!pFile)
             break;
-        *rsa_priv_key = PEM_read_RSAPrivateKey(pFile, NULL, NULL, NULL);
+        *rsa_priv_key = PEM_read_RSAPrivateKey(pFile, nullptr, nullptr, nullptr);
         fclose(pFile);
 
         if (!rsa_priv_key)   // TODO find a better check
@@ -193,7 +193,7 @@ bool read_priv_key_pem_into_eckey(const std::string file_name, EC_KEY **ec_priv_
         FILE *pFile = fopen(file_name.c_str(), "r");
         if (!pFile)
             break;
-        *ec_priv_key = PEM_read_ECPrivateKey(pFile, NULL, NULL, NULL);
+        *ec_priv_key = PEM_read_ECPrivateKey(pFile, nullptr, nullptr, nullptr);
         fclose(pFile);
 
         // Make sure the key is good
@@ -216,7 +216,7 @@ bool read_priv_key_pem_into_eckey(const std::string file_name, EC_KEY **ec_priv_
  */
 bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_priv_key)
 {
-    EC_KEY *ec_privkey = NULL;
+    EC_KEY *ec_privkey = nullptr;
 
     // New up the EVP_PKEY
     if (!(*evp_priv_key = EVP_PKEY_new()))
@@ -245,7 +245,7 @@ bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_p
  */
 bool write_pub_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
 {
-    FILE *pFile = NULL;
+    FILE *pFile = nullptr;
     pFile = fopen(file_name.c_str(), "wt");
     if (!pFile)
         return false;
@@ -268,13 +268,13 @@ bool write_pub_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
  */
 bool write_priv_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
 {
-    FILE *pFile = NULL;
+    FILE *pFile = nullptr;
     pFile = fopen(file_name.c_str(), "wt");
     if (!pFile)
         return false;
 
     // printf("Writing to file: %s\n", file_name.c_str());
-    if (PEM_write_PrivateKey(pFile, evp_key_pair, NULL, NULL, 0, NULL, 0) != 1) {
+    if (PEM_write_PrivateKey(pFile, evp_key_pair, nullptr, nullptr, 0, nullptr, nullptr) != 1) {
         printf("Error writing privkey to file: %s\n", file_name.c_str());
         fclose(pFile);
         return false;
@@ -534,7 +534,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
     hmac_sha_256 sha_digest_256;        // Hash on the cert from Version to PubKey
     hmac_sha_512 sha_digest_384;        // Hash on the cert from Version to PubKey
     SHA_TYPE sha_type;
-    uint8_t *sha_digest = NULL;
+    uint8_t *sha_digest = nullptr;
     size_t sha_length = 0;
 
     do {
@@ -708,12 +708,12 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
-    RSA *rsa_pub_key = NULL;
-    EC_KEY *ec_pub_key = NULL;
-    BIGNUM *x_big_num = NULL;
-    BIGNUM *y_big_num = NULL;
-    BIGNUM *modulus = NULL;
-    BIGNUM *pub_exp = NULL;
+    RSA *rsa_pub_key = nullptr;
+    EC_KEY *ec_pub_key = nullptr;
+    BIGNUM *x_big_num = nullptr;
+    BIGNUM *y_big_num = nullptr;
+    BIGNUM *modulus = nullptr;
+    BIGNUM *pub_exp = nullptr;
 
     do {
         if ((cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
@@ -722,9 +722,9 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
             rsa_pub_key = RSA_new();
 
             // Convert the parent to an RSA key to pass into RSA_verify
-            modulus = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.modulus, cert->pub_key.rsa.modulus_size/8, NULL);  // n    // New's up BigNum
-            pub_exp = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.pub_exp, cert->pub_key.rsa.modulus_size/8, NULL);  // e
-            if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, NULL) != 1)
+            modulus = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.modulus, cert->pub_key.rsa.modulus_size/8, nullptr);  // n    // New's up BigNum
+            pub_exp = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.pub_exp, cert->pub_key.rsa.modulus_size/8, nullptr);  // e
+            if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, nullptr) != 1)
                 break;
 
             // Make sure the key is good.
@@ -752,13 +752,13 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
             // SEV certificate are little-endian, must reverse bytes before storing in BIGNUM
             if ((cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                 (cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA384)) {
-                x_big_num = BN_lebin2bn(cert->pub_key.ecdsa.qx, sizeof(cert->pub_key.ecdsa.qx), NULL);  // New's up BigNum
-                y_big_num = BN_lebin2bn(cert->pub_key.ecdsa.qy, sizeof(cert->pub_key.ecdsa.qy), NULL);
+                x_big_num = BN_lebin2bn(cert->pub_key.ecdsa.qx, sizeof(cert->pub_key.ecdsa.qx), nullptr);  // New's up BigNum
+                y_big_num = BN_lebin2bn(cert->pub_key.ecdsa.qy, sizeof(cert->pub_key.ecdsa.qy), nullptr);
             }
             else if ((cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA256)  ||
                     (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384)) {
-                x_big_num = BN_lebin2bn(cert->pub_key.ecdh.qx, sizeof(cert->pub_key.ecdh.qx), NULL);  // New's up BigNum
-                y_big_num = BN_lebin2bn(cert->pub_key.ecdh.qy, sizeof(cert->pub_key.ecdh.qy), NULL);
+                x_big_num = BN_lebin2bn(cert->pub_key.ecdh.qx, sizeof(cert->pub_key.ecdh.qx), nullptr);  // New's up BigNum
+                y_big_num = BN_lebin2bn(cert->pub_key.ecdh.qy, sizeof(cert->pub_key.ecdh.qy), nullptr);
             }
 
             int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
@@ -812,13 +812,13 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
-    EC_KEY *ec_pubkey = NULL;
-    RSA *rsa_pubkey = NULL;
-    const BIGNUM *exponent = NULL;
-    const BIGNUM *modulus = NULL;
-    BIGNUM *x_bignum = NULL;
-    BIGNUM *y_bignum = NULL;
-    EC_GROUP *ec_group = NULL;
+    EC_KEY *ec_pubkey = nullptr;
+    RSA *rsa_pubkey = nullptr;
+    const BIGNUM *exponent = nullptr;
+    const BIGNUM *modulus = nullptr;
+    BIGNUM *x_bignum = nullptr;
+    BIGNUM *y_bignum = nullptr;
+    EC_GROUP *ec_group = nullptr;
 
     do {
         if ((cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
@@ -868,7 +868,7 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
             y_bignum = BN_new();
 
             // Get the x and y coordinates from the EC_POINT and store as separate BIGNUM objects
-            if (!EC_POINT_get_affine_coordinates_GFp(ec_group, pub, x_bignum, y_bignum, NULL))
+            if (!EC_POINT_get_affine_coordinates_GFp(ec_group, pub, x_bignum, y_bignum, nullptr))
                 break;
 
             // Store the x and y components into the cert. The values in the
@@ -911,7 +911,7 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
-    EVP_PKEY *parent_pub_key[SEV_CERT_MAX_SIGNATURES] = {NULL};
+    EVP_PKEY *parent_pub_key[SEV_CERT_MAX_SIGNATURES] = {nullptr};
     const sev_cert *parent_cert[SEV_CERT_MAX_SIGNATURES] = {parent_cert1, parent_cert2};   // A cert has max of x parents/sigs
 
     do {
@@ -1043,7 +1043,7 @@ SEV_ERROR_CODE SEVCert::verify_signed_pek_csr(const sev_cert *oca_cert)
             break;
         }
         // Check subsequent signature flags
-        return verify_sev_cert(oca_cert, NULL);
+        return verify_sev_cert(oca_cert, nullptr);
     } while(0);
     return ERROR_INVALID_CERTIFICATE;
 }

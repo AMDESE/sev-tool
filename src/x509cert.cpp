@@ -47,13 +47,13 @@ void convert_der_to_pem(const std::string in_file_name, const std::string out_fi
 
 bool read_pem_into_x509(const std::string file_name, X509 **x509_cert)
 {
-    FILE *pFile = NULL;
+    FILE *pFile = nullptr;
     pFile = fopen(file_name.c_str(), "re");
     if (!pFile)
         return false;
 
     // printf("Reading from file: %s\n", file_name.c_str());
-    *x509_cert = PEM_read_X509(pFile, NULL, NULL, NULL);
+    *x509_cert = PEM_read_X509(pFile, nullptr, nullptr, nullptr);
     if (!x509_cert) {
         printf("Error reading x509 from file: %s\n", file_name.c_str());
         fclose(pFile);
@@ -65,7 +65,7 @@ bool read_pem_into_x509(const std::string file_name, X509 **x509_cert)
 
 bool write_x509_pem(const std::string file_name, X509 *x509_cert)
 {
-    FILE *pFile = NULL;
+    FILE *pFile = nullptr;
     pFile = fopen(file_name.c_str(), "wt");
     if (!pFile)
         return false;
@@ -83,8 +83,8 @@ bool write_x509_pem(const std::string file_name, X509 *x509_cert)
 bool x509_validate_signature(X509 *child_cert, X509 *intermediate_cert, X509 *parent_cert)
 {
     bool ret = false;
-    X509_STORE *store = NULL;
-    X509_STORE_CTX *store_ctx = NULL;
+    X509_STORE *store = nullptr;
+    X509_STORE_CTX *store_ctx = nullptr;
 
     do {
         // Create the store
@@ -114,7 +114,7 @@ bool x509_validate_signature(X509 *child_cert, X509 *intermediate_cert, X509 *pa
         }
 
         // Pass the store (parent and intermediate cert) and child cert (that we want to verify) into the store context
-        if (X509_STORE_CTX_init(store_ctx, store, child_cert, NULL) != 1) {
+        if (X509_STORE_CTX_init(store_ctx, store, child_cert, nullptr) != 1) {
             printf("Error initializing 509_store_context\n");
             break;
         }

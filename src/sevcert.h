@@ -71,7 +71,7 @@ public:
     SEV_ERROR_CODE decompile_public_key_into_certificate(sev_cert *cert,
                                                          EVP_PKEY *evp_pubkey);
     SEV_ERROR_CODE verify_sev_cert(const sev_cert *parent_cert1,
-                                   const sev_cert *parent_cert2 = NULL);
+                                   const sev_cert *parent_cert2 = nullptr);
     SEV_ERROR_CODE validate_pek_csr();
     SEV_ERROR_CODE verify_signed_pek_csr(const sev_cert *oca_cert);
 };

@@ -56,7 +56,7 @@ bool kdf(uint8_t *key_out,       size_t key_out_length,
             break;
 
         // Calculate a chunk of random data from the PRF
-        if (HMAC_Init_ex(ctx, key_in, (int)key_in_length, EVP_sha256(), NULL) != 1)
+        if (HMAC_Init_ex(ctx, key_in, (int)key_in_length, EVP_sha256(), nullptr) != 1)
             break;
         if (HMAC_Update(ctx, (uint8_t *)&i, sizeof(i)) != 1)
             break;
@@ -100,15 +100,15 @@ uint8_t *calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
                                  size_t& shared_key_len_out)
 {
     if (!priv_key || !peer_key)
-        return NULL;
+        return nullptr;
 
     bool success = false;
-    EVP_PKEY_CTX *ctx = NULL;
-    uint8_t *shared_key = NULL;
+    EVP_PKEY_CTX *ctx = nullptr;
+    uint8_t *shared_key = nullptr;
 
     do {
         // Create the context using your private key
-        if (!(ctx = EVP_PKEY_CTX_new(priv_key, NULL)))
+        if (!(ctx = EVP_PKEY_CTX_new(priv_key, nullptr)))
             break;
 
         // Calculate the intermediate secret
@@ -118,7 +118,7 @@ uint8_t *calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
             break;
 
         // Determine buffer length
-        if (EVP_PKEY_derive(ctx, NULL, &shared_key_len_out) <= 0)
+        if (EVP_PKEY_derive(ctx, nullptr, &shared_key_len_out) <= 0)
             break;
 
         // Need to free shared_key using OPENSSL_FREE() in the calling function
@@ -135,7 +135,7 @@ uint8_t *calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
 
     EVP_PKEY_CTX_free(ctx);
 
-    return success ? shared_key : NULL;
+    return success ? shared_key : nullptr;
 }
 
 /**
@@ -156,7 +156,7 @@ bool derive_master_secret(aes_128_key master_secret,
     memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
     SEVCert temp_obj(&dummy);           // TODO. Hack b/c just want to call function later
     bool ret = false;
-    EVP_PKEY *plat_pub_key = NULL;   // Peer key
+    EVP_PKEY *plat_pub_key = nullptr;   // Peer key
     size_t shared_key_len = 0;
 
     do {
@@ -202,14 +202,14 @@ bool derive_master_secret(aes_128_key master_secret,
 bool derive_kek(aes_128_key kek, const aes_128_key master_secret)
 {
     bool ret = kdf((unsigned char*)kek, sizeof(aes_128_key), master_secret, sizeof(aes_128_key),
-                   (uint8_t *)SEV_KEK_LABEL, sizeof(SEV_KEK_LABEL)-1, NULL, 0);
+                   (uint8_t *)SEV_KEK_LABEL, sizeof(SEV_KEK_LABEL)-1, nullptr, 0);
     return ret;
 }
 
 bool derive_kik(hmac_key_128 kik, const aes_128_key master_secret)
 {
     bool ret = kdf((unsigned char*)kik, sizeof(aes_128_key), master_secret, sizeof(aes_128_key),
-                   (uint8_t *)SEV_KIK_LABEL, sizeof(SEV_KIK_LABEL)-1, NULL, 0);
+                   (uint8_t *)SEV_KIK_LABEL, sizeof(SEV_KIK_LABEL)-1, nullptr, 0);
     return ret;
 }
 
@@ -222,7 +222,7 @@ bool gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len)
     HMAC(EVP_sha256(), key, sizeof(hmac_key_128), msg,    // Returns NULL or value of out
          msg_len, (uint8_t *)out, &out_len);
 
-    if ((out != NULL) && (out_len == sizeof(hmac_sha_256)))
+    if ((out != nullptr) && (out_len == sizeof(hmac_sha_256)))
         return true;
     else
         return false;
@@ -245,7 +245,7 @@ bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
 
         // Initialize the encryption operation. IMPORTANT - ensure you
         // use a key and IV size appropriate for your cipher
-        if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), NULL, key, iv) != 1)
+        if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), nullptr, key, iv) != 1)
             break;
 
         // Provide the message to be encrypted, and obtain the encrypted output
@@ -283,7 +283,7 @@ bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair, SEV_EC curve)
 
     bool ret = false;
     int nid = 0;
-    EC_KEY *ec_key_pair = NULL;
+    EC_KEY *ec_key_pair = nullptr;
 
     do {
         // New up the Guest Owner's private EVP_PKEY
@@ -334,8 +334,8 @@ bool GenerateRSAKeypair(EVP_PKEY **evp_key_pair)
         return false;
 
     bool ret = false;
-    RSA *rsa_key_pair = NULL;
-    BIGNUM *bne = NULL;
+    RSA *rsa_key_pair = nullptr;
+    BIGNUM *bne = nullptr;
     int bits = 4096;    // Modulus size in bits
     unsigned long e = RSA_F4;       // 65537
 
@@ -355,7 +355,7 @@ bool GenerateRSAKeypair(EVP_PKEY **evp_key_pair)
 
         // Create the new public/private EC key pair. EC_key must have a group
         // associated with it before calling this function
-        if (RSA_generate_key_ex(rsa_key_pair, bits, bne, NULL) != 1)
+        if (RSA_generate_key_ex(rsa_key_pair, bits, bne, nullptr) != 1)
             break;
 
         /*
@@ -430,7 +430,7 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *diges
                      size_t length, SHA_TYPE sha_type, bool pss)
 {
     bool is_valid = false;
-    RSA *priv_rsa_key = NULL;
+    RSA *priv_rsa_key = nullptr;
     uint32_t sig_len = 0;
 
     do {
@@ -496,7 +496,7 @@ static bool rsa_verify(sev_sig *sig, EVP_PKEY **evp_pub_key, const uint8_t *sha_
                        size_t sha_length, SHA_TYPE sha_type, bool pss)
 {
     bool is_valid = false;
-    RSA *rsa_pub_key = NULL;
+    RSA *rsa_pub_key = nullptr;
     uint32_t sig_len = 0;
 
     do {
@@ -564,10 +564,10 @@ static bool ecdsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
                        const uint8_t *digest, size_t length)
 {
     bool is_valid = false;
-    EC_KEY *priv_ec_key = NULL;
-    const BIGNUM *r = NULL;
-    const BIGNUM *s = NULL;
-    ECDSA_SIG *ecdsa_sig = NULL;
+    EC_KEY *priv_ec_key = nullptr;
+    const BIGNUM *r = nullptr;
+    const BIGNUM *s = nullptr;
+    ECDSA_SIG *ecdsa_sig = nullptr;
 
     do {
         priv_ec_key = EVP_PKEY_get1_EC_KEY(*priv_evp_key);
@@ -603,10 +603,10 @@ static bool ecdsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
 bool ecdsa_verify(sev_sig *sig, EVP_PKEY **pub_evp_key, uint8_t *digest, size_t length)
 {
     bool is_valid = false;
-    EC_KEY *pub_ec_key = NULL;
-    BIGNUM *r = NULL;
-    BIGNUM *s = NULL;
-    ECDSA_SIG *ecdsa_sig = NULL;
+    EC_KEY *pub_ec_key = nullptr;
+    BIGNUM *r = nullptr;
+    BIGNUM *s = nullptr;
+    ECDSA_SIG *ecdsa_sig = nullptr;
 
     do {
         pub_ec_key = EVP_PKEY_get1_EC_KEY(*pub_evp_key);
@@ -615,8 +615,8 @@ bool ecdsa_verify(sev_sig *sig, EVP_PKEY **pub_evp_key, uint8_t *digest, size_t 
 
         // Store the x and y components as separate BIGNUM objects. The values in the
         // SEV certificate are little-endian, must reverse bytes before storing in BIGNUM
-        r = BN_lebin2bn(sig->ecdsa.r, sizeof(sig->ecdsa.r), NULL);  // New's up BigNum
-        s = BN_lebin2bn(sig->ecdsa.s, sizeof(sig->ecdsa.s), NULL);
+        r = BN_lebin2bn(sig->ecdsa.r, sizeof(sig->ecdsa.r), nullptr);  // New's up BigNum
+        s = BN_lebin2bn(sig->ecdsa.s, sizeof(sig->ecdsa.s), nullptr);
 
         // Create a ecdsa_sig from the bignums and store in sig
         ecdsa_sig = ECDSA_SIG_new();
@@ -652,7 +652,7 @@ static bool sign_verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uin
     hmac_sha_256 sha_digest_256;   // Hash on the cert from Version to PubKey
     hmac_sha_512 sha_digest_384;   // Hash on the cert from Version to PubKey
     SHA_TYPE sha_type;
-    uint8_t *sha_digest = NULL;
+    uint8_t *sha_digest = nullptr;
     size_t sha_length;
     const bool pss = true;
 
@@ -752,15 +752,15 @@ SEV_ERROR_CODE aes_256_gcm_authenticated_encrypt(const uint8_t *p_key, size_t ke
         EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
         // Set the cipher and context only
-        if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL))
+        if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr))
             break;
 
         // Sets the IV length: Can only be called before specifying an IV [Optional for GCM]
-        if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, (int)iv_size, NULL))
+        if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, (int)iv_size, nullptr))
             break;
 
         // Now initialize the context with key and IV
-        if (!EVP_EncryptInit_ex(ctx, NULL, NULL, p_key, p_iv))
+        if (!EVP_EncryptInit_ex(ctx, nullptr, nullptr, p_key, p_iv))
             break;
 
         // Set the key length
@@ -776,7 +776,7 @@ SEV_ERROR_CODE aes_256_gcm_authenticated_encrypt(const uint8_t *p_key, size_t ke
          * out set to NULL
          */
         // Add Additional associated data (AAD) [Optional for GCM]
-        if (!EVP_EncryptUpdate(ctx, NULL, &out_len, p_aad, (int)aad_size))
+        if (!EVP_EncryptUpdate(ctx, nullptr, &out_len, p_aad, (int)aad_size))
             break;
         // Now encrypt the data
         if (!EVP_EncryptUpdate(ctx, p_out, &out_len, p_msg, (int)msg_size))
@@ -838,13 +838,13 @@ SEV_ERROR_CODE aes_256_gcm_authenticated_decrypt(const uint8_t *p_key, size_t ke
         EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
         // Set the cipher and context only.
-        if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL))
+        if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr))
             break;
 
         EVP_CIPHER_CTX_set_padding(ctx, 0);
 
         // Sets the IV length: Can only be called before specifying an IV [Optional for GCM]
-        if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, (int)iv_size, NULL))
+        if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, (int)iv_size, nullptr))
             break;
 
         // Set Tag from the data
@@ -852,7 +852,7 @@ SEV_ERROR_CODE aes_256_gcm_authenticated_decrypt(const uint8_t *p_key, size_t ke
             break;
 
         // Now initialize the context with key and IV
-        if (!EVP_DecryptInit_ex(ctx, NULL, NULL, p_key, p_iv))
+        if (!EVP_DecryptInit_ex(ctx, nullptr, nullptr, p_key, p_iv))
             break;
 
         // Set the key length
@@ -868,7 +868,7 @@ SEV_ERROR_CODE aes_256_gcm_authenticated_decrypt(const uint8_t *p_key, size_t ke
          * out set to NULL
          */
         // Add Additional associated data (AAD) [Optional for GCM]
-        if (!EVP_DecryptUpdate(ctx, NULL, &tmp_len, p_aad, (int)aad_size))
+        if (!EVP_DecryptUpdate(ctx, nullptr, &tmp_len, p_aad, (int)aad_size))
             break;
         out_len += tmp_len;
         // Now decrypt the data
