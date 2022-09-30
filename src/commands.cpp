@@ -110,9 +110,12 @@ int Command::pek_csr(void)
 
     cmd_ret = m_sev_device->platform_status((uint8_t *) &data_buf);
 
-    if (cmd_ret != STATUS_SUCCESS)
+    if (cmd_ret != STATUS_SUCCESS) {
+            delete pek_mem;
             return cmd_ret;
+    }
     if (data_buf.owner != PLATFORM_STATUS_OWNER_SELF) {
+            delete pek_mem;
             printf("Error: Platform must be self-owned first for the obtaining ownership procedure to work.");
             return -1;
     }
