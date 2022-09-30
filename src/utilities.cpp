@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <sys/random.h>
+#include <vector>
 
 bool sev::execute_system_command(const std::string cmd, std::string *log)
 {
@@ -135,12 +136,10 @@ void sev::gen_random_bytes(void *bytes, size_t num_bytes)
 
 bool sev::verify_access(uint8_t *buf, size_t len)
 {
-    uint8_t *master = new uint8_t[len];
-    gen_random_bytes(master, len);
-    memcpy(buf, master, len);
-    bool ret = memcmp(buf, master, len) == 0;
-    delete[] master;
-    return ret;
+    std::vector<uint8_t> master(len);
+    gen_random_bytes(master.data(), len);
+    memcpy(buf, master.data(), len);
+    return memcmp(buf, master.data(), len) == 0;
 }
 
 bool sev::str_to_array(const std::string in_string, uint8_t *array,
