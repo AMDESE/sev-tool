@@ -161,7 +161,7 @@ bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
 
             if (SHA256_Init(&context) != 1)
                 break;
-            if (SHA256_Update(&context, (void *)msg, msg_len) != 1)
+            if (SHA256_Update(&context, msg, msg_len) != 1)
                 break;
             if (SHA256_Final(digest, &context) != 1)
                 break;
@@ -171,7 +171,7 @@ bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
 
             if (SHA384_Init(&context) != 1)
                 break;
-            if (SHA384_Update(&context, (void *)msg, msg_len) != 1)
+            if (SHA384_Update(&context, msg, msg_len) != 1)
                 break;
             if (SHA384_Final(digest, &context) != 1)
                 break;
