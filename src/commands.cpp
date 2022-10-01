@@ -997,12 +997,11 @@ int Command::validate_attestation()
             printf("Error: The size of the attestation report is %ld bytes\n", sizeof(attestation_report));
             break;
         }
-        uint8_t report_mem[report_size];
-        auto *report = (attestation_report *)report_mem;
+        attestation_report report{};
 
         // Read in the report
         // printf("Attempting to read in Report file\n");
-        if (sev::read_file(report_file, report_mem, report_size) != report_size)
+        if (sev::read_file(report_file, &report, report_size) != report_size)
             break;
 
         // Read in the PEK (Platform Encryption Public Key)
@@ -1026,8 +1025,8 @@ int Command::validate_attestation()
             break;
 
         // Validate the report
-        success = verify_message((sev_sig *)&report->sig1,
-                                  &pek_pub_key, report_mem,
+        success = verify_message((sev_sig *)&report.sig1,
+                                  &pek_pub_key, reinterpret_cast<uint8_t *>(&report),
                                   offsetof(attestation_report, sig_usage),
                                   SEV_SIG_ALGO_ECDSA_SHA256);
         if (!success) {
@@ -1061,12 +1060,11 @@ int Command::validate_guest_report()
             printf("Error: The size of the attestation report is %ld bytes\n", sizeof(snp_attestation_report_t));
             break;
         }
-        uint8_t report_mem[report_size];
-        auto *report = (snp_attestation_report_t *)report_mem;
+        snp_attestation_report_t report{};
 
         // Read in the report
         // printf("Attempting to read in Report file\n");
-        if (sev::read_file(report_file, report_mem, report_size) != report_size)
+        if (sev::read_file(report_file, &report, report_size) != report_size)
             break;
 
         // Read in the VCEK
@@ -1086,8 +1084,8 @@ int Command::validate_guest_report()
         // BIO_free(out2);
 
         // Validate the report
-        success = verify_message((sev_sig *)&report->signature,
-                                  &vcek_pub_key, report_mem,
+        success = verify_message((sev_sig *)&report.signature,
+                                  &vcek_pub_key, reinterpret_cast<uint8_t *>(&report),
                                   offsetof(snp_attestation_report_t, signature),
                                   SEV_SIG_ALGO_ECDSA_SHA384);
         if (!success) {
