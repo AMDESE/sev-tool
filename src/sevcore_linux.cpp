@@ -489,25 +489,24 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
 std::string SEVDevice::display_build_info()
 {
     SEVDevice sev_device;
-    uint8_t status_data[sizeof(sev_platform_status_cmd_buf)];
-    auto *status_data_buf = (sev_platform_status_cmd_buf *)&status_data;
+    sev_platform_status_cmd_buf status;
     int cmd_ret = -1;
 
     std::string api_major_ver = "API_Major: xxx";
     std::string api_minor_ver = "API_Minor: xxx";
     std::string build_id_ver  = "BuildID: xxx";
 
-    cmd_ret = sev_device.platform_status(status_data);
+    cmd_ret = sev_device.platform_status(reinterpret_cast<uint8_t *>(&status));
     if (cmd_ret != 0)
         return "";
 
-    char major_buf[4], minor_buf[4], build_id_buf[4];   // +1 for Null char
-    sprintf(major_buf, "%d", status_data_buf->api_major);
-    sprintf(minor_buf, "%d", status_data_buf->api_minor);
-    sprintf(build_id_buf, "%d", status_data_buf->build_id);
-    api_major_ver.replace(11, 3, major_buf);
-    api_minor_ver.replace(11, 3, minor_buf);
-    build_id_ver.replace(9, 3, build_id_buf);
+    std::array<char, 4> major_buf, minor_buf, build_id_buf;   // +1 for Null char
+    sprintf(major_buf.data(), "%d", status.api_major);
+    sprintf(minor_buf.data(), "%d", status.api_minor);
+    sprintf(build_id_buf.data(), "%d", status.build_id);
+    api_major_ver.replace(11, 3, major_buf.data());
+    api_minor_ver.replace(11, 3, minor_buf.data());
+    build_id_ver.replace(9, 3, build_id_buf.data());
 
     return api_major_ver + ", " + api_minor_ver + ", " + build_id_ver;
 }
@@ -621,12 +620,12 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
         // Copy the resulting IDs into the real buffer allocated for them
         // Note that Linux referrs to P0 and P1 as socket1 and socket2 (which is incorrect).
         //   So below, we are getting the ID for P0, which is the first socket
-        char id0_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
+        std::array<char, sizeof(id_buf.socket1)*2+1> id0_buf{};  // 2 chars per byte +1 for null term
         for (uint8_t i = 0; i < sizeof(id_buf.socket1); i++)
         {
-            sprintf(id0_buf+strlen(id0_buf), "%02x", id_buf.socket1[i]);
+            sprintf(id0_buf.data()+2*i, "%02x", id_buf.socket1[i]);
         }
-        cmd += id0_buf;
+        cmd += id0_buf.data();
 
         // Don't re-download the CEK from the KDS server if you already have it
         if (sev::get_file_size(to_cert_w_path) != 0) {
@@ -636,7 +635,7 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
         }
 
         // The AMD KDS server only accepts requests every 10 seconds
-        std::string cert_w_path = output_folder + id0_buf;
+        std::string cert_w_path = output_folder + id0_buf.data();
         bool cert_found = false;
         int sec_to_sleep = 6;
         int retries = 0;
@@ -680,18 +679,12 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_get_id id_buf;
-    char cmd[235];
+    sev_user_data_get_id id_buf{};
+    std::array<char, 235> cmd{};
     std::string fmt;
     std::string output = "";
     std::string der_cert_w_path = output_folder + vcek_der_file;
     std::string pem_cert_w_path = output_folder + vcek_pem_file;
-
-    // Set struct to 0
-    memset(&id_buf, 0, sizeof(sev_user_data_get_id));
-
-    // Zero the memory used for the URL, just in case.
-    memset(&cmd, 0, sizeof(cmd));
 
     do {
 
@@ -706,10 +699,10 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
         // Copy the resulting IDs into the real buffer allocated for them
         // Note that Linux referrs to P0 and P1 as socket1 and socket2 (which is incorrect).
         //   So below, we are getting the ID for P0, which is the first socket
-        char id0_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
+        std::array<char, sizeof(id_buf.socket1)*2+1> id0_buf{};  // 2 chars per byte +1 for null term
         for (uint8_t i = 0; i < sizeof(id_buf.socket1); i++)
         {
-            sprintf(id0_buf+strlen(id0_buf), "%02x", id_buf.socket1[i]);
+            sprintf(id0_buf.data()+2*i, "%02x", id_buf.socket1[i]);
         }
 
         // Create a container to store the TCB Version in.
@@ -720,11 +713,11 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
 
         // Build the URL string.
         sprintf(
-            cmd,
+            cmd.data(),
             fmt.c_str(),
             der_cert_w_path.c_str(),
             KDS_VCEK,
-            id0_buf,
+            id0_buf.data(),
             tcb_data.f.boot_loader,
             tcb_data.f.tee,
             tcb_data.f.snp,
@@ -744,7 +737,7 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
         int retries = 0;
         int max_retries = (int)((10/sec_to_sleep)+2);
         while (!cert_found && retries <= max_retries) {
-            if (!sev::execute_system_command(cmd, &output)) {
+            if (!sev::execute_system_command(cmd.data(), &output)) {
                 printf("Error: pipe not opened for system command\n");
                 cmd_ret = SEV_RET_UNSUPPORTED;
                 break;
