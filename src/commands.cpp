@@ -681,16 +681,16 @@ int Command::calc_measurement(measurement_t *user_data)
             printf("   Build ID: %02x\n", user_data->build_id);
             printf("   Policy: %02x\n", user_data->policy);
             printf("   Digest: ");
-            for (size_t i = 0; i < sizeof(user_data->digest); i++) {
-                printf("%02x", user_data->digest[i]);
+            for (auto i: user_data->digest) {
+                printf("%02x", i);
             }
             printf("\n   MNonce: ");
-            for (size_t i = 0; i < sizeof(user_data->mnonce); i++) {
-                printf("%02x", user_data->mnonce[i]);
+            for (auto i: user_data->mnonce) {
+                printf("%02x", i);
             }
             printf("\n   TIK: ");
-            for (size_t i = 0; i < sizeof(user_data->tik); i++) {
-                printf("%02x", user_data->tik[i]);
+            for (auto i: user_data->tik) {
+                printf("%02x", i);
             }
             // Print output
             printf("\n\n%s\n", meas_str.c_str());
@@ -864,28 +864,28 @@ int Command::generate_launch_blob(uint32_t policy)
             if (m_verbose_flag) {
                 printf("Guest Policy (input): %08x\n", policy);
                 printf("nonce:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.nonce); i++) {
-                    printf("%02x ", session_data_buf.nonce[i]);
+                for (auto i: session_data_buf.nonce) {
+                    printf("%02x ", i);
                 }
                 printf("\nWrapTK TEK:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.wrap_tk.tek); i++) {
-                    printf("%02x ", session_data_buf.wrap_tk.tek[i]);
+                for (auto i: session_data_buf.wrap_tk.tek) {
+                    printf("%02x ", i);
                 }
                 printf("\nWrapTK TIK:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.wrap_tk.tik); i++) {
-                    printf("%02x ", session_data_buf.wrap_tk.tik[i]);
+                for (auto i: session_data_buf.wrap_tk.tik) {
+                    printf("%02x ", i);
                 }
                 printf("\nWrapIV:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.wrap_iv); i++) {
-                    printf("%02x ", session_data_buf.wrap_iv[i]);
+                for (auto i: session_data_buf.wrap_iv) {
+                    printf("%02x ", i);
                 }
                 printf("\nWrapMAC:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.wrap_mac); i++) {
-                    printf("%02x ", session_data_buf.wrap_mac[i]);
+                for (auto i: session_data_buf.wrap_mac) {
+                    printf("%02x ", i);
                 }
                 printf("\nPolicyMAC:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.policy_mac); i++) {
-                    printf("%02x ", session_data_buf.policy_mac[i]);
+                for (auto i: session_data_buf.policy_mac) {
+                    printf("%02x ", i);
                 }
                 printf("\n");
             }
@@ -948,8 +948,8 @@ int Command::package_secret()
 
         if (m_verbose_flag) {
             printf("Random IV\n");
-            for (size_t i = 0; i < sizeof(iv); i++) {
-                printf("%02x ", iv[i]);
+            for (auto i: iv) {
+                printf("%02x ", i);
             }
             printf("\n");
         }
