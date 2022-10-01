@@ -670,11 +670,11 @@ int Command::calc_measurement(measurement_t *user_data)
     cmd_ret = calculate_measurement(user_data, &final_meas);
 
     if (cmd_ret == STATUS_SUCCESS) {
-        char meas_buf[sizeof(final_meas)*2+1] = {0}; // 2 chars per byte +1 for null term
+        std::string meas_str{};
+        meas_str.resize(sizeof(final_meas)*2);
         for (size_t i = 0; i < sizeof(final_meas); i++) {
-            sprintf(meas_buf+strlen(meas_buf), "%02x", final_meas[i]);
+            sprintf(meas_str.data()+2*i, "%02x", final_meas[i]);
         }
-        std::string meas_str = meas_buf;
 
         if (m_verbose_flag) {          // Print ID arrays
             // Print input args for user
