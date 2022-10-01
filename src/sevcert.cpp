@@ -26,7 +26,7 @@
 #include <openssl/rsa.h>
 #include <cstring>      // memset
 #include <fstream>
-#include <stdio.h>
+#include <cstdio>
 #include <stdexcept>
 
 /**

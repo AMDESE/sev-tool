@@ -21,9 +21,9 @@
 #include "utilities.h"
 
 #include <cstring>                  // memset
-#include <stdio.h>
+#include <cstdio>
 #include <stdexcept>
-#include <stdio.h>
+#include <cstdio>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rsa.h>

@@ -20,7 +20,7 @@
 #include <openssl/pem.h>
 #include <cstring>  // memset
 #include <fstream>
-#include <stdio.h>
+#include <cstdio>
 #include <stdexcept>
 
 // Print a certificate

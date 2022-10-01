@@ -18,7 +18,7 @@
 #include "tests.h"     // for test_all
 #include "utilities.h" // for str_to_array
 #include <getopt.h>    // for getopt_long
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 
 const char help_array[] =  "The following commands are supported:\n" \

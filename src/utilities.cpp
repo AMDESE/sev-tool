@@ -18,8 +18,8 @@
 #include <climits>
 #include <cstring>      // memcpy
 #include <fstream>
-#include <stdio.h>
-#include <time.h>
+#include <cstdio>
+#include <ctime>
 #include <sys/random.h>
 #include <vector>
 

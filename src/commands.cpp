@@ -24,9 +24,10 @@
 #include <openssl/hmac.h>   // for calc_measurement
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
-#include <stdio.h>          // printf
-#include <stdlib.h>         // malloc
+#include <cstdio>          // printf
+#include <cstdlib>         // malloc
 #include <memory>
+#include <utility>
 
 Command::Command(void)
        : m_sev_device(&SEVDevice::get_sev_device())
@@ -36,7 +37,7 @@ Command::Command(void)
 
 Command::Command(std::string output_folder, int verbose_flag, ccp_required_t ccp)
        : m_sev_device((ccp == CCP_REQ) ? &SEVDevice::get_sev_device() : nullptr),
-         m_output_folder(output_folder),
+         m_output_folder(std::move(output_folder)),
          m_verbose_flag(verbose_flag)
 {
     // Intentionally Empty

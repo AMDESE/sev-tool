@@ -22,8 +22,8 @@
 #include "tests.h"
 #include "utilities.h"  // for read_file
 #include <cstring>      // For memcmp
-#include <stdio.h>      // prboolf
-#include <stdlib.h>     // malloc
+#include <cstdio>      // prboolf
+#include <cstdlib>     // malloc
 
 Tests::Tests(std::string output_folder, int verbose_flag)
      : m_output_folder(std::move(output_folder)),

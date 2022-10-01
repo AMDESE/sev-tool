@@ -26,7 +26,7 @@ typedef bool _Bool;
 #endif
 
 
-#include <stdint.h>
+#include <cstdint>
 
 // ------------------------------- //
 // --- Miscellaneous constants --- //
