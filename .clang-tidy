@@ -1,1 +1,1 @@
-Checks: 'modernize-use-nullptr,modernize-use-auto,modernize-use-bool-literals,modernize-pass-by-value,modernize-deprecated-headers,modernize-redundant-void-arg'
+Checks: 'modernize-use-nullptr,modernize-use-auto,modernize-use-bool-literals,modernize-pass-by-value,modernize-deprecated-headers,modernize-redundant-void-arg,modernize-avoid-c-arrays'
