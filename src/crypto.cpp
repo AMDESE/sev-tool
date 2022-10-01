@@ -21,6 +21,7 @@
 #include <openssl/hmac.h>
 #include <openssl/ts.h>
 #include <openssl/ecdh.h>
+#include <array>
 
 /**
  * Description:   Generates a new P-384 key pair
@@ -201,15 +202,11 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *diges
         }
 
         if (pss) {
-            uint8_t encrypted[4096/BITS_PER_BYTE] = {0};
-            uint8_t signature[4096/BITS_PER_BYTE] = {0};
-
-            // Memzero all the buffers
-            memset(encrypted, 0, sizeof(encrypted));
-            memset(signature, 0, sizeof(signature));
+            std::array<uint8_t, 4096/BITS_PER_BYTE> encrypted{};
+            std::array<uint8_t, 4096/BITS_PER_BYTE> signature{};
 
             // Compute the pss padded data
-            if (RSA_padding_add_PKCS1_PSS(priv_rsa_key, encrypted, digest,
+            if (RSA_padding_add_PKCS1_PSS(priv_rsa_key, encrypted.data(), digest,
                                          (sha_type == SHA_TYPE_256) ? EVP_sha256() : EVP_sha384(),
                                          -2) != 1) // maximum salt length
             {
@@ -217,13 +214,13 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *diges
             }
 
             // Perform digital signature
-            if (RSA_private_encrypt(sizeof(encrypted), encrypted, signature, priv_rsa_key, RSA_NO_PADDING) == -1)
+            if (RSA_private_encrypt(sizeof(encrypted), encrypted.data(), signature.data(), priv_rsa_key, RSA_NO_PADDING) == -1)
                 break;
 
             // Swap the bytes of the signature
-            if (!sev::reverse_bytes(signature, 4096/BITS_PER_BYTE))
+            if (!sev::reverse_bytes(signature.data(), signature.size()))
                 break;
-            memcpy(sig->rsa.s, signature, 4096/BITS_PER_BYTE);
+            memcpy(sig->rsa.s, signature.data(), signature.size());
         }
         else {
             if (RSA_sign((sha_type == SHA_TYPE_256) ? NID_sha256 : NID_sha384, digest,
@@ -264,27 +261,23 @@ static bool rsa_verify(sev_sig *sig, EVP_PKEY **evp_pub_key, const uint8_t *sha_
         sig_len = RSA_size(rsa_pub_key);
 
         if (pss) {
-            uint8_t decrypted[4096/BITS_PER_BYTE] = {0}; // TODO wrong length
-            uint8_t signature[4096/BITS_PER_BYTE] = {0};
-
-            // Memzero all the buffers
-            memset(decrypted, 0, sizeof(decrypted));
-            memset(signature, 0, sizeof(signature));
+            std::array<uint8_t, 4096/BITS_PER_BYTE> decrypted{}; // TODO wrong length
+            std::array<uint8_t, 4096/BITS_PER_BYTE> signature{};
 
             // Swap the bytes of the signature
-            memcpy(signature, sig->rsa.s, 4096/BITS_PER_BYTE);
-            if (!sev::reverse_bytes(signature, 4096/BITS_PER_BYTE))
+            memcpy(signature.data(), sig->rsa.s, signature.size());
+            if (!sev::reverse_bytes(signature.data(), signature.size()))
                 break;
 
             // Now we will verify the signature. Start by a RAW decrypt of the signature
-            if (RSA_public_decrypt(sig_len, signature, decrypted, rsa_pub_key, RSA_NO_PADDING) == -1)
+            if (RSA_public_decrypt(sig_len, signature.data(), decrypted.data(), rsa_pub_key, RSA_NO_PADDING) == -1)
                 break;
 
             // Verify the data
             // SLen of -2 means salt length is recovered from the signature
             if (RSA_verify_PKCS1_PSS(rsa_pub_key, sha_digest,
                                      (sha_type == SHA_TYPE_256) ? EVP_sha256() : EVP_sha384(),
-                                     decrypted, -2) != 1)
+                                     decrypted.data(), -2) != 1)
             {
                 printf("Error: rsa_verify with pss Failed\n");
                 break;
