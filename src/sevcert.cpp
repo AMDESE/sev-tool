@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <array>
+#include <vector>
 #include <string_view>
 
 /**
@@ -578,12 +579,10 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
             if ((parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
                 (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
                 uint32_t sig_len = parent_cert->pub_key.rsa.modulus_size/8; // Should be child_cert but SEV_RSA_SIG doesn't have a size param
-                uint8_t decrypted[parent_cert->pub_key.rsa.modulus_size]; // TODO wrong length
-                uint8_t signature[parent_cert->pub_key.rsa.modulus_size];
-                for(auto &i : decrypted)
-                    i = 0;
-                for(auto &i : signature)
-                    i = 0;
+                std::vector<uint8_t> decrypted{};
+                decrypted.resize(parent_cert->pub_key.rsa.modulus_size); // TODO wrong length
+                std::vector<uint8_t> signature{};
+                signature.resize(parent_cert->pub_key.rsa.modulus_size);
 
                 RSA *rsa_pub_key = EVP_PKEY_get1_RSA(parent_signing_key);   // Signer's (parent's) public key
                 if (!rsa_pub_key) {
@@ -592,19 +591,19 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                 }
 
                 // Swap the bytes of the signature
-                memcpy(signature, &cert_sig[i].rsa, parent_cert->pub_key.rsa.modulus_size/8);
-                if (!sev::reverse_bytes(signature, parent_cert->pub_key.rsa.modulus_size/8))
+                memcpy(signature.data(), &cert_sig[i].rsa, parent_cert->pub_key.rsa.modulus_size/8);
+                if (!sev::reverse_bytes(signature.data(), parent_cert->pub_key.rsa.modulus_size/8))
                     break;
 
                 // Now we will verify the signature. Start by a RAW decrypt of the signature
-                if (RSA_public_decrypt(sig_len, signature, decrypted, rsa_pub_key, RSA_NO_PADDING) == -1)
+                if (RSA_public_decrypt(sig_len, signature.data(), decrypted.data(), rsa_pub_key, RSA_NO_PADDING) == -1)
                     break;
 
                 // Verify the data
                 // SLen of -2 means salt length is recovered from the signature
                 if (RSA_verify_PKCS1_PSS(rsa_pub_key, sha_digest,
                                         (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ? EVP_sha256() : EVP_sha384(),
-                                        decrypted, -2) != 1)
+                                        decrypted.data(), -2) != 1)
                 {
                     RSA_free(rsa_pub_key);
                     continue;
