@@ -28,6 +28,8 @@
 #include <fstream>
 #include <cstdio>
 #include <stdexcept>
+#include <array>
+#include <string_view>
 
 /**
  * Description: This function prints out an sev_cert in readable ASCII format
@@ -38,38 +40,39 @@
  */
 void print_sev_cert_readable(const sev_cert *cert, std::string &out_str)
 {
-    char out[sizeof(sev_cert)*3+500];   // 2 chars per byte + 1 spaces + ~500 extra chars for text
+    std::array<char, sizeof(sev_cert)*3+500> out{};   // 2 chars per byte + 1 spaces + ~500 extra chars for text
+    size_t offset{};
 
-    sprintf(out, "%-15s%08x\n", "Version:", cert->version);                         // uint32_t
-    sprintf(out+strlen(out), "%-15s%02x\n", "api_major:", cert->api_major);         // uint8_t
-    sprintf(out+strlen(out), "%-15s%02x\n", "api_minor:", cert->api_minor);         // uint8_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "pub_key_usage:", cert->pub_key_usage); // uint32_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "pub_key_algo:", cert->pub_key_algo);   // uint32_t
-    sprintf(out+strlen(out), "%-15s\n", "pub_key:");                                 // sev_pubkey
+    offset += sprintf(out.data(), "%-15s%08x\n", "Version:", cert->version);                         // uint32_t
+    offset += sprintf(out.data()+offset, "%-15s%02x\n", "api_major:", cert->api_major);         // uint8_t
+    offset += sprintf(out.data()+offset, "%-15s%02x\n", "api_minor:", cert->api_minor);         // uint8_t
+    offset += sprintf(out.data()+offset, "%-15s%08x\n", "pub_key_usage:", cert->pub_key_usage); // uint32_t
+    offset += sprintf(out.data()+offset, "%-15s%08x\n", "pub_key_algo:", cert->pub_key_algo);   // uint32_t
+    offset += sprintf(out.data()+offset, "%-15s\n", "pub_key:");                                 // sev_pubkey
     for (size_t i = 0; i < (size_t)(sizeof(sev_pubkey)); i++) {  //bytes to uint8
-        sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->pub_key)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->pub_key)[i] );
     }
-    sprintf(out+strlen(out), "\n");
-    sprintf(out+strlen(out), "%-15s%08x\n", "sig_1_usage:", cert->sig_1_usage);     // uint32_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "sig_1_algo:", cert->sig_1_algo);       // uint32_t
-    sprintf(out+strlen(out), "%-15s\n", "sig_1:");                                   // sev_sig
+    offset += sprintf(out.data()+offset, "\n");
+    offset += sprintf(out.data()+offset, "%-15s%08x\n", "sig_1_usage:", cert->sig_1_usage);     // uint32_t
+    offset += sprintf(out.data()+offset, "%-15s%08x\n", "sig_1_algo:", cert->sig_1_algo);       // uint32_t
+    offset += sprintf(out.data()+offset, "%-15s\n", "sig_1:");                                   // sev_sig
     for (size_t i = 0; i < (size_t)(sizeof(sev_sig)); i++) {     //bytes to uint8
-        sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->sig_1)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->sig_1)[i] );
     }
-    sprintf(out+strlen(out), "\n");
-    sprintf(out+strlen(out), "%-15s%08x\n", "sig_2_usage:", cert->sig_2_usage);     // uint32_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "sig_2_algo:", cert->sig_2_algo);       // uint32_t
-    sprintf(out+strlen(out), "%-15s\n", "Sig2:");                                   // sev_sig
+    offset += sprintf(out.data()+offset, "\n");
+    offset += sprintf(out.data()+offset, "%-15s%08x\n", "sig_2_usage:", cert->sig_2_usage);     // uint32_t
+    offset += sprintf(out.data()+offset, "%-15s%08x\n", "sig_2_algo:", cert->sig_2_algo);       // uint32_t
+    offset += sprintf(out.data()+offset, "%-15s\n", "Sig2:");                                   // sev_sig
     for (size_t i = 0; i < (size_t)(sizeof(sev_sig)); i++) {     //bytes to uint8
-        sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->sig_2)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->sig_2)[i] );
     }
-    sprintf(out+strlen(out), "\n");
+    offset += sprintf(out.data()+offset, "\n");
 
     if (out_str == "NULL") {
-        printf("%s\n", out);
+        printf("%s\n", out.data());
     }
     else {
-        out_str += out;
+        out_str += std::string_view{out.data(), offset};
     }
 }
 
@@ -96,22 +99,22 @@ void print_sev_cert_hex(const sev_cert *cert)
  */
 void print_cert_chain_buf_readable(const sev_cert_chain_buf *p, std::string &out_str)
 {
-    char out_pek[50];    // Just big enough for string below
-    char out_oca[50];
-    char out_cek[50];
+    std::array<char, 50> out_pek{};    // Just big enough for string below
+    std::array<char, 50> out_oca{};
+    std::array<char, 50> out_cek{};
 
     std::string out_str_local = "";
 
-    sprintf(out_pek, "PEK Memory: %ld bytes\n", sizeof(sev_cert));
-    out_str_local += out_pek;
+    sprintf(out_pek.data(), "PEK Memory: %ld bytes\n", sizeof(sev_cert));
+    out_str_local += out_pek.data();
     print_sev_cert_readable(((sev_cert *)PEK_IN_CERT_CHAIN(p)), out_str_local);
 
-    sprintf(out_oca, "\nOCA Memory: %ld bytes\n", sizeof(sev_cert));
-    out_str_local += out_oca;
+    sprintf(out_oca.data(), "\nOCA Memory: %ld bytes\n", sizeof(sev_cert));
+    out_str_local += out_oca.data();
     print_sev_cert_readable(((sev_cert *)OCA_IN_CERT_CHAIN(p)), out_str_local);
 
-    sprintf(out_cek, "\nCEK Memory: %ld bytes\n", sizeof(sev_cert));
-    out_str_local += out_cek;
+    sprintf(out_cek.data(), "\nCEK Memory: %ld bytes\n", sizeof(sev_cert));
+    out_str_local += out_cek.data();
     print_sev_cert_readable(((sev_cert *)CEK_IN_CERT_CHAIN(p)), out_str_local);
 
     if (out_str == "NULL") {
@@ -528,9 +531,9 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
-    sev_sig cert_sig[SEV_CERT_MAX_SIGNATURES] = {child_cert->sig_1, child_cert->sig_2};
-    uint32_t cert_sig_algo[SEV_CERT_MAX_SIGNATURES] = {child_cert->sig_1_algo, child_cert->sig_2_algo};
-    uint32_t cert_sig_usage[SEV_CERT_MAX_SIGNATURES] = {child_cert->sig_1_usage, child_cert->sig_2_usage};
+    std::array<sev_sig, SEV_CERT_MAX_SIGNATURES> cert_sig{child_cert->sig_1, child_cert->sig_2};
+    std::array<uint32_t, SEV_CERT_MAX_SIGNATURES> cert_sig_algo{child_cert->sig_1_algo, child_cert->sig_2_algo};
+    std::array<uint32_t, SEV_CERT_MAX_SIGNATURES> cert_sig_usage{child_cert->sig_1_usage, child_cert->sig_2_usage};
     hmac_sha_256 sha_digest_256;        // Hash on the cert from Version to PubKey
     hmac_sha_512 sha_digest_384;        // Hash on the cert from Version to PubKey
     SHA_TYPE sha_type;
@@ -911,8 +914,8 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
-    EVP_PKEY *parent_pub_key[SEV_CERT_MAX_SIGNATURES] = {nullptr};
-    const sev_cert *parent_cert[SEV_CERT_MAX_SIGNATURES] = {parent_cert1, parent_cert2};   // A cert has max of x parents/sigs
+    std::array<EVP_PKEY *, SEV_CERT_MAX_SIGNATURES> parent_pub_key{};
+    const std::array<const sev_cert *, SEV_CERT_MAX_SIGNATURES> parent_cert{parent_cert1, parent_cert2};   // A cert has max of x parents/sigs
 
     do {
         // Get the public key from parent certs
@@ -959,10 +962,10 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
             // 2. If CEK parent1 and OCA parent2 or
             // 3. If OCA parent1 only certificate (signed CSR)
             // 4. If OCA parent2 only certificate (signed CSR)
-            if (((parent_cert1->pub_key_usage != SEV_USAGE_OCA) && (parent_cert2->pub_key_usage != SEV_USAGE_CEK)) &&
-                ((parent_cert1->pub_key_usage != SEV_USAGE_CEK) && (parent_cert2->pub_key_usage != SEV_USAGE_OCA)) &&
+            if (((parent_cert1->pub_key_usage != SEV_USAGE_OCA) && ((parent_cert2 == nullptr) || parent_cert2->pub_key_usage != SEV_USAGE_CEK)) &&
+                ((parent_cert1->pub_key_usage != SEV_USAGE_CEK) && ((parent_cert2 == nullptr) || parent_cert2->pub_key_usage != SEV_USAGE_OCA)) &&
                 ((numSigs == 1) && (parent_cert1->pub_key_usage != SEV_USAGE_OCA)) &&
-                ((numSigs == 1) && (parent_cert2->pub_key_usage != SEV_USAGE_OCA)))  {
+                ((numSigs == 1) && ((parent_cert2 == nullptr) || parent_cert2->pub_key_usage != SEV_USAGE_OCA)))  {
                 break;
             }
         }
@@ -1001,10 +1004,9 @@ SEV_ERROR_CODE SEVCert::validate_pek_csr()
         m_child_cert->sig_1_algo     == SEV_SIG_ALGO_INVALID      &&
         m_child_cert->sig_2_usage    == SEV_USAGE_INVALID         &&
         m_child_cert->sig_2_algo     == SEV_SIG_ALGO_INVALID ) {
-        char testblock [SEV_SIG_SIZE];
-        memset (testblock, 0, SEV_SIG_SIZE);
+        std::array<char, SEV_SIG_SIZE> testblock{};
         // if both signatures 0
-        if (!memcmp(testblock, &m_child_cert->sig_1, SEV_SIG_SIZE) || !memcmp(testblock, &m_child_cert->sig_2, SEV_SIG_SIZE)) {
+        if (!memcmp(testblock.data(), &m_child_cert->sig_1, testblock.size()) || !memcmp(testblock.data(), &m_child_cert->sig_2, testblock.size())) {
             return STATUS_SUCCESS;
         }
     }
@@ -1026,17 +1028,16 @@ SEV_ERROR_CODE SEVCert::verify_signed_pek_csr(const sev_cert *oca_cert)
         uint32_t usage1 = m_child_cert->sig_1_usage, usage2 = m_child_cert->sig_2_usage;
         uint32_t algo1 = m_child_cert->sig_1_algo, algo2 = m_child_cert->sig_2_algo;
 
-        char testblock [SEV_SIG_SIZE];
-        memset (testblock, 0, SEV_SIG_SIZE);
+        std::array<char, SEV_SIG_SIZE> testblock{};
         // Check that exactly one field empty
         if ((algo1 == SEV_SIG_ALGO_INVALID) && (usage1 == SEV_USAGE_INVALID))
         {
-            if (memcmp(testblock, &m_child_cert->sig_1, SEV_SIG_SIZE) != 0) {
+            if (memcmp(testblock.data(), &m_child_cert->sig_1, testblock.size()) != 0) {
                 break;
             }
         }
         else if ((algo2 == SEV_SIG_ALGO_INVALID) && (usage2 == SEV_USAGE_INVALID)) {
-            if (memcmp(testblock, &m_child_cert->sig_2, SEV_SIG_SIZE) != 0) {
+            if (memcmp(testblock.data(), &m_child_cert->sig_2, testblock.size()) != 0) {
                 break;
             }
         } else {
