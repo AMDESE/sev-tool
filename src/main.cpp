@@ -20,6 +20,7 @@
 #include <getopt.h>    // for getopt_long
 #include <cstdio>
 #include <array>
+#include <filesystem>
 #include <string>
 #include <string_view>
 
@@ -143,16 +144,8 @@ int main(int argc, char **argv)
                 output_folder += "/";
 
                 // Check that output folder exists, and immediately stop if not
-                std::string cmd = "if test -d " + output_folder + " ; then echo \"exist\"; else echo \"no\"; fi";
-                std::string output = "";
-                if (!sev::execute_system_command(cmd, &output)) {
-                    printf("Error. Output directory %s existance check failed.\n", output_folder.c_str());
-                    return EXIT_FAILURE;
-                }
-
-                if (strncmp(output.c_str(), "exists", 2) != 0) {
-                    printf("Error. Output directory %s does not exist. " \
-                           "Please manually create it and try again\n", output_folder.c_str());
+                if (!std::filesystem::is_directory(output_folder)) {
+                    printf("Error. Output directory '%s' does not exist or is not a directory.\n", output_folder.c_str());
                     return EXIT_FAILURE;
                 }
 
