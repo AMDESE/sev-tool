@@ -19,61 +19,62 @@
 #include "utilities.h" // for str_to_array
 #include <getopt.h>    // for getopt_long
 #include <cstdio>
+#include <array>
 #include <string>
+#include <string_view>
 
-const char help_array[] =  "The following commands are supported:\n" \
-                    " sevtool -[global opts] --[command] [command opts]\n" \
-                    "(Please see the readme file for more detailed information)\n" \
-                    "Platform Owner commands:\n" \
-                    "  factory_reset\n" \
-                    "  platform_status\n" \
-                    "  pek_gen\n" \
-                    "  pek_csr\n" \
-                    "  pdh_gen\n" \
-                    "  pdh_cert_export\n" \
-                    "  pek_cert_import\n" \
-                    "      Input params:\n" \
-                    "          pek_csr.signed.cert file\n" \
-                    "          oca.cert file\n" \
-                    "  get_id\n" \
-                    "  sign_pek_csr\n" \
-                    "      Input params:\n" \
-                    "          pek_csr.cert file\n" \
-                    "          [oca private key].pem file\n" \
-                    "  set_self_owned\n" \
-                    "  set_externally_owned\n" \
-                    "      Input params:\n" \
-                    "          [oca private key].pem file\n" \
-                    "  generate_cek_ask\n" \
-                    "  get_ask_ark\n" \
-                    "  export_cert_chain\n" \
-                    "Guest Owner commands:\n" \
-                    "  calc_measurement\n" \
-                    "      Input params (all in ascii-encoded hex bytes):\n" \
-                    "          uint8_t  meas_ctx\n" \
-                    "          uint8_t  api_major\n" \
-                    "          uint8_t  api_minor\n" \
-                    "          uint8_t  build_id\n" \
-                    "          uint32_t policy\n" \
-                    "          uint32_t digest\n" \
-                    "          uint8_t  m_nonce[128/8]\n" \
-                    "          uint8_t  gctx_tik[128/8]\n" \
-                    "  validate_cert_chain\n" \
-                    "  generate_launch_blob\n" \
-                    "      Input params:\n" \
-                    "          uint32_t policy\n" \
-                    "  package_secret\n" \
-                    "  validate_attestation\n" \
-                    "  validate_guest_report\n" \
-                    "  validate_cert_chain_vcek\n" \
-                    "  export_cert_chain_vcek\n" \
-                    ;
+std::string_view const help_array = R"(The following commands are supported:
+    sev-tool -[global opts] --[command] [command opts]
+(Please see the readme file for more detailed information)
+Platform Owner commands:
+    factory_reset
+    platform_status
+    pek_gen
+    pek_csr
+    pdh_gen
+    pdh_cert_export
+    pek_cert_import
+        Input params:
+            pek_csr.signed.cert file
+            oca.cert file
+    get_id
+    sign_pek_csr
+        Input params:
+            pek_csr.cert file
+            [oca private key].pem file
+    set_self_owned
+    set_externally_owned
+        Input params:
+            [oca private key].pem file
+    generate_cek_ask
+    get_ask_ark
+    export_cert_chain
+Guest Owner commands:
+    calc_measurement
+        Input params (all in ascii-encoded hex bytes):
+            uint8_t  meas_ctx
+            uint8_t  api_major
+            uint8_t  api_minor
+            uint8_t  build_id
+            uint32_t policy
+            uint32_t digest
+            uint8_t  m_nonce[128/8]
+            uint8_t  gctx_tik[128/8]
+    validate_cert_chain
+    generate_launch_blob
+        Input params:
+            uint32_t policy
+    package_secret
+    validate_attestation
+    validate_guest_report
+    validate_cert_chain_vcek
+    export_cert_chain_vcek
+)";
 
 /* Flag set by '--verbose' */
 static int verbose_flag = 0;
 
-static struct option long_options[] =
-{
+static std::array<option, 29> long_options{{
     /* These options set a flag. */
     {"verbose",             no_argument,       &verbose_flag, 1},
     {"brief",               no_argument,       &verbose_flag, 0},
@@ -111,7 +112,7 @@ static struct option long_options[] =
     {"sys_info",             no_argument,       nullptr, 'I'},
     {"ofolder",              required_argument, nullptr, 'O'},
     {nullptr, 0, nullptr, 0}
-};
+}};
 
 int main(int argc, char **argv)
 {
@@ -121,12 +122,12 @@ int main(int argc, char **argv)
 
     int cmd_ret = 0xFFFF;
 
-    while ((c = getopt_long (argc, argv, "hio:", long_options, &option_index)) != -1)
+    while ((c = getopt_long (argc, argv, "hio:", long_options.data(), &option_index)) != -1)
     {
         switch (c) {
             case 'h':           // help
             case 'H': {
-                printf("%s\n", help_array);
+                printf("%s\n", help_array.data());
                 cmd_ret = 0;
                 break;
             }
