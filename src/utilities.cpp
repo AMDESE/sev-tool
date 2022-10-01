@@ -166,14 +166,17 @@ bool sev::str_to_array(const std::string in_string, uint8_t *array,
     return true;
 }
 
-void sev::ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len)
+std::vector<uint8_t> sev::ascii_hex_bytes_to_binary(const char *in_bytes, size_t len)
 {
+    std::vector<uint8_t> result{};
+    result.reserve(len);
     std::string temp;
 
     for (size_t i = 0; i < len; i++) {
         temp = {in_bytes[i*2], in_bytes[(i*2)+1], '\0'};
-        ((uint8_t *)out)[i] = (uint8_t)stoi(temp, nullptr, 16);
+        result.push_back((uint8_t)stoi(temp, nullptr, 16));
     }
+    return result;
 }
 
 bool sev::reverse_bytes(uint8_t *bytes, size_t size)

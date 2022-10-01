@@ -522,13 +522,11 @@ int Command::generate_all_certs()
             break;
         print_amd_cert_hex(&ask, ask_string);       // TODO refactor this
         print_amd_cert_hex(&ark, ark_string);
-        uint8_t ask_binary[ask_size*2];
-        uint8_t ark_binary[ark_size*2];
-        sev::ascii_hex_bytes_to_binary(ask_binary, ask_string.c_str(), ask_size);
-        sev::ascii_hex_bytes_to_binary(ark_binary, ark_string.c_str(), ark_size);
-        if (sev::write_file(ask_full, ask_binary, ask_size) != ask_size)
+        auto ask_binary = sev::ascii_hex_bytes_to_binary(ask_string.c_str(), ask_size);
+        auto ark_binary = sev::ascii_hex_bytes_to_binary(ark_string.c_str(), ark_size);
+        if (sev::write_file(ask_full, ask_binary.data(), ask_size) != ask_size)
             break;
-        if (sev::write_file(ark_full, ark_binary, ark_size) != ark_size)
+        if (sev::write_file(ark_full, ark_binary.data(), ark_size) != ark_size)
             break;
 
         cmd_ret = STATUS_SUCCESS;
@@ -926,12 +924,12 @@ int Command::package_secret()
             printf("Error: SEV requires a secret greater than 8 bytes\n");
             break;
         }
-        uint8_t secret_mem[secret_size];
-        uint8_t encrypted_mem[secret_size];
+        std::vector<uint8_t> secret_mem(secret_size);
+        std::vector<uint8_t> encrypted_mem(secret_size);
 
         // Read in the secret
         // printf("Attempting to read in Secrets file\n");
-        if (sev::read_file(secret_file, secret_mem, secret_size) != secret_size)
+        if (sev::read_file(secret_file, secret_mem.data(), secret_mem.size()) != secret_size)
             break;
 
         // Read in the PEK to obtain API major/minor version
@@ -946,7 +944,7 @@ int Command::package_secret()
         }
 
         // Encrypt the secret with the TEK
-        encrypt_with_tek(encrypted_mem, secret_mem, secret_size, iv);
+        encrypt_with_tek(encrypted_mem.data(), secret_mem.data(), secret_mem.size(), iv);
 
         if (m_verbose_flag) {
             printf("Random IV\n");
@@ -963,11 +961,11 @@ int Command::package_secret()
         }
 
         // Write the encrypted secret to a file
-        sev::write_file(packaged_secret_file, encrypted_mem, secret_size);
+        sev::write_file(packaged_secret_file, encrypted_mem.data(), encrypted_mem.size());
 
         // Set up the Launch_Secret packet header
-        if (!create_launch_secret_header(&packaged_secret_header, &iv, encrypted_mem,
-                                         sizeof(encrypted_mem), flags,
+        if (!create_launch_secret_header(&packaged_secret_header, &iv, encrypted_mem.data(),
+                                         encrypted_mem.size(), flags,
                                          pek.api_major, pek.api_minor)) {
             break;
         }

@@ -18,6 +18,7 @@
 #define UTILITIES_H
 
 #include <string>
+#include <vector>
 
 namespace sev
 {
@@ -115,7 +116,7 @@ namespace sev
      * If you have a buffer (or read in input file) that's in AsciiHexBytes,
      * such as the getid output files, this will read it back into a buffer
      */
-    void ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len);
+    std::vector<uint8_t> ascii_hex_bytes_to_binary(const char *in_bytes, size_t len);
 
     /**
      * Reverses bytes in a section of memory. Used in validating cert signatures
