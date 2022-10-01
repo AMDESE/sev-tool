@@ -1,1 +1,1 @@
-Checks: 'modernize-use-nullptr,modernize-use-auto'
+Checks: 'modernize-use-nullptr,modernize-use-auto,modernize-use-bool-literals'
