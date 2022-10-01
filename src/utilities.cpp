@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <ctime>
 #include <sys/random.h>
+#include <array>
 #include <vector>
 
 bool sev::execute_system_command(const std::string cmd, std::string *log)
@@ -31,11 +32,11 @@ bool sev::execute_system_command(const std::string cmd, std::string *log)
     }
 
     while (!feof(pipe)) {
-        char output[4096];
+        std::array<char, 4096> output;
         size_t count;
-        if ((count = fread(output, 1, sizeof(output), pipe)) > 0) {
+        if ((count = fread(output.data(), 1, output.size(), pipe)) > 0) {
             if (log) {
-                log->append(output, count);
+                log->append(output.data(), count);
             }
         }
     }
