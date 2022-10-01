@@ -276,7 +276,7 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
         if (status_data.api_major == 0 && status_data.api_minor <= 17 &&
             status_data.build < 19) {
             printf("Adding a 5 second delay to account for Naples GetID bug...\n");
-            ioctl_ret = ioctl(get_fd(), SEV_ISSUE_CMD, &arg);
+            ioctl(get_fd(), SEV_ISSUE_CMD, &arg);
             usleep(5000000);    // 5 seconds
         }
     }
