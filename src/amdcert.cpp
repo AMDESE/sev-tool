@@ -19,43 +19,47 @@
 #include "utilities.h"  // reverse_bytes
 #include <cstring>      // memset
 #include <openssl/ts.h> // SHA256_CTX
+#include <array>
+#include <string>
+#include <string_view>
 
 /**
  * If out_str is passed in, fill up the string, else prints to std::out
  */
 void print_amd_cert_readable(const amd_cert *cert, std::string &out_str)
 {
-    char out[sizeof(amd_cert)*3+500];   // 2 chars per byte + 1 space + ~500 extra chars for text
+    std::array<char, sizeof(amd_cert)*3+500> out{};   // 2 chars per byte + 1 space + ~500 extra chars for text
+    size_t offset{};
 
-    sprintf(out, "%-15s%08x\n", "Version:", cert->version);                               // uint32_t
-    sprintf(out+strlen(out), "%-15s%016lx\n", "key_id_0:", cert->key_id_0);               // uint64_t
-    sprintf(out+strlen(out), "%-15s%016lx\n", "key_id_1:", cert->key_id_1);               // uint64_t
-    sprintf(out+strlen(out), "%-15s%016lx\n", "certifying_id_0:", cert->certifying_id_0); // uint64_t
-    sprintf(out+strlen(out), "%-15s%016lx\n", "certifying_id_1:", cert->certifying_id_1); // uint64_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "key_usage:", cert->key_usage);               // uint32_t
-    sprintf(out+strlen(out), "%-15s%016lx\n", "reserved_0:", cert->reserved_0);           // uint64_t
-    sprintf(out+strlen(out), "%-15s%016lx\n", "reserved_1:", cert->reserved_1);           // uint64_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "pub_exp_size:", cert->pub_exp_size);         // uint32_t
-    sprintf(out+strlen(out), "%-15s%08x\n", "modulus_size:", cert->modulus_size);         // uint32_t
-    sprintf(out+strlen(out), "\nPubExp:\n");
+    offset += sprintf(out.data(), "%-15s%08x\n", "Version:", cert->version);                               // uint32_t
+    offset += sprintf(out.data()+offset, "%-15s%016lx\n", "key_id_0:", cert->key_id_0);               // uint64_t
+    offset += sprintf(out.data()+offset, "%-15s%016lx\n", "key_id_1:", cert->key_id_1);               // uint64_t
+    offset += sprintf(out.data()+offset, "%-15s%016lx\n", "certifying_id_0:", cert->certifying_id_0); // uint64_t
+    offset += sprintf(out.data()+offset, "%-15s%016lx\n", "certifying_id_1:", cert->certifying_id_1); // uint64_t
+    offset += sprintf(out.data()+offset, "%-15s%08x\n", "key_usage:", cert->key_usage);               // uint32_t
+    offset += sprintf(out.data()+offset, "%-15s%016lx\n", "reserved_0:", cert->reserved_0);           // uint64_t
+    offset += sprintf(out.data()+offset, "%-15s%016lx\n", "reserved_1:", cert->reserved_1);           // uint64_t
+    offset += sprintf(out.data()+offset, "%-15s%08x\n", "pub_exp_size:", cert->pub_exp_size);         // uint32_t
+    offset += sprintf(out.data()+offset, "%-15s%08x\n", "modulus_size:", cert->modulus_size);         // uint32_t
+    offset += sprintf(out.data()+offset, "\nPubExp:\n");
     for (size_t i = 0; i < (size_t)(cert->pub_exp_size/8); i++) {    // bytes to uint8
-        sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->pub_exp)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->pub_exp)[i] );
     }
-    sprintf(out+strlen(out), "\nModulus:\n");
+    offset += sprintf(out.data()+offset, "\nModulus:\n");
     for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
-        sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->modulus)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->modulus)[i] );
     }
-    sprintf(out+strlen(out), "\nSig:\n");
+    offset += sprintf(out.data()+offset, "\nSig:\n");
     for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
-        sprintf(out+strlen(out), "%02X ", ((uint8_t *)&cert->sig)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->sig)[i] );
     }
-    sprintf(out+strlen(out), "\n");
+    offset += sprintf(out.data()+offset, "\n");
 
     if (out_str == "NULL") {
-        printf("%s\n", out);
+        printf("%s\n", out.data());
     }
     else {
-        out_str += out;
+        out_str += std::string_view{out.data(), offset};
     }
 }
 
@@ -68,33 +72,33 @@ void print_amd_cert_readable(const amd_cert *cert, std::string &out_str)
  */
 void print_amd_cert_hex(const amd_cert *cert, std::string &out_str)
 {
-    char out[sizeof(amd_cert)*2];   // 2 chars per byte
+    std::array<char, sizeof(amd_cert)*2> out{};   // 2 chars per byte
     size_t fixed_offset = offsetof(amd_cert, pub_exp);      // 64 bytes
 
-    out[0] = '\0';       // Gotta get the sprintf started
+    size_t offset{};
 
     // Print fixed parameters
     for (size_t i = 0; i < fixed_offset; i++) {
-        sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->version)[i] );
+        offset += sprintf(out.data()+offset, "%02X", ((uint8_t *)&cert->version)[i] );
     }
     // Print pub_exp
     for (size_t i = 0; i < (size_t)(cert->pub_exp_size/8); i++) {    // bytes to uint8
-        sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->pub_exp)[i] );
+        offset += sprintf(out.data()+offset, "%02X", ((uint8_t *)&cert->pub_exp)[i] );
     }
     // Print nModulus
     for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
-        sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->modulus)[i] );
+        offset += sprintf(out.data()+offset, "%02X", ((uint8_t *)&cert->modulus)[i] );
     }
     // Print Sig
     for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
-        sprintf(out+strlen(out), "%02X", ((uint8_t *)&cert->sig)[i] );
+        offset += sprintf(out.data()+offset, "%02X", ((uint8_t *)&cert->sig)[i] );
     }
 
     if (out_str == "NULL") {
-        printf("%s\n\n\n", out);
+        printf("%s\n\n\n", out.data());
     }
     else {
-        out_str += out;
+        out_str += std::string_view{out.data(), offset};
     }
 }
 
@@ -141,8 +145,8 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
     uint32_t sig_len = cert->modulus_size/8;
 
     uint32_t digest_len = 0;
-    uint8_t decrypted[AMD_CERT_KEY_BYTES_4K] = {0}; // TODO wrong length
-    uint8_t signature[AMD_CERT_KEY_BYTES_4K] = {0};
+    std::array<uint8_t, AMD_CERT_KEY_BYTES_4K> decrypted{}; // TODO wrong length
+    std::array<uint8_t, AMD_CERT_KEY_BYTES_4K> signature{};
     uint32_t fixed_offset = offsetof(amd_cert, pub_exp);    // 64 bytes
 
     do {
@@ -165,8 +169,6 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
 
         // Memzero all the buffers
         memset(sha_digest, 0, sha_length);
-        memset(decrypted, 0, sizeof(decrypted));
-        memset(signature, 0, sizeof(signature));
 
         // New up the RSA key
         rsa_pub_key = RSA_new();
@@ -189,19 +191,19 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
         EVP_DigestFinal(md_ctx, sha_digest, &digest_len);
 
         // Swap the bytes of the signature
-        memcpy(signature, &cert->sig, parent->modulus_size/8);
-        if (!sev::reverse_bytes(signature, parent->modulus_size/8))
+        memcpy(signature.data(), &cert->sig, parent->modulus_size/8);
+        if (!sev::reverse_bytes(signature.data(), parent->modulus_size/8))
             break;
 
         // Now we will verify the signature. Start by a RAW decrypt of the signature
-        if (RSA_public_decrypt(sig_len, signature, decrypted, rsa_pub_key, RSA_NO_PADDING) == -1)
+        if (RSA_public_decrypt(sig_len, signature.data(), decrypted.data(), rsa_pub_key, RSA_NO_PADDING) == -1)
             break;
 
         // Verify the data
         // SLen of -2 means salt length is recovered from the signature
         if (RSA_verify_PKCS1_PSS(rsa_pub_key, sha_digest,
                                 (algo == SHA_TYPE_256) ? EVP_sha256() : EVP_sha384(),
-                                decrypted, -2) != 1)
+                                decrypted.data(), -2) != 1)
         {
             break;
         }
