@@ -111,7 +111,7 @@ private:
     bool derive_master_secret(aes_128_key master_secret,
                               EVP_PKEY *godh_priv_key,
                               const sev_cert *pdh_public,
-                              const uint8_t nonce[sizeof(nonce_128)]);
+                              const nonce_128 nonce);
     bool derive_kek(aes_128_key kek, const aes_128_key master_secret);
     bool derive_kik(hmac_key_128 kik, const aes_128_key master_secret);
     bool gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len);

@@ -59,28 +59,27 @@ int Command::factory_reset()
 
 int Command::platform_status()
 {
-    uint8_t data[sizeof(sev_platform_status_cmd_buf)];
-    auto *data_buf = (sev_platform_status_cmd_buf *)&data;
+    sev_platform_status_cmd_buf data;
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device->platform_status(data);
+    cmd_ret = m_sev_device->platform_status(reinterpret_cast<uint8_t *>(&data));
 
     if (cmd_ret == STATUS_SUCCESS) {
         // Print ID arrays
-        printf("api_major:\t%d\n", data_buf->api_major);
-        printf("api_minor:\t%d\n", data_buf->api_minor);
-        printf("platform_state:\t%d\n", data_buf->current_platform_state);
-        if (sev::min_api_version(data_buf->api_major, data_buf->api_minor, 0, 17)) {
-            printf("owner:\t\t%d\n", data_buf->owner);
-            printf("config:\t\t%d\n", data_buf->config);
+        printf("api_major:\t%d\n", data.api_major);
+        printf("api_minor:\t%d\n", data.api_minor);
+        printf("platform_state:\t%d\n", data.current_platform_state);
+        if (sev::min_api_version(data.api_major, data.api_minor, 0, 17)) {
+            printf("owner:\t\t%d\n", data.owner);
+            printf("config:\t\t%d\n", data.config);
         }
         else {
             printf("flags:\t\t%d\n",
-                    ((data_buf->owner & PLAT_STAT_OWNER_MASK) << PLAT_STAT_OWNER_MASK) +
-                    ((data_buf->config & PLAT_STAT_ES_MASK) << PLAT_STAT_CONFIGES_OFFSET));
+                    ((data.owner & PLAT_STAT_OWNER_MASK) << PLAT_STAT_OWNER_MASK) +
+                    ((data.config & PLAT_STAT_ES_MASK) << PLAT_STAT_CONFIGES_OFFSET));
         }
-        printf("build:\t\t%d\n", data_buf->build_id);
-        printf("guest_count:\t%d\n", data_buf->guest_count);
+        printf("build:\t\t%d\n", data.build_id);
+        printf("guest_count:\t%d\n", data.guest_count);
     }
 
     return (int)cmd_ret;
@@ -98,7 +97,7 @@ int Command::pek_gen()
 int Command::pek_csr()
 {
     sev_platform_status_cmd_buf data_buf;
-    uint8_t data[sizeof(sev_pek_csr_cmd_buf)];
+    std::array<uint8_t, sizeof(sev_pek_csr_cmd_buf)> data{};
     int cmd_ret = -1;
     std::string pek_csr_readable_path = m_output_folder + PEK_CSR_READABLE_FILENAME;
     std::string pek_csr_hex_path = m_output_folder + PEK_CSR_HEX_FILENAME;
@@ -110,7 +109,7 @@ int Command::pek_csr()
     if (!pek_mem)
         return -1;
 
-    cmd_ret = m_sev_device->platform_status((uint8_t *) &data_buf);
+    cmd_ret = m_sev_device->platform_status(reinterpret_cast<uint8_t *>(&data_buf));
 
     if (cmd_ret != STATUS_SUCCESS) {
             return cmd_ret;
@@ -120,7 +119,7 @@ int Command::pek_csr()
             return -1;
     }
 
-    cmd_ret = m_sev_device->pek_csr(data, pek_mem.get(), &pek_csr);
+    cmd_ret = m_sev_device->pek_csr(data.data(), pek_mem.get(), &pek_csr);
 
     if (cmd_ret == STATUS_SUCCESS) {
         if (m_verbose_flag) {            // Print off the cert to stdout
@@ -150,7 +149,7 @@ int Command::pdh_gen()
 
 int Command::pdh_cert_export()
 {
-    uint8_t data[sizeof(sev_pdh_cert_export_cmd_buf)];
+    sev_pdh_cert_export_cmd_buf data;
     int cmd_ret = -1;
     std::string PDH_readable_path = m_output_folder + PDH_READABLE_FILENAME;
     std::string PDH_path          = m_output_folder + PDH_FILENAME;
@@ -163,7 +162,7 @@ int Command::pdh_cert_export()
     if (!pdh_cert_mem || !cert_chain_mem)
         return -1;
 
-    cmd_ret = m_sev_device->pdh_cert_export(data, pdh_cert_mem.get(), cert_chain_mem.get());
+    cmd_ret = m_sev_device->pdh_cert_export(reinterpret_cast<uint8_t *>(&data), pdh_cert_mem.get(), cert_chain_mem.get());
 
     if (cmd_ret == STATUS_SUCCESS) {
         if (m_verbose_flag) {            // Print off the cert to stdout
@@ -193,7 +192,7 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
 
     // Initial PDH cert chain export, so we can confirm that it
     // changed after running the pek_cert_import
-    uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
+    sev_pdh_cert_export_cmd_buf pdh_cert_export_data;  // pdh_cert_export
     auto pdh_cert_mem = std::make_unique<sev_cert_t>();
     auto cert_chain_mem = std::make_unique<sev_cert_chain_buf_t>();
 
@@ -202,11 +201,11 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
     sev_cert oca_cert;
 
     // The actual pek_cert_import command
-    uint8_t pek_cert_import_data[sizeof(sev_pek_cert_import_cmd_buf)];  // pek_cert_import
+    sev_pek_cert_import_cmd_buf pek_cert_import_data{};  // pek_cert_import
 
     // Afterwards PDH cert chain export, to verify that the certs
     // have changed after running pek_cert_import
-    uint8_t pdh_cert_export_data2[sizeof(sev_pdh_cert_export_cmd_buf)]; // pdh_cert_export
+    sev_pdh_cert_export_cmd_buf pdh_cert_export_data2{}; // pdh_cert_export
     auto pdh_cert_mem2 = std::make_unique<sev_cert_t>();
     auto cert_chain_mem2 = std::make_unique<sev_cert_chain_buf_t>();
 
@@ -229,23 +228,23 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
         }
 
         // Just used to confirm afterwards that the cert chain has changed
-        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh_cert_mem.get(), cert_chain_mem.get());
+        cmd_ret = m_sev_device->pdh_cert_export(reinterpret_cast<uint8_t *>(&pdh_cert_export_data), pdh_cert_mem.get(), cert_chain_mem.get());
         if (cmd_ret != 0)
             break;
 
         // Run the pek_cert_import command
-        cmd_ret = m_sev_device->pek_cert_import(pek_cert_import_data, &signed_pek_csr, &oca_cert);
+        cmd_ret = m_sev_device->pek_cert_import(reinterpret_cast<uint8_t *>(&pek_cert_import_data), &signed_pek_csr, &oca_cert);
         if (cmd_ret != 0)
             break;
 
         // Export the cert chain again, so we can compare that it has changed
         // after running the pek_cert_import
-        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data2, pdh_cert_mem2.get(), cert_chain_mem2.get());
+        cmd_ret = m_sev_device->pdh_cert_export(reinterpret_cast<uint8_t *>(&pdh_cert_export_data2), pdh_cert_mem2.get(), cert_chain_mem2.get());
         if (cmd_ret != 0)
             break;
 
         // Make sure the cert chain changed after running the pek_cert_import
-        if (0 != memcmp(pdh_cert_export_data2, pdh_cert_export_data, sizeof(sev_pdh_cert_export_cmd_buf)))
+        if (0 != memcmp(&pdh_cert_export_data2, &pdh_cert_export_data, sizeof(pdh_cert_export_data)))
             break;
 
         printf("PEK Cert Import SUCCESS.\n");
@@ -310,8 +309,7 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
 // doesn't follow the API
 int Command::get_id()
 {
-    uint8_t data[sizeof(sev_get_id_cmd_buf)];
-    auto *data_buf = (sev_get_id_cmd_buf *)&data;
+    sev_get_id_cmd_buf data{};
     int cmd_ret = -1;
     uint32_t default_id_length = 0;
     std::string id0_path = m_output_folder + GET_ID_S0_FILENAME;
@@ -331,7 +329,7 @@ int Command::get_id()
     if (!id_mem)
         return cmd_ret;
 
-    cmd_ret = m_sev_device->get_id(data, id_mem, 2*default_id_length);
+    cmd_ret = m_sev_device->get_id(reinterpret_cast<uint8_t *>(&data), id_mem, 2*default_id_length);
 
     if (cmd_ret == STATUS_SUCCESS) {
         char id0_buf[default_id_length*2+1];  // 2 chars per byte +1 for null term
@@ -341,8 +339,8 @@ int Command::get_id()
         for(auto &i : id1_buf)
             i = 0;
         for (uint8_t i = 0; i < default_id_length; i++) {
-            sprintf(id0_buf+strlen(id0_buf), "%02x", ((uint8_t *)(data_buf->id_p_addr))[i]);
-            sprintf(id1_buf+strlen(id1_buf), "%02x", ((uint8_t *)(data_buf->id_p_addr))[i+default_id_length]);
+            sprintf(id0_buf+strlen(id0_buf), "%02x", ((uint8_t *)(data.id_p_addr))[i]);
+            sprintf(id1_buf+strlen(id1_buf), "%02x", ((uint8_t *)(data.id_p_addr))[i+default_id_length]);
         }
 
         if (m_verbose_flag) {            // Print ID arrays
@@ -376,26 +374,26 @@ int Command::sys_info()
 
 int Command::get_platform_owner()
 {
-    uint8_t data[sizeof(sev_platform_status_cmd_buf)];
+    sev_platform_status_cmd_buf data{};
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device->platform_status(data);
+    cmd_ret = m_sev_device->platform_status(reinterpret_cast<uint8_t *>(&data));
     if (cmd_ret != STATUS_SUCCESS)
         return -1;
 
-    return m_sev_device->get_platform_owner(data);
+    return m_sev_device->get_platform_owner(reinterpret_cast<uint8_t *>(&data));
 }
 
 int Command::get_platform_es()
 {
-    uint8_t data[sizeof(sev_platform_status_cmd_buf)];
+    sev_platform_status_cmd_buf data{};
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device->platform_status(data);
+    cmd_ret = m_sev_device->platform_status(reinterpret_cast<uint8_t *>(&data));
     if (cmd_ret != STATUS_SUCCESS)
         return -1;
 
-    return m_sev_device->get_platform_es(data);
+    return m_sev_device->get_platform_es(reinterpret_cast<uint8_t *>(&data));
 }
 
 int Command::set_self_owned()
@@ -460,7 +458,7 @@ int Command::get_ask_ark()
 int Command::generate_all_certs()
 {
     int cmd_ret = -1;
-    uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
+    sev_pdh_cert_export_cmd_buf pdh_cert_export_data{};  // pdh_cert_export
     auto pdh = std::make_unique<sev_cert_t>();
     auto cert_chain = std::make_unique<sev_cert_chain_buf_t>(); // PEK, OCA, CEK
     amd_cert ask;
@@ -481,7 +479,7 @@ int Command::generate_all_certs()
 
     do {
         // Get the pdh Cert Chain (pdh and pek, oca, cek)
-        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh.get(), cert_chain.get());
+        cmd_ret = m_sev_device->pdh_cert_export(reinterpret_cast<uint8_t *>(&pdh_cert_export_data), pdh.get(), cert_chain.get());
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -724,22 +722,22 @@ int Command::import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
 
     do {
         // Read in the ark
-        uint8_t ark_buf[sizeof(amd_cert)] = {0};
-        if (sev::read_file(ark_full, ark_buf, sizeof(amd_cert)) == 0) // Variable size
+        amd_cert ark_buf{};
+        if (sev::read_file(ark_full, &ark_buf, sizeof(amd_cert)) == 0) // Variable size
             break;
 
         // Initialize the ark
-        cmd_ret = tmp_amd.amd_cert_init(ark, ark_buf);
+        cmd_ret = tmp_amd.amd_cert_init(ark, reinterpret_cast<uint8_t *>(&ark_buf));
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
         // Read in the ark
-        uint8_t ask_buf[sizeof(amd_cert)] = {0};
-        if (sev::read_file(ask_full, ask_buf, sizeof(amd_cert)) == 0) // Variable size
+        amd_cert ask_buf{};
+        if (sev::read_file(ask_full, &ask_buf, sizeof(amd_cert)) == 0) // Variable size
             break;
 
         // Initialize the ark
-        cmd_ret = tmp_amd.amd_cert_init(ask, ask_buf);
+        cmd_ret = tmp_amd.amd_cert_init(ask, reinterpret_cast<uint8_t *>(&ask_buf));
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -1296,7 +1294,7 @@ uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_ke
 bool Command::derive_master_secret(aes_128_key master_secret,
                                    EVP_PKEY *godh_priv_key,
                                    const sev_cert *pdh_public,
-                                   const uint8_t nonce[sizeof(nonce_128)])
+                                   const nonce_128 nonce)
 {
     if (!godh_priv_key || !pdh_public)
         return false;
@@ -1330,7 +1328,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
         // Derive the master secret from the intermediate secret
         if (!kdf((unsigned char*)master_secret, sizeof(aes_128_key), shared_key,
             shared_key_len, (uint8_t *)SEV_MASTER_SECRET_LABEL,
-            sizeof(SEV_MASTER_SECRET_LABEL)-1, nonce, sizeof(nonce_128))) // sizeof(nonce), bad?
+            sizeof(SEV_MASTER_SECRET_LABEL)-1, reinterpret_cast<uint8_t *>(&nonce), sizeof(nonce_128))) // sizeof(nonce), bad?
             break;
 
         // Free memory allocated in calculate_shared_secret
