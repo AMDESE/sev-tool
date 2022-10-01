@@ -332,25 +332,23 @@ int Command::get_id()
     cmd_ret = m_sev_device->get_id(reinterpret_cast<uint8_t *>(&data), id_mem, 2*default_id_length);
 
     if (cmd_ret == STATUS_SUCCESS) {
-        char id0_buf[default_id_length*2+1];  // 2 chars per byte +1 for null term
-        char id1_buf[default_id_length*2+1];
-        for(auto &i : id0_buf)
-            i = 0;
-        for(auto &i : id1_buf)
-            i = 0;
+        std::string id0_buf{};
+        id0_buf.resize(default_id_length*2);// 2 chars per byte
+        std::string id1_buf{};
+        id1_buf.resize(default_id_length*2);
         for (uint8_t i = 0; i < default_id_length; i++) {
-            sprintf(id0_buf+strlen(id0_buf), "%02x", ((uint8_t *)(data.id_p_addr))[i]);
-            sprintf(id1_buf+strlen(id1_buf), "%02x", ((uint8_t *)(data.id_p_addr))[i+default_id_length]);
+            sprintf(id0_buf.data()+2*i, "%02x", ((uint8_t *)(data.id_p_addr))[i]);
+            sprintf(id1_buf.data()+2*i, "%02x", ((uint8_t *)(data.id_p_addr))[i+default_id_length]);
         }
 
         if (m_verbose_flag) {            // Print ID arrays
-            printf("* GetID Socket0:\n%s", id0_buf);
-            printf("\n* GetID Socket1:\n%s", id1_buf);
+            printf("* GetID Socket0:\n%s", id0_buf.data());
+            printf("\n* GetID Socket1:\n%s", id1_buf.data());
             printf("\n");
         }
         if (m_output_folder != "") {     // Print the IDs to a text file
-            sev::write_file(id0_path, (void *)id0_buf, sizeof(id0_buf)-1);  // Don't write null term
-            sev::write_file(id1_path, (void *)id1_buf, sizeof(id1_buf)-1);
+            sev::write_file(id0_path, id0_buf.data(), id0_buf.size());  // Don't write null term
+            sev::write_file(id1_path, id1_buf.data(), id1_buf.size());
         }
     }
 
