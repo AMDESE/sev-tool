@@ -43,15 +43,15 @@ void print_amd_cert_readable(const amd_cert *cert, std::string &out_str)
     offset += sprintf(out.data()+offset, "%-15s%08x\n", "modulus_size:", cert->modulus_size);         // uint32_t
     offset += sprintf(out.data()+offset, "\nPubExp:\n");
     for (size_t i = 0; i < (size_t)(cert->pub_exp_size/8); i++) {    // bytes to uint8
-        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->pub_exp)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", (reinterpret_cast<uint8_t const *>(&cert->pub_exp))[i] );
     }
     offset += sprintf(out.data()+offset, "\nModulus:\n");
     for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
-        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->modulus)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", (reinterpret_cast<uint8_t const *>(&cert->modulus))[i] );
     }
     offset += sprintf(out.data()+offset, "\nSig:\n");
     for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
-        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->sig)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", (reinterpret_cast<uint8_t const *>(&cert->sig))[i] );
     }
     offset += sprintf(out.data()+offset, "\n");
 
@@ -79,19 +79,19 @@ void print_amd_cert_hex(const amd_cert *cert, std::string &out_str)
 
     // Print fixed parameters
     for (size_t i = 0; i < fixed_offset; i++) {
-        offset += sprintf(out.data()+offset, "%02X", ((uint8_t *)&cert->version)[i] );
+        offset += sprintf(out.data()+offset, "%02X", (reinterpret_cast<uint8_t const *>(&cert->version))[i] );
     }
     // Print pub_exp
     for (size_t i = 0; i < (size_t)(cert->pub_exp_size/8); i++) {    // bytes to uint8
-        offset += sprintf(out.data()+offset, "%02X", ((uint8_t *)&cert->pub_exp)[i] );
+        offset += sprintf(out.data()+offset, "%02X", (reinterpret_cast<uint8_t const *>(&cert->pub_exp))[i] );
     }
     // Print nModulus
     for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
-        offset += sprintf(out.data()+offset, "%02X", ((uint8_t *)&cert->modulus)[i] );
+        offset += sprintf(out.data()+offset, "%02X", (reinterpret_cast<uint8_t const *>(&cert->modulus))[i] );
     }
     // Print Sig
     for (size_t i = 0; i < (size_t)(cert->modulus_size/8); i++) {    // bytes to uint8
-        offset += sprintf(out.data()+offset, "%02X", ((uint8_t *)&cert->sig)[i] );
+        offset += sprintf(out.data()+offset, "%02X", (reinterpret_cast<uint8_t const *>(&cert->sig)[i]) );
     }
 
     if (out_str == "NULL") {
@@ -174,8 +174,8 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
         rsa_pub_key = RSA_new();
 
         // Convert the parent to an RSA key to pass into RSA_verify
-        modulus = BN_lebin2bn((uint8_t *)&parent->modulus, parent->modulus_size/8, nullptr);  // n    // New's up BigNum
-        pub_exp = BN_lebin2bn((uint8_t *)&parent->pub_exp, parent->pub_exp_size/8, nullptr);   // e
+        modulus = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&parent->modulus), parent->modulus_size/8, nullptr);  // n    // New's up BigNum
+        pub_exp = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&parent->pub_exp), parent->pub_exp_size/8, nullptr);   // e
         if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, nullptr) != 1)
             break;
 
@@ -274,7 +274,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate(const amd_cert *cert,
             break;
 
         // If there is no parent, then the certificate must be self-certified
-        key_id = parent ? (uint8_t *)&parent->key_id_0 : (uint8_t *)&cert->key_id_0;
+        key_id = parent ? reinterpret_cast<uint8_t const *>(&parent->key_id_0) : reinterpret_cast<uint8_t const *>(&cert->key_id_0);
 
         if (cert->key_usage != expected_usage ||
             memcmp(&cert->certifying_id_0, key_id, sizeof(cert->certifying_id_0 + cert->certifying_id_1)) != 0)
@@ -316,7 +316,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_public_key_hash(const amd_cert *cert,
         if (SHA256_Update(&ctx, &cert->modulus, cert->modulus_size/8) != 1)
             break;
 
-        if (SHA256_Final((uint8_t *)&tmp_hash, &ctx) != 1)
+        if (SHA256_Final(reinterpret_cast<uint8_t *>(&tmp_hash), &ctx) != 1)
             break;
 
         // Copy the hash to the output

@@ -51,21 +51,21 @@ void print_sev_cert_readable(const sev_cert *cert, std::string &out_str)
     offset += sprintf(out.data()+offset, "%-15s%08x\n", "pub_key_algo:", cert->pub_key_algo);   // uint32_t
     offset += sprintf(out.data()+offset, "%-15s\n", "pub_key:");                                 // sev_pubkey
     for (size_t i = 0; i < (size_t)(sizeof(sev_pubkey)); i++) {  //bytes to uint8
-        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->pub_key)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", reinterpret_cast<uint8_t const *>(&cert->pub_key)[i] );
     }
     offset += sprintf(out.data()+offset, "\n");
     offset += sprintf(out.data()+offset, "%-15s%08x\n", "sig_1_usage:", cert->sig_1_usage);     // uint32_t
     offset += sprintf(out.data()+offset, "%-15s%08x\n", "sig_1_algo:", cert->sig_1_algo);       // uint32_t
     offset += sprintf(out.data()+offset, "%-15s\n", "sig_1:");                                   // sev_sig
     for (size_t i = 0; i < (size_t)(sizeof(sev_sig)); i++) {     //bytes to uint8
-        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->sig_1)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", reinterpret_cast<uint8_t const *>(&cert->sig_1)[i] );
     }
     offset += sprintf(out.data()+offset, "\n");
     offset += sprintf(out.data()+offset, "%-15s%08x\n", "sig_2_usage:", cert->sig_2_usage);     // uint32_t
     offset += sprintf(out.data()+offset, "%-15s%08x\n", "sig_2_algo:", cert->sig_2_algo);       // uint32_t
     offset += sprintf(out.data()+offset, "%-15s\n", "Sig2:");                                   // sev_sig
     for (size_t i = 0; i < (size_t)(sizeof(sev_sig)); i++) {     //bytes to uint8
-        offset += sprintf(out.data()+offset, "%02X ", ((uint8_t *)&cert->sig_2)[i] );
+        offset += sprintf(out.data()+offset, "%02X ", reinterpret_cast<uint8_t const *>(&cert->sig_2)[i] );
     }
     offset += sprintf(out.data()+offset, "\n");
 
@@ -86,7 +86,7 @@ void print_sev_cert_hex(const sev_cert *cert)
 {
     printf("Printing cert as hex...\n");
     for (size_t i = 0; i < (size_t)(sizeof(sev_cert)); i++) { // bytes to uint8
-        printf( "%02X ", ((uint8_t *)cert)[i] );
+        printf( "%02X ", reinterpret_cast<uint8_t const *>(cert)[i] );
     }
     printf("\n");
 }
@@ -108,15 +108,15 @@ void print_cert_chain_buf_readable(const sev_cert_chain_buf *p, std::string &out
 
     sprintf(out_pek.data(), "PEK Memory: %ld bytes\n", sizeof(sev_cert));
     out_str_local += out_pek.data();
-    print_sev_cert_readable(((sev_cert *)PEK_IN_CERT_CHAIN(p)), out_str_local);
+    print_sev_cert_readable(reinterpret_cast<sev_cert const *>(PEK_IN_CERT_CHAIN(p)), out_str_local);
 
     sprintf(out_oca.data(), "\nOCA Memory: %ld bytes\n", sizeof(sev_cert));
     out_str_local += out_oca.data();
-    print_sev_cert_readable(((sev_cert *)OCA_IN_CERT_CHAIN(p)), out_str_local);
+    print_sev_cert_readable(reinterpret_cast<sev_cert const *>(OCA_IN_CERT_CHAIN(p)), out_str_local);
 
     sprintf(out_cek.data(), "\nCEK Memory: %ld bytes\n", sizeof(sev_cert));
     out_str_local += out_cek.data();
-    print_sev_cert_readable(((sev_cert *)CEK_IN_CERT_CHAIN(p)), out_str_local);
+    print_sev_cert_readable(reinterpret_cast<sev_cert const *>(CEK_IN_CERT_CHAIN(p)), out_str_local);
 
     if (out_str == "NULL") {
         printf("%s\n", out_str_local.c_str());
@@ -137,15 +137,15 @@ void print_cert_chain_buf_hex(const sev_cert_chain_buf *p)
 {
     printf("PEK Memory: %ld bytes\n", sizeof(sev_cert));
     for (size_t i = 0; i < (size_t)(sizeof(sev_cert)); i++) { //bytes to uint8
-        printf( "%02X ", ((uint8_t *)PEK_IN_CERT_CHAIN(p))[i] );
+        printf( "%02X ", reinterpret_cast<uint8_t const *>(PEK_IN_CERT_CHAIN(p))[i] );
     }
     printf("\nOCA Memory: %ld bytes\n", sizeof(sev_cert));
     for (size_t i = 0; i < (size_t)(sizeof(sev_cert)); i++) { //bytes to uint8
-        printf( "%02X ", ((uint8_t *)OCA_IN_CERT_CHAIN(p))[i] );
+        printf( "%02X ", reinterpret_cast<uint8_t const *>(OCA_IN_CERT_CHAIN(p))[i] );
     }
     printf("\nCEK Memory: %ld bytes\n", sizeof(sev_cert));
     for (size_t i = 0; i < (size_t)(sizeof(sev_cert)); i++) { //bytes to uint8
-        printf( "%02X ", ((uint8_t *)CEK_IN_CERT_CHAIN(p))[i] );
+        printf( "%02X ", reinterpret_cast<uint8_t const *>(CEK_IN_CERT_CHAIN(p))[i] );
     }
     printf("\n");
 }
@@ -425,7 +425,7 @@ bool SEVCert::sign_with_key(uint32_t version, uint32_t pub_key_usage,
 
     // SHA256/SHA384 hash the cert from the [version:pub_key] params
     uint32_t pub_key_offset = offsetof(sev_cert, sig_1_usage);  // 16 + sizeof(sev_pubkey)
-    return sign_message(&m_child_cert->sig_1, priv_evp_key, (uint8_t *)m_child_cert, pub_key_offset, sig_1_algo);
+    return sign_message(&m_child_cert->sig_1, priv_evp_key, reinterpret_cast<uint8_t *>(m_child_cert), pub_key_offset, sig_1_algo);
 }
 
 /**
@@ -567,7 +567,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
         // Calculate the digest of the input message   rsa.c -> rsa_pss_verify_msg()
         // SHA256/SHA384 hash the cert from the [Version:pub_key] params
         uint32_t pub_key_offset = offsetof(sev_cert, sig_1_usage);  // 16 + sizeof(SEV_PUBKEY)
-        if (!digest_sha((uint8_t *)child_cert, pub_key_offset, sha_digest, sha_length, sha_type)) {
+        if (!digest_sha(child_cert, pub_key_offset, sha_digest, sha_length, sha_type)) {
             break;
         }
 
@@ -724,8 +724,8 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
             rsa_pub_key = RSA_new();
 
             // Convert the parent to an RSA key to pass into RSA_verify
-            modulus = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.modulus, cert->pub_key.rsa.modulus_size/8, nullptr);  // n    // New's up BigNum
-            pub_exp = BN_lebin2bn((uint8_t *)&cert->pub_key.rsa.pub_exp, cert->pub_key.rsa.modulus_size/8, nullptr);  // e
+            modulus = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&cert->pub_key.rsa.modulus), cert->pub_key.rsa.modulus_size/8, nullptr);  // n    // New's up BigNum
+            pub_exp = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&cert->pub_key.rsa.pub_exp), cert->pub_key.rsa.modulus_size/8, nullptr);  // e
             if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, nullptr) != 1)
                 break;
 

@@ -505,9 +505,9 @@ typedef struct __attribute__ ((__packed__)) sev_cert_t
 } sev_cert;
 
 // Macros used for comparing individual certificates from chain
-#define PEK_IN_CERT_CHAIN(x) (&((sev_cert_chain_buf *)x)->pek_cert)
-#define OCA_IN_CERT_CHAIN(x) (&((sev_cert_chain_buf *)x)->oca_cert)
-#define CEK_IN_CERT_CHAIN(x) (&((sev_cert_chain_buf *)x)->cek_cert)
+#define PEK_IN_CERT_CHAIN(x) (&reinterpret_cast<sev_cert_chain_buf const *>(x)->pek_cert)
+#define OCA_IN_CERT_CHAIN(x) (&reinterpret_cast<sev_cert_chain_buf const *>(x)->oca_cert)
+#define CEK_IN_CERT_CHAIN(x) (&reinterpret_cast<sev_cert_chain_buf const *>(x)->cek_cert)
 
 
 // Appendix B.1: Certificate Format

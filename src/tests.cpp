@@ -309,9 +309,9 @@ bool Tests::test_pdh_cert_export()
 
         // Check the usage of all certs
         if (pdh.pub_key_usage != SEV_USAGE_PDH ||
-           ((sev_cert *)PEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_PEK ||
-           ((sev_cert *)OCA_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_OCA ||
-           ((sev_cert *)CEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_CEK) {
+            reinterpret_cast<sev_cert const *>(PEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_PEK ||
+            reinterpret_cast<sev_cert const*>(OCA_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_OCA ||
+            reinterpret_cast<sev_cert const *>(CEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_CEK) {
             printf("Error: Certificate Usage did not match expected value\n");
             break;
         }
@@ -707,9 +707,9 @@ bool Tests::test_calc_measurement()
     data.api_minor = 0x12;
     data.build_id  = 0x0f;
     data.policy    = 0x00;
-    sev::str_to_array("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", (uint8_t *)&data.digest, sizeof(data.digest));
-    sev::str_to_array("4fbe0bedbad6c86ae8f68971d103e554", (uint8_t *)&data.mnonce, sizeof(data.mnonce));
-    sev::str_to_array("66320db73158a35a255d051758e95ed4", (uint8_t *)&data.tik, sizeof(data.tik));
+    sev::str_to_array("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", data.digest, sizeof(data.digest));
+    sev::str_to_array("4fbe0bedbad6c86ae8f68971d103e554", data.mnonce, sizeof(data.mnonce));
+    sev::str_to_array("66320db73158a35a255d051758e95ed4", data.tik, sizeof(data.tik));
 
     std::string expected_output_readable = "6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea";
     std::array<uint8_t, 32> expected_output = {0x6f, 0xaa, 0xb2, 0xda, 0xae, 0x38, 0x9b, 0xcd, 0x34, 0x05, 0xa0,

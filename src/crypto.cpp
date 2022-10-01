@@ -224,7 +224,7 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *diges
         }
         else {
             if (RSA_sign((sha_type == SHA_TYPE_256) ? NID_sha256 : NID_sha384, digest,
-                        (uint32_t)length, (uint8_t *)&sig->rsa, &sig_len, priv_rsa_key) != 1)
+                        (uint32_t)length, reinterpret_cast<uint8_t *>(&sig->rsa), &sig_len, priv_rsa_key) != 1)
                 break;
         }
 

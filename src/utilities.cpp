@@ -66,7 +66,7 @@ size_t sev::read_file(const std::string file_name, void *buffer, size_t len)
         return 0;
     }
 
-    file.read((char *)buffer, slen);
+    file.read(reinterpret_cast<char *>(buffer), slen);
     auto count = (size_t)file.gcount();
     file.close();
 
@@ -95,7 +95,7 @@ size_t sev::write_file(const std::string file_name, const void *buffer, size_t l
     }
     printf("Writing to file: %s\n", file_name.c_str());
 
-    file.write((char *)buffer, slen);
+    file.write(reinterpret_cast<char const *>(buffer), slen);
     size_t count = (size_t)file.tellp();
     file.close();
 
@@ -127,7 +127,7 @@ void sev::gen_random_bytes(void *bytes, size_t num_bytes)
     if (num_gen_bytes != (ssize_t)num_bytes) {
         printf("Warning: getrandom failed. Generating random bytes manually\n");
         // Do it manually
-        auto *addr = (uint8_t *)bytes;
+        auto *addr = reinterpret_cast<uint8_t *>(bytes);
         srand((unsigned int)time(nullptr));
         while (num_bytes--) {
             *addr++ = (uint8_t)(rand() & 0xff);

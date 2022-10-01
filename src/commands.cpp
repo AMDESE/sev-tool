@@ -318,7 +318,7 @@ int Command::get_id()
     // Send the first command with a length of 0, then use the returned length
     // as the input parameter for the 'real' command which will succeed
     sev_get_id_cmd_buf data_buf_temp;
-    cmd_ret = m_sev_device->get_id((uint8_t *)&data_buf_temp, nullptr); // Sets IDLength
+    cmd_ret = m_sev_device->get_id(reinterpret_cast<uint8_t *>(&data_buf_temp), nullptr); // Sets IDLength
     if (cmd_ret != ERROR_INVALID_LENGTH)     // What we expect to happen
         return cmd_ret;
     default_id_length = data_buf_temp.id_length;
@@ -337,8 +337,8 @@ int Command::get_id()
         std::string id1_buf{};
         id1_buf.resize(default_id_length*2);
         for (uint8_t i = 0; i < default_id_length; i++) {
-            sprintf(id0_buf.data()+2*i, "%02x", ((uint8_t *)(data.id_p_addr))[i]);
-            sprintf(id1_buf.data()+2*i, "%02x", ((uint8_t *)(data.id_p_addr))[i+default_id_length]);
+            sprintf(id0_buf.data()+2*i, "%02x", reinterpret_cast<uint8_t *>(data.id_p_addr)[i]);
+            sprintf(id1_buf.data()+2*i, "%02x", reinterpret_cast<uint8_t *>(data.id_p_addr)[i+default_id_length]);
         }
 
         if (m_verbose_flag) {            // Print ID arrays
@@ -639,14 +639,14 @@ int Command::calculate_measurement(measurement_t *user_data, hmac_sha_256 *final
             if (HMAC_Update(ctx, &user_data->build_id, sizeof(user_data->build_id)) != 1)
                 break;
         }
-        if (HMAC_Update(ctx, (uint8_t *)&user_data->policy, sizeof(user_data->policy)) != 1)
+        if (HMAC_Update(ctx, reinterpret_cast<uint8_t *>(&user_data->policy), sizeof(user_data->policy)) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&user_data->digest, sizeof(user_data->digest)) != 1)
+        if (HMAC_Update(ctx, reinterpret_cast<uint8_t *>(&user_data->digest), sizeof(user_data->digest)) != 1)
             break;
         // Use the same random MNonce as the FW in our validation calculations
-        if (HMAC_Update(ctx, (uint8_t *)&user_data->mnonce, sizeof(user_data->mnonce)) != 1)
+        if (HMAC_Update(ctx, reinterpret_cast<uint8_t *>(&user_data->mnonce), sizeof(user_data->mnonce)) != 1)
             break;
-        if (HMAC_Final(ctx, (uint8_t *)final_meas, &measurement_length) != 1)  // size = 32
+        if (HMAC_Final(ctx, reinterpret_cast<uint8_t *>(final_meas), &measurement_length) != 1)  // size = 32
             break;
 
         cmd_ret = STATUS_SUCCESS;
@@ -1023,7 +1023,7 @@ int Command::validate_attestation()
             break;
 
         // Validate the report
-        success = verify_message((sev_sig *)&report.sig1,
+        success = verify_message(reinterpret_cast<sev_sig *>(&report.sig1), // FIXME: sig1 seems to be smaller than sev_sig
                                   &pek_pub_key, reinterpret_cast<uint8_t *>(&report),
                                   offsetof(attestation_report, sig_usage),
                                   SEV_SIG_ALGO_ECDSA_SHA256);
@@ -1082,7 +1082,7 @@ int Command::validate_guest_report()
         // BIO_free(out2);
 
         // Validate the report
-        success = verify_message((sev_sig *)&report.signature,
+        success = verify_message(reinterpret_cast<sev_sig *>(&report.signature),
                                   &vcek_pub_key, reinterpret_cast<uint8_t *>(&report),
                                   offsetof(snp_attestation_report_t, signature),
                                   SEV_SIG_ALGO_ECDSA_SHA384);
@@ -1199,9 +1199,9 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
         // calculate a chunk of random data from the PRF
         if (HMAC_Init_ex(ctx, key_in, (int)key_in_length, EVP_sha256(), nullptr) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&i, sizeof(i)) != 1)
+        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&i), sizeof(i)) != 1)
             break;
-        if (HMAC_Update(ctx, (unsigned char*)label, label_length) != 1)
+        if (HMAC_Update(ctx, reinterpret_cast<unsigned char const *>(label), label_length) != 1)
             break;
         if (HMAC_Update(ctx, &null_byte, sizeof(null_byte)) != 1)
             break;
@@ -1209,7 +1209,7 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
             if (HMAC_Update(ctx, (unsigned char const*)context, context_length) != 1)
                 break;
         }
-        if (HMAC_Update(ctx, (uint8_t *)&l, sizeof(l)) != 1)
+        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&l), sizeof(l)) != 1)
             break;
         if (HMAC_Final(ctx, prf_out.data(), &out_len) != 1)
             break;
@@ -1263,7 +1263,7 @@ uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_ke
             break;
 
         // Need to free shared_key using OPENSSL_FREE() in the calling function
-        shared_key = (unsigned char*)OPENSSL_malloc(shared_key_len_out);
+        shared_key = reinterpret_cast<unsigned char*>(OPENSSL_malloc(shared_key_len_out));
         if (!shared_key)
             break;      // malloc failure
 
@@ -1321,7 +1321,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
 
         // Derive the master secret from the intermediate secret
         if (!kdf((unsigned char*)master_secret, sizeof(aes_128_key), shared_key,
-            shared_key_len, (uint8_t *)SEV_MASTER_SECRET_LABEL,
+            shared_key_len, reinterpret_cast<uint8_t const *>(SEV_MASTER_SECRET_LABEL),
             sizeof(SEV_MASTER_SECRET_LABEL)-1, reinterpret_cast<uint8_t *>(&nonce), sizeof(nonce_128))) // sizeof(nonce), bad?
             break;
 
@@ -1340,14 +1340,14 @@ bool Command::derive_master_secret(aes_128_key master_secret,
 bool Command::derive_kek(aes_128_key kek, const aes_128_key master_secret)
 {
     bool ret = kdf((unsigned char*)kek, sizeof(aes_128_key), master_secret, sizeof(aes_128_key),
-                   (uint8_t *)SEV_KEK_LABEL, sizeof(SEV_KEK_LABEL)-1, nullptr, 0);
+                   reinterpret_cast<uint8_t const *>(SEV_KEK_LABEL), sizeof(SEV_KEK_LABEL)-1, nullptr, 0);
     return ret;
 }
 
 bool Command::derive_kik(hmac_key_128 kik, const aes_128_key master_secret)
 {
     bool ret = kdf((unsigned char*)kik, sizeof(aes_128_key), master_secret, sizeof(aes_128_key),
-                   (uint8_t *)SEV_KIK_LABEL, sizeof(SEV_KIK_LABEL)-1, nullptr, 0);
+                   reinterpret_cast<uint8_t const *>(SEV_KIK_LABEL), sizeof(SEV_KIK_LABEL)-1, nullptr, 0);
     return ret;
 }
 
@@ -1358,7 +1358,7 @@ bool Command::gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t
 
     unsigned int out_len = 0;
     HMAC(EVP_sha256(), key, sizeof(hmac_key_128), msg,    // Returns NULL or value of out
-         msg_len, (uint8_t *)out, &out_len);
+         msg_len, reinterpret_cast<uint8_t *>(out), &out_len);
 
     if ((out != nullptr) && (out_len == sizeof(hmac_sha_256)))
         return true;
@@ -1442,15 +1442,15 @@ int Command::build_session_buffer(sev_session_buf *buf, uint32_t guest_policy,
 
         // Create an IV and wrap the TK with KEK and IV
         sev::gen_random_bytes(iv, sizeof(iv_128));
-        if (!encrypt((uint8_t *)&wrap_tk, (uint8_t *)&m_tk, sizeof(m_tk), kek, iv))
+        if (!encrypt(reinterpret_cast<uint8_t *>(&wrap_tk), reinterpret_cast<uint8_t *>(&m_tk), sizeof(m_tk), kek, iv))
             break;
 
         // Generate the HMAC for the wrap_tk
-        if (!gen_hmac(&wrap_mac, kik, (uint8_t *)&wrap_tk, sizeof(wrap_tk)))
+        if (!gen_hmac(&wrap_mac, kik, reinterpret_cast<uint8_t *>(&wrap_tk), sizeof(wrap_tk)))
             break;
 
         // Generate the HMAC for the Policy bits
-        if (!gen_hmac(&policy_mac, m_tk.tik, (uint8_t *)&guest_policy, sizeof(guest_policy)))
+        if (!gen_hmac(&policy_mac, m_tk.tik, reinterpret_cast<uint8_t *>(&guest_policy), sizeof(guest_policy)))
             break;
 
         // Copy everything to the session data buffer
@@ -1504,13 +1504,13 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
             break;
         if (HMAC_Update(ctx, &meas_ctx, sizeof(meas_ctx)) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&header.flags, sizeof(header.flags)) != 1)
+        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&header.flags), sizeof(header.flags)) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&header.iv, sizeof(header.iv)) != 1)
+        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&header.iv), sizeof(header.iv)) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&buf_len, sizeof(buf_len)) != 1) // Guest Length
+        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&buf_len), sizeof(buf_len)) != 1) // Guest Length
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&buf_len, sizeof(buf_len)) != 1) // Trans Length
+        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&buf_len), sizeof(buf_len)) != 1) // Trans Length
             break;
         if (HMAC_Update(ctx, buf, buf_len) != 1)                        // Data
             break;
@@ -1518,7 +1518,7 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
             if (HMAC_Update(ctx, m_measurement, sizeof(m_measurement)) != 1) // Measure
                 break;
         }
-        if (HMAC_Final(ctx, (uint8_t *)&header.mac, &measurement_length) != 1)
+        if (HMAC_Final(ctx, reinterpret_cast<uint8_t *>(&header.mac), &measurement_length) != 1)
             break;
 
         memcpy(out_header, &header, sizeof(sev_hdr_buf));

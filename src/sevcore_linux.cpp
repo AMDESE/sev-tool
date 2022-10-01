@@ -269,7 +269,7 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
          *       self-owned and externally-owned (both directions).
          */
         sev_user_data_status status_data;  // Platform Status
-        *cmd_ret = platform_status((uint8_t *)&status_data);
+        *cmd_ret = platform_status(reinterpret_cast<uint8_t *>(&status_data));
         if (*cmd_ret != 0)
             return ioctl_ret;
 
@@ -305,12 +305,12 @@ int SEVDevice::factory_reset()
 
 int SEVDevice::get_platform_owner(void *data)
 {
-    return ((sev_user_data_status *)data)->flags & PLAT_STAT_OWNER_MASK;
+    return reinterpret_cast<sev_user_data_status *>(data)->flags & PLAT_STAT_OWNER_MASK;
 }
 
 int SEVDevice::get_platform_es(void *data)
 {
-    return ((sev_user_data_status *)data)->flags & PLAT_STAT_ES_MASK;
+    return reinterpret_cast<sev_user_data_status *>(data)->flags & PLAT_STAT_ES_MASK;
 }
 
 int SEVDevice::platform_status(uint8_t *data)
@@ -343,7 +343,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    auto *data_buf = (sev_user_data_pek_csr *)data;
+    auto *data_buf = reinterpret_cast<sev_user_data_pek_csr *>(data);
     SEVCert csr_obj(csr);
 
     // Set struct to 0
@@ -370,7 +370,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
             break;
 
         // Verify the CSR complies to API specification
-        memcpy(csr, (sev_cert*)data_buf->address, sizeof(sev_cert));
+        memcpy(csr, reinterpret_cast<sev_cert const *>(data_buf->address), sizeof(sev_cert));
         if (csr_obj.validate_pek_csr() != STATUS_SUCCESS) {
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
@@ -398,7 +398,7 @@ int SEVDevice::pdh_cert_export(uint8_t *data, sev_cert_t const *pdh_cert_mem,
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    auto *data_buf = (sev_user_data_pdh_cert_export *)data;
+    auto *data_buf = reinterpret_cast<sev_user_data_pdh_cert_export *>(data);
 
     // Set struct to 0
     memset(data_buf, 0, sizeof(sev_user_data_pdh_cert_export));
@@ -424,7 +424,7 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *signed_pek_csr,
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    auto *data_buf = (sev_user_data_pek_cert_import *)data;
+    auto *data_buf = reinterpret_cast<sev_user_data_pek_cert_import *>(data);
     memset(data_buf, 0, sizeof(sev_user_data_pek_cert_import));
 
     do {
@@ -480,8 +480,8 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
     //   struct to the SEV API struct in sevapi.h, however, for this function,
     //   this Linux struct doesn't match (at all) the API
     // Hard coded hack mapping to sevapi.h. Don't want to include sevapi.h in this file
-    ((uint64_t *)data)[0] = (uint64_t)id_mem;      // Set address of id_mem as 64 bit PAddr from sevapi.h
-    ((uint32_t *)data)[2] = id_length;  // 3rd 32-bit chunk in the cmd_buf
+    reinterpret_cast<uint64_t *>(data)[0] = (uint64_t)id_mem;      // Set address of id_mem as 64 bit PAddr from sevapi.h
+    reinterpret_cast<uint32_t *>(data)[2] = id_length;  // 3rd 32-bit chunk in the cmd_buf
 
     return (int)cmd_ret;
 }
@@ -563,7 +563,7 @@ int SEVDevice::set_self_owned()
     sev_user_data_status status_data;  // Platform Status
     int cmd_ret = SEV_RET_UNSUPPORTED;
 
-    cmd_ret = platform_status((uint8_t *)&status_data);
+    cmd_ret = platform_status(reinterpret_cast<uint8_t *>(&status_data));
     if (cmd_ret != SEV_RET_SUCCESS) {
         return cmd_ret;
     }
