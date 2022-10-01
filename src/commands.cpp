@@ -494,19 +494,19 @@ int Command::generate_all_certs()
             break;
 
         // Read in the ask_ark so we can split it into 2 separate cert files
-        uint8_t ask_ark_buf[sizeof(amd_cert)*2] = {0};
-        if (sev::read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0)
+        std::array<uint8_t, sizeof(amd_cert)*2> ask_ark_buf{};
+        if (sev::read_file(ask_ark_full, ask_ark_buf.data(), sizeof(ask_ark_buf)) == 0)
             break;
 
         // Initialize the ask
-        cmd_ret = tmp_amd.amd_cert_init(&ask, ask_ark_buf);
+        cmd_ret = tmp_amd.amd_cert_init(&ask, ask_ark_buf.data());
         if (cmd_ret != STATUS_SUCCESS)
             break;
         // print_amd_cert_readable(&ask);
 
         // Initialize the ark
         size_t ask_size = tmp_amd.amd_cert_get_size(&ask);
-        cmd_ret = tmp_amd.amd_cert_init(&ark, (uint8_t *)(ask_ark_buf + ask_size));
+        cmd_ret = tmp_amd.amd_cert_init(&ark, (uint8_t *)(ask_ark_buf.data() + ask_size));
         if (cmd_ret != STATUS_SUCCESS)
             break;
         // print_amd_cert_readable(&ark);
@@ -1181,7 +1181,7 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
     bool cmd_ret = false;
     uint8_t null_byte = '\0';
     unsigned int out_len = 0;
-    uint8_t prf_out[NIST_KDF_H_BYTES];      // Buffer to collect PRF output
+    std::array<uint8_t, NIST_KDF_H_BYTES> prf_out;      // Buffer to collect PRF output
 
     // length in bits of derived key
     auto l = (uint32_t)(key_out_length * BITS_PER_BYTE);
@@ -1212,22 +1212,22 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
         if (HMAC_Update(ctx, &null_byte, sizeof(null_byte)) != 1)
             break;
         if ((context) && (context_length != 0)) {
-            if (HMAC_Update(ctx, (unsigned char*)context, context_length) != 1)
+            if (HMAC_Update(ctx, (unsigned char const*)context, context_length) != 1)
                 break;
         }
         if (HMAC_Update(ctx, (uint8_t *)&l, sizeof(l)) != 1)
             break;
-        if (HMAC_Final(ctx, prf_out, &out_len) != 1)
+        if (HMAC_Final(ctx, prf_out.data(), &out_len) != 1)
             break;
 
         // Write out the key bytes
-        if (bytes_left <= NIST_KDF_H_BYTES) {
-            memcpy(key_out + offset, prf_out, bytes_left);
+        if (bytes_left <= prf_out.size()) {
+            memcpy(key_out + offset, prf_out.data(), bytes_left);
         }
         else {
-            memcpy(key_out + offset, prf_out, NIST_KDF_H_BYTES);
-            offset     += NIST_KDF_H_BYTES;
-            bytes_left -= NIST_KDF_H_BYTES;
+            memcpy(key_out + offset, prf_out.data(), prf_out.size());
+            offset     += prf_out.size();
+            bytes_left -= prf_out.size();
         }
 
         if (i == n)          // If successfully finished all iterations
