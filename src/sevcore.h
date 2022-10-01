@@ -76,7 +76,7 @@ namespace sev
 {
 // Global Functions that don't require ioctls
 void get_family_model(uint32_t *family, uint32_t *model);
-ePSP_DEVICE_TYPE get_device_type(void);
+ePSP_DEVICE_TYPE get_device_type();
 bool min_api_version(unsigned platform_major, unsigned platform_minor,
                      unsigned api_major, unsigned api_minor);
 int get_ask_ark(const std::string output_folder, const std::string cert_file);
@@ -91,13 +91,13 @@ class SEVDevice {
 private:
     int mFd{-1};
 
-    inline int get_fd(void) { return mFd; }
+    inline int get_fd() { return mFd; }
     int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
-    std::string display_build_info(void);
+    std::string display_build_info();
 
     // Do NOT create ANY other constructors or destructors of any kind.
-    SEVDevice(void)  = default;
+    SEVDevice()  = default;
 
     // Delete the copy and assignment operators which
     // may be automatically created by the compiler. The user
@@ -107,10 +107,10 @@ private:
 
 public:
     // Singleton Constructor - Threadsafe in C++ 11 and greater.
-    static SEVDevice& get_sev_device(void);
+    static SEVDevice& get_sev_device();
 
     // Do NOT create ANY other constructors or destructors of any kind.
-    ~SEVDevice(void);
+    ~SEVDevice();
 
     /*
      * Format for below input variables:
@@ -119,11 +119,11 @@ public:
      * Each function sets the params in data to the input/output variables of
      *   the function
      */
-    int factory_reset(void);
+    int factory_reset();
     int platform_status(uint8_t *data);
-    int pek_gen(void);
+    int pek_gen();
     int pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr);
-    int pdh_gen(void);
+    int pdh_gen();
     int pdh_cert_export(uint8_t *data, sev_cert_t const *pdh_cert_mem,
                                sev_cert_chain_buf_t const *cert_chain_mem);
     int pek_cert_import(uint8_t *data, sev_cert *pek_csr,
@@ -131,7 +131,7 @@ public:
     int get_id(void *data, void *id_mem, uint32_t id_length = 0);
 
     int sys_info();
-    int set_self_owned(void);
+    int set_self_owned();
     int get_platform_owner(void *data);
     int get_platform_es(void *data);
     int generate_cek_ask(const std::string output_folder,

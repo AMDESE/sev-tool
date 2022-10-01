@@ -47,7 +47,7 @@ void sev::get_family_model(uint32_t *family, uint32_t *model)
     *model = std::stoi(model_str, nullptr, 10);
 }
 
-ePSP_DEVICE_TYPE sev::get_device_type(void)
+ePSP_DEVICE_TYPE sev::get_device_type()
 {
     uint32_t family = 0;
     uint32_t model = 0;
@@ -242,7 +242,7 @@ SEVDevice::~SEVDevice()
     mFd = -1;
 }
 
-SEVDevice& SEVDevice::get_sev_device(void)
+SEVDevice& SEVDevice::get_sev_device()
 {
     static SEVDevice m_sev_device;
     m_sev_device.mFd = open(DEFAULT_SEV_DEVICE.c_str(), O_RDWR);
@@ -486,7 +486,7 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
     return (int)cmd_ret;
 }
 
-std::string SEVDevice::display_build_info(void)
+std::string SEVDevice::display_build_info()
 {
     SEVDevice sev_device;
     uint8_t status_data[sizeof(sev_platform_status_cmd_buf)];

@@ -29,7 +29,7 @@
 #include <memory>
 #include <utility>
 
-Command::Command(void)
+Command::Command()
        : m_sev_device(&SEVDevice::get_sev_device())
 {
     // Intentionally Empty
@@ -48,7 +48,7 @@ Command::~Command()
     //delete m_sev_device;
 }
 
-int Command::factory_reset(void)
+int Command::factory_reset()
 {
     int cmd_ret = -1;
 
@@ -57,7 +57,7 @@ int Command::factory_reset(void)
     return (int)cmd_ret;
 }
 
-int Command::platform_status(void)
+int Command::platform_status()
 {
     uint8_t data[sizeof(sev_platform_status_cmd_buf)];
     auto *data_buf = (sev_platform_status_cmd_buf *)&data;
@@ -86,7 +86,7 @@ int Command::platform_status(void)
     return (int)cmd_ret;
 }
 
-int Command::pek_gen(void)
+int Command::pek_gen()
 {
     int cmd_ret = -1;
 
@@ -95,7 +95,7 @@ int Command::pek_gen(void)
     return (int)cmd_ret;
 }
 
-int Command::pek_csr(void)
+int Command::pek_csr()
 {
     sev_platform_status_cmd_buf data_buf;
     uint8_t data[sizeof(sev_pek_csr_cmd_buf)];
@@ -139,7 +139,7 @@ int Command::pek_csr(void)
     return (int)cmd_ret;
 }
 
-int Command::pdh_gen(void)
+int Command::pdh_gen()
 {
     int cmd_ret = -1;
 
@@ -148,7 +148,7 @@ int Command::pdh_gen(void)
     return (int)cmd_ret;
 }
 
-int Command::pdh_cert_export(void)
+int Command::pdh_cert_export()
 {
     uint8_t data[sizeof(sev_pdh_cert_export_cmd_buf)];
     int cmd_ret = -1;
@@ -308,7 +308,7 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
 
 // Must always pass in 128 bytes array, because of Linux /dev/sev ioctl
 // doesn't follow the API
-int Command::get_id(void)
+int Command::get_id()
 {
     uint8_t data[sizeof(sev_get_id_cmd_buf)];
     auto *data_buf = (sev_get_id_cmd_buf *)&data;
@@ -365,7 +365,7 @@ int Command::get_id(void)
 // ------------------------------------- //
 // ---- Non-ioctl (Custom) commands ---- //
 // ------------------------------------- //
-int Command::sys_info(void)
+int Command::sys_info()
 {
     int cmd_ret = -1;
 
@@ -374,7 +374,7 @@ int Command::sys_info(void)
     return (int)cmd_ret;
 }
 
-int Command::get_platform_owner(void)
+int Command::get_platform_owner()
 {
     uint8_t data[sizeof(sev_platform_status_cmd_buf)];
     int cmd_ret = -1;
@@ -386,7 +386,7 @@ int Command::get_platform_owner(void)
     return m_sev_device->get_platform_owner(data);
 }
 
-int Command::get_platform_es(void)
+int Command::get_platform_es()
 {
     uint8_t data[sizeof(sev_platform_status_cmd_buf)];
     int cmd_ret = -1;
@@ -398,7 +398,7 @@ int Command::get_platform_es(void)
     return m_sev_device->get_platform_es(data);
 }
 
-int Command::set_self_owned(void)
+int Command::set_self_owned()
 {
     int cmd_ret = -1;
 
@@ -435,7 +435,7 @@ int Command::set_externally_owned(std::string oca_priv_key_file)
     return cmd_ret;
 }
 
-int Command::generate_cek_ask(void)
+int Command::generate_cek_ask()
 {
     int cmd_ret = -1;
 
@@ -446,7 +446,7 @@ int Command::generate_cek_ask(void)
     return (int)cmd_ret;
 }
 
-int Command::get_ask_ark(void)
+int Command::get_ask_ark()
 {
     int cmd_ret = -1;
 
@@ -457,7 +457,7 @@ int Command::get_ask_ark(void)
     return (int)cmd_ret;
 }
 
-int Command::generate_all_certs(void)
+int Command::generate_all_certs()
 {
     int cmd_ret = -1;
     uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
@@ -541,7 +541,7 @@ int Command::generate_all_certs(void)
     return (int)cmd_ret;
 }
 
-int Command::export_cert_chain(void)
+int Command::export_cert_chain()
 {
     int cmd_ret = -1;
     std::string zip_name = CERTS_ZIP_FILENAME;
@@ -563,7 +563,7 @@ int Command::export_cert_chain(void)
     return (int)cmd_ret;
 }
 
-int Command::generate_all_certs_vcek(void)
+int Command::generate_all_certs_vcek()
 {
     int cmd_ret = -1;
 
@@ -592,7 +592,7 @@ int Command::generate_all_certs_vcek(void)
     return (int)cmd_ret;
 }
 
-int Command::export_cert_chain_vcek(void)
+int Command::export_cert_chain_vcek()
 {
     int cmd_ret = -1;
     std::string zip_name = CERTS_VCEK_ZIP_FILENAME;
@@ -765,7 +765,7 @@ int Command::import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
     return (int)cmd_ret;
 }
 
-int Command::validate_cert_chain(void)
+int Command::validate_cert_chain()
 {
     int cmd_ret = -1;
     sev_cert pdh;
@@ -907,7 +907,7 @@ int Command::generate_launch_blob(uint32_t policy)
     return (int)cmd_ret;
 }
 
-int Command::package_secret(void)
+int Command::package_secret()
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     sev_hdr_buf packaged_secret_header;
@@ -985,7 +985,7 @@ int Command::package_secret(void)
     return (int)cmd_ret;
 }
 
-int Command::validate_attestation(void)
+int Command::validate_attestation()
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     std::string report_file = m_output_folder + ATTESTATION_REPORT_FILENAME;
@@ -1049,7 +1049,7 @@ int Command::validate_attestation(void)
     return (int)cmd_ret;
 }
 
-int Command::validate_guest_report(void)
+int Command::validate_guest_report()
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     std::string report_file = m_output_folder + GUEST_REPORT_FILENAME;
@@ -1110,7 +1110,7 @@ int Command::validate_guest_report(void)
     return (int)cmd_ret;
 }
 
-int Command::validate_cert_chain_vcek(void)
+int Command::validate_cert_chain_vcek()
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;

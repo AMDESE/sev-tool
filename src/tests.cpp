@@ -32,7 +32,7 @@ Tests::Tests(std::string output_folder, int verbose_flag)
     // Intentionally Empty
 }
 
-bool Tests::clear_output_folder(void)
+bool Tests::clear_output_folder()
 {
     printf("*Clearing output folder %s\n", m_output_folder.c_str());
 
@@ -50,7 +50,7 @@ bool Tests::clear_output_folder(void)
  * is by checking if the Platform ownership goes back from externally-owned to
  * self-owned after sending the factory_reset command.
  */
-bool Tests::test_factory_reset(void)
+bool Tests::test_factory_reset()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -101,7 +101,7 @@ bool Tests::test_factory_reset(void)
 /**
  * Just check that the command succeeds
  */
-bool Tests::test_platform_status(void)
+bool Tests::test_platform_status()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -122,7 +122,7 @@ bool Tests::test_platform_status(void)
  * Compare PEK and PDH certs before and after calling pek_gen, they should both
  * be new.
  */
-bool Tests::test_pek_gen(void)
+bool Tests::test_pek_gen()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -185,7 +185,7 @@ bool Tests::test_pek_gen(void)
 /**
  * Call the command to generate the CSR, do basic validation on the CSR.
  */
-bool Tests::test_pek_csr(void)
+bool Tests::test_pek_csr()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -218,7 +218,7 @@ bool Tests::test_pek_csr(void)
  * Compare PEK and PDH certs before and after calling pek_gen, PEK certs should
  * be the same and PDH cert should be new.
  */
-bool Tests::test_pdh_gen(void)
+bool Tests::test_pdh_gen()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -282,7 +282,7 @@ bool Tests::test_pdh_gen(void)
  * Run the test_pdh_cert_export command, read in the PDH cert and cert chain,
  * and check the usages of all the certs. Not much else we can test, really.
  */
-bool Tests::test_pdh_cert_export(void)
+bool Tests::test_pdh_cert_export()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -378,7 +378,7 @@ bool Tests::test_sign_pek_csr()
  * Compare PEK and PDH certs before and after calling test_pek_cert_import, they
  * should both be new.
  */
-bool Tests::test_pek_cert_import(void)
+bool Tests::test_pek_cert_import()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -475,7 +475,7 @@ bool Tests::test_pek_cert_import(void)
  * Development parts all have the same ID, so can't even check to make sure the
  * ID's are different
  */
-bool Tests::test_get_id(void)
+bool Tests::test_get_id()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -498,7 +498,7 @@ bool Tests::test_get_id(void)
  *   platform_reset at the end. set_self_owned calls platform_reset, so it's
  *   really still the same test.
  */
-bool Tests::test_set_self_owned(void)
+bool Tests::test_set_self_owned()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -549,7 +549,7 @@ bool Tests::test_set_self_owned(void)
 /**
  * Call factory_reset to set Platform to self-owned, then call set_externally_owned
  */
-bool Tests::test_set_externally_owned(void)
+bool Tests::test_set_externally_owned()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -592,7 +592,7 @@ bool Tests::test_set_externally_owned(void)
 /**
  * Call function, read in cert, and check usage
  */
-bool Tests::test_generate_cek_ask(void)
+bool Tests::test_generate_cek_ask()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -626,7 +626,7 @@ bool Tests::test_generate_cek_ask(void)
  * split it up in separate ask and ark certs. Then, check the certs to make sure
  * they have the correct Usage.
  */
-bool Tests::test_get_ask_ark(void)
+bool Tests::test_get_ask_ark()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
@@ -675,7 +675,7 @@ bool Tests::test_get_ask_ark(void)
     return ret;
 }
 
-bool Tests::test_export_cert_chain(void)
+bool Tests::test_export_cert_chain()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -695,7 +695,7 @@ bool Tests::test_export_cert_chain(void)
 /**
  *  Pass in known input and check against expected output
  */
-bool Tests::test_calc_measurement(void)
+bool Tests::test_calc_measurement()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
@@ -749,7 +749,7 @@ bool Tests::test_calc_measurement(void)
     return ret;
 }
 
-bool Tests::test_validate_cert_chain(void)
+bool Tests::test_validate_cert_chain()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
@@ -766,7 +766,7 @@ bool Tests::test_validate_cert_chain(void)
     return ret;
 }
 
-bool Tests::test_generate_launch_blob(void)
+bool Tests::test_generate_launch_blob()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -785,7 +785,7 @@ bool Tests::test_generate_launch_blob(void)
     return ret;
 }
 
-bool Tests::test_package_secret(void)
+bool Tests::test_package_secret()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -840,7 +840,7 @@ bool Tests::test_package_secret(void)
     return ret;
 }
 
-bool Tests::test_export_cert_chain_vcek(void)
+bool Tests::test_export_cert_chain_vcek()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -863,7 +863,7 @@ bool Tests::test_export_cert_chain_vcek(void)
     return ret;
 }
 
-bool Tests::test_validate_cert_chain_vcek(void)
+bool Tests::test_validate_cert_chain_vcek()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
@@ -886,7 +886,7 @@ bool Tests::test_validate_cert_chain_vcek(void)
     return ret;
 }
 
-bool Tests::test_all(void)
+bool Tests::test_all()
 {
     bool ret = false;
 

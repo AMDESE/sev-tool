@@ -99,8 +99,8 @@ private:
     int m_verbose_flag = 0;
 
     int calculate_measurement(measurement_t *user_data, hmac_sha_256 *final_meas);
-    int generate_all_certs(void);
-    int generate_all_certs_vcek(void);
+    int generate_all_certs();
+    int generate_all_certs_vcek();
     int import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
                          sev_cert *cek, amd_cert *ask, amd_cert *ark);
     bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
@@ -131,33 +131,33 @@ public:
     Command(std::string output_folder, int verbose_flag, ccp_required_t ccp = CCP_REQ);
     ~Command();
 
-    int factory_reset(void);
-    int platform_status(void);
-    int pek_gen(void);
-    int pek_csr(void);
-    int pdh_gen(void);
-    int pdh_cert_export(void);
+    int factory_reset();
+    int platform_status();
+    int pek_gen();
+    int pek_csr();
+    int pdh_gen();
+    int pdh_cert_export();
     int pek_cert_import(std::string signed_pek_csr_file, std::string oca_cert_file);
-    int get_id(void);
+    int get_id();
 
     // Non-ioctl (custom) commands
-    int sys_info(void);
-    int get_platform_owner(void);
-    int get_platform_es(void);
+    int sys_info();
+    int get_platform_owner();
+    int get_platform_es();
     int sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_file);
-    int set_self_owned(void);
+    int set_self_owned();
     int set_externally_owned(std::string oca_priv_key_file);
-    int generate_cek_ask(void);
-    int get_ask_ark(void);
-    int export_cert_chain(void);
-    int export_cert_chain_vcek(void);
+    int generate_cek_ask();
+    int get_ask_ark();
+    int export_cert_chain();
+    int export_cert_chain_vcek();
     int calc_measurement(measurement_t *user_data);
-    int validate_cert_chain(void);
+    int validate_cert_chain();
     int generate_launch_blob(uint32_t policy);
-    int package_secret(void);
-    int validate_attestation(void);
-    int validate_guest_report(void);
-    int validate_cert_chain_vcek(void);
+    int package_secret();
+    int validate_attestation();
+    int validate_guest_report();
+    int validate_cert_chain_vcek();
 };
 
 #endif /* COMMANDS_H */
