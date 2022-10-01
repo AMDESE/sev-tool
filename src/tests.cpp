@@ -24,6 +24,7 @@
 #include <cstring>      // For memcmp
 #include <cstdio>      // prboolf
 #include <cstdlib>     // malloc
+#include <array>
 
 Tests::Tests(std::string output_folder, int verbose_flag)
      : m_output_folder(std::move(output_folder)),
@@ -642,14 +643,14 @@ bool Tests::test_get_ask_ark()
             break;
 
         // Read in the ask_ark so we can split it into 2 separate cert files
-        uint8_t ask_ark_buf[sizeof(amd_cert)*2] = {0};
-        if (sev::read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0) {
+        std::array<uint8_t, sizeof(amd_cert)*2> ask_ark_buf{};
+        if (sev::read_file(ask_ark_full, ask_ark_buf.data(), sizeof(ask_ark_buf)) == 0) {
             printf("Error: Unable to read in ASK_ARK certificate\n");
             break;
         }
 
         // Initialize the ASK
-        if (tmp_amd.amd_cert_init(&ask, ask_ark_buf) != STATUS_SUCCESS) {
+        if (tmp_amd.amd_cert_init(&ask, ask_ark_buf.data()) != STATUS_SUCCESS) {
             printf("Error: Failed to initialize ASK certificate\n");
             break;
         }
@@ -657,7 +658,7 @@ bool Tests::test_get_ask_ark()
 
         // Initialize the ARK
         size_t ask_size = tmp_amd.amd_cert_get_size(&ask);
-        if (tmp_amd.amd_cert_init(&ark, (uint8_t *)(ask_ark_buf + ask_size)) != STATUS_SUCCESS) {
+        if (tmp_amd.amd_cert_init(&ark, ask_ark_buf.data() + ask_size) != STATUS_SUCCESS) {
             printf("Error: Failed to initialize ARK certificate\n");
             break;
         }
@@ -711,7 +712,7 @@ bool Tests::test_calc_measurement()
     sev::str_to_array("66320db73158a35a255d051758e95ed4", (uint8_t *)&data.tik, sizeof(data.tik));
 
     std::string expected_output_readable = "6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea";
-    uint8_t expected_output[32] = {0x6f, 0xaa, 0xb2, 0xda, 0xae, 0x38, 0x9b, 0xcd, 0x34, 0x05, 0xa0,
+    std::array<uint8_t, 32> expected_output = {0x6f, 0xaa, 0xb2, 0xda, 0xae, 0x38, 0x9b, 0xcd, 0x34, 0x05, 0xa0,
                                    0x5d, 0x6c, 0xaf, 0xe3, 0x3c, 0x04, 0x14, 0xf7, 0xbe, 0xdd, 0x0b,
                                    0xae, 0x19, 0xba, 0x5f, 0x38, 0xb7, 0xfd, 0x16, 0x64, 0xea};
 
@@ -722,9 +723,9 @@ bool Tests::test_calc_measurement()
             break;
 
         // Read in the actual output as a readable hex string
-        uint8_t actual_output_readable[2*sizeof(hmac_sha_256)];  // 2 chars per byte +1 for null term
+        std::array<uint8_t, 2*sizeof(hmac_sha_256)> actual_output_readable;  // 2 chars per byte +1 for null term
         std::string meas_out_readable_full = m_output_folder + CALC_MEASUREMENT_READABLE_FILENAME;
-        if (sev::read_file(meas_out_readable_full, actual_output_readable, sizeof(actual_output_readable)) != sizeof(actual_output_readable))
+        if (sev::read_file(meas_out_readable_full, actual_output_readable.data(), sizeof(actual_output_readable)) != sizeof(actual_output_readable))
             break;
 
         // Read in the actual output as binary
@@ -734,13 +735,13 @@ bool Tests::test_calc_measurement()
             break;
 
         // Make sure the actual output is equal to the expected
-        printf("Expected: %s\nActual  : %s\n", expected_output_readable.c_str(), actual_output_readable);
-        if (memcmp(expected_output_readable.c_str(), actual_output_readable, sizeof(actual_output_readable)) != 0)
+        printf("Expected: %s\nActual  : %s\n", expected_output_readable.c_str(), actual_output_readable.data());
+        if (memcmp(expected_output_readable.c_str(), actual_output_readable.data(), sizeof(actual_output_readable)) != 0)
             break;
 
         // Make sure the actual output is equal to the expected
         // printf("Expected: %s\nActual  : %s\n", expected_output, actual_output);
-        if (memcmp(expected_output, actual_output, sizeof(actual_output)) != 0)
+        if (memcmp(expected_output.data(), actual_output, sizeof(actual_output)) != 0)
             break;
 
         ret = true;
