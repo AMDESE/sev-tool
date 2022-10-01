@@ -207,7 +207,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
         }
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     // Free the keys and contexts
     if (rsa_pub_key)
@@ -235,7 +235,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_common(const amd_cert *cert)
         {
             cmd_ret = ERROR_INVALID_CERTIFICATE;
         }
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -279,7 +279,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate(const amd_cert *cert,
         {
             cmd_ret = ERROR_INVALID_CERTIFICATE;
         }
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -321,7 +321,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_public_key_hash(const amd_cert *cert,
         memcpy(hash, &tmp_hash, sizeof(hmac_sha_256));
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -367,7 +367,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
         // We have to trust the ARK from the website, as there is no way to
         // validate it further, here. It is trustable due to being transmitted
         // over https
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -423,7 +423,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_export_pub_key(const amd_cert *cert,
         pub_key_cert->pub_key.rsa.modulus_size = cert->modulus_size;
         memcpy(pub_key_cert->pub_key.rsa.pub_exp, &cert->pub_exp, cert->pub_exp_size/8);
         memcpy(pub_key_cert->pub_key.rsa.modulus, &cert->modulus, cert->modulus_size/8);
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -464,7 +464,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_init(amd_cert *cert, const uint8_t *buffer)
         memcpy(&tmp.sig, (void *)(buffer + sig_offset), tmp.modulus_size/8);
 
         memcpy(cert, &tmp, sizeof(*cert));
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }

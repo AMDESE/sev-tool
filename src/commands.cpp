@@ -248,7 +248,7 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
             break;
 
         printf("PEK Cert Import SUCCESS.\n");
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -300,7 +300,7 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
         sev::write_file(pek_oca_path, (void *)&oca_cert, sizeof(oca_cert));
         sev::write_file(pek_csr_signed_path, (void *)&pek_csr, sizeof(pek_csr));
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
     EVP_PKEY_free(oca_priv_key);
     return cmd_ret;
 }
@@ -535,7 +535,7 @@ int Command::generate_all_certs(void)
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -558,7 +558,7 @@ int Command::export_cert_chain(void)
             break;
 
         cmd_ret = sev::zip_certs(m_output_folder, zip_name, cert_names);
-    } while (0);
+    } while (false);
     return (int)cmd_ret;
 }
 
@@ -586,7 +586,7 @@ int Command::generate_all_certs_vcek(void)
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -614,7 +614,7 @@ int Command::export_cert_chain_vcek(void)
             break;
 
         cmd_ret = sev::zip_certs(m_output_folder, zip_name, cert_names);
-    } while (0);
+    } while (false);
     return (int)cmd_ret;
 }
 
@@ -655,7 +655,7 @@ int Command::calculate_measurement(measurement_t *user_data, hmac_sha_256 *final
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     HMAC_CTX_free(ctx);
     return cmd_ret;
@@ -759,7 +759,7 @@ int Command::import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -819,7 +819,7 @@ int Command::validate_cert_chain(void)
         cmd_ret = tmp_sev_pdh.verify_sev_cert(&pek);
         if (cmd_ret != STATUS_SUCCESS)
             break;
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -901,7 +901,7 @@ int Command::generate_launch_blob(uint32_t policy)
 
             sev::write_file(buf_file, (void *)&session_data_buf, sizeof(sev_session_buf));
         }
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -979,7 +979,7 @@ int Command::package_secret(void)
         sev::write_file(packaged_secret_header_file, &packaged_secret_header, sizeof(packaged_secret_header));
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -1040,7 +1040,7 @@ int Command::validate_attestation(void)
 
         printf("Attestation report validated successfully!\n");
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     // Free memory
     EVP_PKEY_free(pek_pub_key);
@@ -1100,7 +1100,7 @@ int Command::validate_guest_report(void)
 
         printf("Guest report validated successfully!\n");
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     // Free memory
     EVP_PKEY_free(vcek_pub_key);
@@ -1153,7 +1153,7 @@ int Command::validate_cert_chain_vcek(void)
 
         printf("VCEK cert chain validated successfully!\n");
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     // Free memory
     EVP_PKEY_free(vcek_pub_key);
@@ -1279,7 +1279,7 @@ uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_ke
             break;
 
         success = true;
-    } while (0);
+    } while (false);
 
     EVP_PKEY_CTX_free(ctx);
 
@@ -1336,7 +1336,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
         OPENSSL_free(shared_key);    // Local variable
 
         ret = true;
-    } while (0);
+    } while (false);
 
     // Free memory
     EVP_PKEY_free(plat_pub_key);
@@ -1406,7 +1406,7 @@ bool Command::encrypt(uint8_t *out, const uint8_t *in, size_t length,
             break;
 
         cmd_ret = true;
-    } while (0);
+    } while (false);
 
     // Clean up
     EVP_CIPHER_CTX_free(ctx);
@@ -1468,7 +1468,7 @@ int Command::build_session_buffer(sev_session_buf *buf, uint32_t guest_policy,
         memcpy(&buf->policy_mac, &policy_mac, sizeof(buf->policy_mac));
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -1530,7 +1530,7 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
 
         memcpy(out_header, &header, sizeof(sev_hdr_buf));
         ret = true;
-    } while (0);
+    } while (false);
 
     HMAC_CTX_free(ctx);
 

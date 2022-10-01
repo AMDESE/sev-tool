@@ -133,7 +133,7 @@ int sev::get_ask_ark(const std::string output_folder, const std::string cert_fil
         }
 
         cmd_ret = SEV_RET_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -209,7 +209,7 @@ int sev::get_ask_ark_pem(const std::string output_folder, const std::string cert
         }
 
         cmd_ret = SEV_RET_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -375,7 +375,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
         }
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -414,7 +414,7 @@ int SEVDevice::pdh_cert_export(uint8_t *data, sev_cert_t const *pdh_cert_mem,
         if (ioctl_ret != 0)
             break;
 
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -445,7 +445,7 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *signed_pek_csr,
         if (ioctl_ret != 0)
             break;
 
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -474,7 +474,7 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
 
         // Copy the resulting IDs into the real buffer allocated for them
         memcpy(id_mem, &id_buf, id_length);
-    } while (0);
+    } while (false);
 
     // The other functions in this file can do a direct mapping of the Linux
     //   struct to the SEV API struct in sevapi.h, however, for this function,
@@ -669,7 +669,7 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
         }
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -767,7 +767,7 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
 
         // Convert the file from a DER to a PEM file
         convert_der_to_pem(der_cert_w_path, pem_cert_w_path);
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }

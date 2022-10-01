@@ -93,7 +93,7 @@ bool Tests::test_factory_reset(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -113,7 +113,7 @@ bool Tests::test_platform_status(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -177,7 +177,7 @@ bool Tests::test_pek_gen(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -209,7 +209,7 @@ bool Tests::test_pek_csr(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -273,7 +273,7 @@ bool Tests::test_pdh_gen(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -316,7 +316,7 @@ bool Tests::test_pdh_cert_export(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -370,7 +370,7 @@ bool Tests::test_sign_pek_csr()
         if (SignedCSR.verify_signed_pek_csr((const sev_cert*) &oca_cert) != STATUS_SUCCESS)
             break;
         ret = true;
-    } while (0);
+    } while (false);
     return ret;
 }
 
@@ -465,7 +465,7 @@ bool Tests::test_pek_cert_import(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -487,7 +487,7 @@ bool Tests::test_get_id(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -541,7 +541,7 @@ bool Tests::test_set_self_owned(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -584,7 +584,7 @@ bool Tests::test_set_externally_owned(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -616,7 +616,7 @@ bool Tests::test_generate_cek_ask(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -670,7 +670,7 @@ bool Tests::test_get_ask_ark(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -687,7 +687,7 @@ bool Tests::test_export_cert_chain(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -744,7 +744,7 @@ bool Tests::test_calc_measurement(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -761,7 +761,7 @@ bool Tests::test_validate_cert_chain(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -780,7 +780,7 @@ bool Tests::test_generate_launch_blob(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -835,7 +835,7 @@ bool Tests::test_package_secret(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -858,7 +858,7 @@ bool Tests::test_export_cert_chain_vcek(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -881,7 +881,7 @@ bool Tests::test_validate_cert_chain_vcek(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -962,7 +962,7 @@ bool Tests::test_all(void)
 
         printf("All tests Succeeded!\n");
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }

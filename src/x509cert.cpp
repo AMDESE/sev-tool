@@ -133,7 +133,7 @@ bool x509_validate_signature(X509 *child_cert, X509 *intermediate_cert, X509 *pa
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     // Cleanup
     if (store_ctx)

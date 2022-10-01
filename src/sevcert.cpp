@@ -169,7 +169,7 @@ void read_priv_key_pem_into_rsakey(const std::string file_name, RSA **rsa_priv_k
 
         if (!rsa_priv_key)   // TODO find a better check
             break;
-    } while (0);
+    } while (false);
 }
 
 /**
@@ -201,7 +201,7 @@ bool read_priv_key_pem_into_eckey(const std::string file_name, EC_KEY **ec_priv_
             break;
 
         success = true;
-    } while (0);
+    } while (false);
 
     return success;
 }
@@ -330,7 +330,7 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
             break;
 
         cmd_ret = true;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -379,7 +379,7 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, SEV_SIG_ALGO algo)
             break;
 
         cmd_ret = true;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -504,7 +504,7 @@ SEV_ERROR_CODE SEVCert::validate_public_key(const sev_cert *cert, const EVP_PKEY
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -662,7 +662,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                break;
         }
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -686,7 +686,7 @@ SEV_ERROR_CODE SEVCert::validate_body(const sev_cert *cert)
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -787,7 +787,7 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     // Free memory if it was allocated
     BN_free(y_big_num);     // If NULL, does nothing
@@ -884,7 +884,7 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     // Free memory if it was allocated
     BN_free(y_bignum);       // If NULL, does nothing
@@ -982,7 +982,7 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     // Free memory
     for (int i = 0; i < SEV_CERT_MAX_SIGNATURES; i++) {
@@ -1044,6 +1044,6 @@ SEV_ERROR_CODE SEVCert::verify_signed_pek_csr(const sev_cert *oca_cert)
         }
         // Check subsequent signature flags
         return verify_sev_cert(oca_cert, nullptr);
-    } while(0);
+    } while (false);
     return ERROR_INVALID_CERTIFICATE;
 }

@@ -131,7 +131,7 @@ uint8_t *calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
             break;
 
         success = true;
-    } while (0);
+    } while (false);
 
     EVP_PKEY_CTX_free(ctx);
 
@@ -192,7 +192,7 @@ bool derive_master_secret(aes_128_key master_secret,
         OPENSSL_free(shared_key);    // Local variable
 
         ret = true;
-    } while (0);
+    } while (false);
 
     EVP_PKEY_free(plat_pub_key);
 
@@ -258,7 +258,7 @@ bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
             break;
 
         ret_val = true;
-    } while (0);
+    } while (false);
 
     // Clean up
     EVP_CIPHER_CTX_free(ctx);
@@ -315,7 +315,7 @@ bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair, SEV_EC curve)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -371,7 +371,7 @@ bool GenerateRSAKeypair(EVP_PKEY **evp_key_pair)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -421,7 +421,7 @@ bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -481,7 +481,7 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *diges
         }
 
         is_valid = true;
-    } while (0);
+    } while (false);
 
     // Free memory
     // RSA_free(priv_rsa_key);
@@ -545,7 +545,7 @@ static bool rsa_verify(sev_sig *sig, EVP_PKEY **evp_pub_key, const uint8_t *sha_
         }
 
         is_valid = true;
-    } while (0);
+    } while (false);
 
     // Free the keys and contexts
     // if (rsa_pub_key)
@@ -586,7 +586,7 @@ static bool ecdsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
         ECDSA_SIG_free(ecdsa_sig);
 
         is_valid = true;
-    } while (0);
+    } while (false);
 
     // Free memory
     EC_KEY_free(priv_ec_key);
@@ -630,7 +630,7 @@ bool ecdsa_verify(sev_sig *sig, EVP_PKEY **pub_evp_key, uint8_t *digest, size_t 
         ECDSA_SIG_free(ecdsa_sig);
 
         is_valid = true;
-    } while (0);
+    } while (false);
 
     // Free memory
     EC_KEY_free(pub_ec_key);
@@ -704,7 +704,7 @@ static bool sign_verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uin
         }
 
         is_valid = true;
-    } while (0);
+    } while (false);
 
     return is_valid;
 }
@@ -802,7 +802,7 @@ SEV_ERROR_CODE aes_256_gcm_authenticated_encrypt(const uint8_t *p_key, size_t ke
         EVP_CIPHER_CTX_free(ctx);
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -887,7 +887,7 @@ SEV_ERROR_CODE aes_256_gcm_authenticated_decrypt(const uint8_t *p_key, size_t ke
         EVP_CIPHER_CTX_free(ctx);
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
