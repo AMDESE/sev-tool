@@ -22,6 +22,7 @@
 #include <openssl/ts.h>
 #include <openssl/ecdh.h>
 #include <array>
+#include <memory>
 
 /**
  * Description:   Generates a new P-384 key pair
@@ -257,32 +258,27 @@ static bool ecdsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
                        const uint8_t *digest, size_t length)
 {
     bool is_valid = false;
-    EC_KEY *priv_ec_key = nullptr;
-    const BIGNUM *r = nullptr;
-    const BIGNUM *s = nullptr;
-    ECDSA_SIG *ecdsa_sig = nullptr;
 
     do {
-        priv_ec_key = EVP_PKEY_get1_EC_KEY(*priv_evp_key);
+        std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> priv_ec_key{nullptr, &EC_KEY_free};
+        priv_ec_key.reset(EVP_PKEY_get1_EC_KEY(*priv_evp_key));
         if (!priv_ec_key)
             break;
 
-        ecdsa_sig = ECDSA_do_sign(digest, (uint32_t)length, priv_ec_key); // Contains 2 bignums
+        std::unique_ptr<ECDSA_SIG, decltype(&ECDSA_SIG_free)> ecdsa_sig{nullptr, &ECDSA_SIG_free};
+        ecdsa_sig.reset(ECDSA_do_sign(digest, (uint32_t)length, priv_ec_key.get())); // Contains 2 bignums
         if (!ecdsa_sig)
             break;
 
         // Extract the bignums from ecdsa_sig and store the signature in sig
-        ECDSA_SIG_get0(ecdsa_sig, &r, &s);
+        const BIGNUM *r = nullptr;
+        const BIGNUM *s = nullptr;
+        ECDSA_SIG_get0(ecdsa_sig.get(), &r, &s);
         BN_bn2lebinpad(r, sig->ecdsa.r, sizeof(sev_ecdsa_sig::r));    // LE to BE
         BN_bn2lebinpad(s, sig->ecdsa.s, sizeof(sev_ecdsa_sig::s));
 
-        ECDSA_SIG_free(ecdsa_sig);
-
         is_valid = true;
     } while (false);
-
-    // Free memory
-    EC_KEY_free(priv_ec_key);
 
     return is_valid;
 }
@@ -296,37 +292,30 @@ static bool ecdsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
 bool ecdsa_verify(sev_sig *sig, EVP_PKEY **pub_evp_key, uint8_t *digest, size_t length)
 {
     bool is_valid = false;
-    EC_KEY *pub_ec_key = nullptr;
-    BIGNUM *r = nullptr;
-    BIGNUM *s = nullptr;
-    ECDSA_SIG *ecdsa_sig = nullptr;
 
     do {
-        pub_ec_key = EVP_PKEY_get1_EC_KEY(*pub_evp_key);
+        std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> pub_ec_key{nullptr, &EC_KEY_free};
+        pub_ec_key.reset(EVP_PKEY_get1_EC_KEY(*pub_evp_key));
         if (!pub_ec_key)
             break;
 
         // Store the x and y components as separate BIGNUM objects. The values in the
         // SEV certificate are little-endian, must reverse bytes before storing in BIGNUM
-        r = BN_lebin2bn(sig->ecdsa.r, sizeof(sig->ecdsa.r), nullptr);  // New's up BigNum
-        s = BN_lebin2bn(sig->ecdsa.s, sizeof(sig->ecdsa.s), nullptr);
+        auto r = BN_lebin2bn(sig->ecdsa.r, sizeof(sig->ecdsa.r), nullptr);  // New's up BigNum
+        auto s = BN_lebin2bn(sig->ecdsa.s, sizeof(sig->ecdsa.s), nullptr);
 
         // Create a ecdsa_sig from the bignums and store in sig
-        ecdsa_sig = ECDSA_SIG_new();
-        ECDSA_SIG_set0(ecdsa_sig, r, s);
+        std::unique_ptr<ECDSA_SIG, decltype(&ECDSA_SIG_free)> ecdsa_sig{nullptr, &ECDSA_SIG_free};
+        ecdsa_sig.reset(ECDSA_SIG_new());
+        ECDSA_SIG_set0(ecdsa_sig.get(), r, s);
 
         // Validation will also be done by the FW
-        if (ECDSA_do_verify(digest, (uint32_t)length, ecdsa_sig, pub_ec_key) != 1) {
-            ECDSA_SIG_free(ecdsa_sig);
+        if (ECDSA_do_verify(digest, (uint32_t)length, ecdsa_sig.get(), pub_ec_key.get()) != 1) {
             break;
         }
-        ECDSA_SIG_free(ecdsa_sig);
 
         is_valid = true;
     } while (false);
-
-    // Free memory
-    EC_KEY_free(pub_ec_key);
 
     return is_valid;
 }
