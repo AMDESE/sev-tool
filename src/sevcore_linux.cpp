@@ -258,7 +258,7 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
     sev_issue_cmd arg;
 
     arg.cmd = (uint32_t)cmd;
-    arg.data = (uint64_t)data;
+    arg.data = data;
 
     if (cmd == SEV_GET_ID) {
         /*
@@ -351,7 +351,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 
     do {
         // Populate PEKCSR buffer with CSRLength = 0
-        data_buf->address = (uint64_t)pek_mem;
+        data_buf->address = pek_mem;
         data_buf->length = 0;
 
         // Send the command. This is to get the MinSize length. If you
@@ -404,9 +404,9 @@ int SEVDevice::pdh_cert_export(uint8_t *data, sev_cert_t const *pdh_cert_mem,
     memset(data_buf, 0, sizeof(sev_user_data_pdh_cert_export));
 
     do {
-        data_buf->pdh_cert_address = (uint64_t)pdh_cert_mem;
+        data_buf->pdh_cert_address = pdh_cert_mem;
         data_buf->pdh_cert_len = sizeof(sev_cert);
-        data_buf->cert_chain_address = (uint64_t)cert_chain_mem;
+        data_buf->cert_chain_address = cert_chain_mem;
         data_buf->cert_chain_len = sizeof(sev_cert_chain_buf);
 
         // Send the command
@@ -435,9 +435,9 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *signed_pek_csr,
             break;
         }
 
-        data_buf->pek_cert_address = (uint64_t)signed_pek_csr;
+        data_buf->pek_cert_address = signed_pek_csr;
         data_buf->pek_cert_len = sizeof(sev_cert);
-        data_buf->oca_cert_address = (uint64_t)oca_cert;
+        data_buf->oca_cert_address = oca_cert;
         data_buf->oca_cert_len = sizeof(sev_cert);
 
         // Send the command

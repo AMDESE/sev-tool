@@ -15,6 +15,8 @@
 
 #include <linux/types.h>
 
+static_assert(sizeof(void*) == sizeof(uint64_t), "This code requires 64-bit pointers to work");
+
 /**
  * SEV platform commands
  */
@@ -93,7 +95,7 @@ struct sev_user_data_status {
  * @length: length of certificate
  */
 struct sev_user_data_pek_csr {
-    __u64 address;                 /* In */
+    void const *address;                 /* In */
     __u32 length;                  /* In/Out */
 } __attribute__((packed));
 
@@ -106,9 +108,9 @@ struct sev_user_data_pek_csr {
  * @oca_len: length of OCA certificate
  */
 struct sev_user_data_pek_cert_import {
-    __u64 pek_cert_address;        /* In */
+    void const *pek_cert_address;        /* In */
     __u32 pek_cert_len;            /* In */
-    __u64 oca_cert_address;        /* In */
+    void const *oca_cert_address;        /* In */
     __u32 oca_cert_len;            /* In */
 } __attribute__((packed));
 
@@ -121,9 +123,9 @@ struct sev_user_data_pek_cert_import {
  * @cert_chain_len: length of PDH certificate chain
  */
 struct sev_user_data_pdh_cert_export {
-    __u64 pdh_cert_address;        /* In */
+    void const *pdh_cert_address;        /* In */
     __u32 pdh_cert_len;            /* In/Out */
-    __u64 cert_chain_address;      /* In */
+    void const *cert_chain_address;      /* In */
     __u32 cert_chain_len;          /* In/Out */
 } __attribute__((packed));
 
@@ -144,7 +146,7 @@ struct sev_user_data_get_id {
  * @length: length of the unique ID
  */
 struct sev_user_data_get_id2 {
-    __u64 address;                /* In */
+    void const *address;                /* In */
     __u32 length;                /* In/Out */
 } __attribute__((packed));
 
@@ -157,7 +159,7 @@ struct sev_user_data_get_id2 {
  */
 struct sev_issue_cmd {
     __u32 cmd;                     /* In */
-    __u64 data;                    /* In */
+    void const *data;                    /* In */
     __u32 error;                   /* Out */
 } __attribute__((packed));
 
