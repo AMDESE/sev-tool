@@ -20,6 +20,7 @@
 #include <cstring>      // memset
 #include <openssl/ts.h> // SHA256_CTX
 #include <array>
+#include <memory>
 #include <string>
 #include <string_view>
 
@@ -138,10 +139,10 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
     uint8_t *sha_digest = nullptr;
     size_t sha_length = 0;
 
-    RSA *rsa_pub_key = nullptr;
+    std::unique_ptr<RSA, decltype(&RSA_free)> rsa_pub_key{nullptr, &RSA_free};
     BIGNUM *modulus = nullptr;
     BIGNUM *pub_exp = nullptr;
-    EVP_MD_CTX* md_ctx = nullptr;
+    std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> md_ctx{nullptr, &EVP_MD_CTX_free};
     uint32_t sig_len = cert->modulus_size/8;
 
     uint32_t digest_len = 0;
@@ -171,24 +172,24 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
         memset(sha_digest, 0, sha_length);
 
         // New up the RSA key
-        rsa_pub_key = RSA_new();
+        rsa_pub_key.reset(RSA_new());
 
         // Convert the parent to an RSA key to pass into RSA_verify
         modulus = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&parent->modulus), parent->modulus_size/8, nullptr);  // n    // New's up BigNum
         pub_exp = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&parent->pub_exp), parent->pub_exp_size/8, nullptr);   // e
-        if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, nullptr) != 1)
+        if (RSA_set0_key(rsa_pub_key.get(), modulus, pub_exp, nullptr) != 1)
             break;
 
-        md_ctx = EVP_MD_CTX_create();
-        if (EVP_DigestInit(md_ctx, (algo == SHA_TYPE_256) ? EVP_sha256() : EVP_sha384()) <= 0)
+        md_ctx.reset(EVP_MD_CTX_create());
+        if (EVP_DigestInit(md_ctx.get(), (algo == SHA_TYPE_256) ? EVP_sha256() : EVP_sha384()) <= 0)
             break;
-        if (EVP_DigestUpdate(md_ctx, cert, fixed_offset) <= 0)     // Calls SHA256_UPDATE
+        if (EVP_DigestUpdate(md_ctx.get(), cert, fixed_offset) <= 0)     // Calls SHA256_UPDATE
             break;
-        if (EVP_DigestUpdate(md_ctx, &cert->pub_exp, cert->pub_exp_size/8) <= 0)
+        if (EVP_DigestUpdate(md_ctx.get(), &cert->pub_exp, cert->pub_exp_size/8) <= 0)
             break;
-        if (EVP_DigestUpdate(md_ctx, &cert->modulus, cert->modulus_size/8) <= 0)
+        if (EVP_DigestUpdate(md_ctx.get(), &cert->modulus, cert->modulus_size/8) <= 0)
             break;
-        EVP_DigestFinal(md_ctx, sha_digest, &digest_len);
+        EVP_DigestFinal(md_ctx.get(), sha_digest, &digest_len);
 
         // Swap the bytes of the signature
         memcpy(signature.data(), &cert->sig, parent->modulus_size/8);
@@ -196,12 +197,12 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
             break;
 
         // Now we will verify the signature. Start by a RAW decrypt of the signature
-        if (RSA_public_decrypt(sig_len, signature.data(), decrypted.data(), rsa_pub_key, RSA_NO_PADDING) == -1)
+        if (RSA_public_decrypt(sig_len, signature.data(), decrypted.data(), rsa_pub_key.get(), RSA_NO_PADDING) == -1)
             break;
 
         // Verify the data
         // SLen of -2 means salt length is recovered from the signature
-        if (RSA_verify_PKCS1_PSS(rsa_pub_key, sha_digest,
+        if (RSA_verify_PKCS1_PSS(rsa_pub_key.get(), sha_digest,
                                 (algo == SHA_TYPE_256) ? EVP_sha256() : EVP_sha384(),
                                 decrypted.data(), -2) != 1)
         {
@@ -210,13 +211,6 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
 
         cmd_ret = STATUS_SUCCESS;
     } while (false);
-
-    // Free the keys and contexts
-    if (rsa_pub_key)
-        RSA_free(rsa_pub_key);
-
-    if (md_ctx)
-        EVP_MD_CTX_free(md_ctx);
 
     return cmd_ret;
 }
