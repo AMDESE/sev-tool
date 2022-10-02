@@ -78,62 +78,6 @@ bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair, SEV_EC curve)
 }
 
 /**
- * Description:   Generates a new RSA key pair with salt
- * Typical Usage: Used to create a new OCA cert
- * Parameters:    [evp_key_pair] the output EVP_PKEY to which the keypair gets
- *                  set
- * Note:          This key must be initialized (with EVP_PKEY_new())
- *                before passing in
- */
-bool GenerateRSAKeypair(EVP_PKEY **evp_key_pair)
-{
-    if (!evp_key_pair)
-        return false;
-
-    bool ret = false;
-    RSA *rsa_key_pair = nullptr;
-    BIGNUM *bne = nullptr;
-    int bits = 4096;    // Modulus size in bits
-    unsigned long e = RSA_F4;       // 65537
-
-    do {
-        // New up the Guest Owner's private EVP_PKEY
-        if (!(*evp_key_pair = EVP_PKEY_new()))
-            break;
-
-        // Generate RSA key
-        bne = BN_new();
-        if (BN_set_word(bne, e) != 1)
-           break;
-
-        // New up the RSA key
-        if (!(rsa_key_pair = RSA_new()))
-            break;
-
-        // Create the new public/private EC key pair. EC_key must have a group
-        // associated with it before calling this function
-        if (RSA_generate_key_ex(rsa_key_pair, bits, bne, nullptr) != 1)
-            break;
-
-        /*
-         * Convert RSA key to EVP_PKEY
-         * This function links EVP_PKEY to rsa_key_pair, so when EVP_PKEY is
-         *  freed, rsa_key_pair is freed. We don't want the user to have to manage 2
-         *  keys, so just return EVP_PKEY and make sure user free's it
-         */
-        if (EVP_PKEY_assign_RSA(*evp_key_pair, rsa_key_pair) != 1)
-            break;
-
-        if (!rsa_key_pair)
-            break;
-
-        ret = true;
-    } while (false);
-
-    return ret;
-}
-
-/**
  * Calculate the complete SHA256/SHA384 digest of the input message.
  * Use for RSA and ECDSA, not ECDH
  * Formerly called CalcHashDigest
