@@ -476,12 +476,14 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
         memcpy(id_mem, &id_buf, id_length);
     } while (false);
 
-    // The other functions in this file can do a direct mapping of the Linux
-    //   struct to the SEV API struct in sevapi.h, however, for this function,
-    //   this Linux struct doesn't match (at all) the API
-    // Hard coded hack mapping to sevapi.h. Don't want to include sevapi.h in this file
-    reinterpret_cast<uint64_t *>(data)[0] = (uint64_t)id_mem;      // Set address of id_mem as 64 bit PAddr from sevapi.h
-    reinterpret_cast<uint32_t *>(data)[2] = id_length;  // 3rd 32-bit chunk in the cmd_buf
+    using data_type = struct [[gnu::packed]] {
+        void *id_mem;
+        uint32_t id_length;
+    };
+
+    auto dataptr = reinterpret_cast<data_type *>(data);
+    dataptr->id_mem = id_mem;
+    dataptr->id_length = id_length;
 
     return (int)cmd_ret;
 }
