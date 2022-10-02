@@ -1007,10 +1007,6 @@ int Command::validate_attestation()
             break;
 
         // Build up a pek_pub_key so we can verify the signature on the report
-        sev_cert dummy;
-        memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-        SEVCert temp_obj(&dummy);               // TODO. Hack b/c just want to call function later
-
         // New up the pek_pub_key
         if (!(pek_pub_key = EVP_PKEY_new()))
             break;
@@ -1019,7 +1015,7 @@ int Command::validate_attestation()
         // This function allocates memory and attaches an EC_Key
         //  to your EVP_PKEY so, to prevent mem leaks, make sure
         //  the EVP_PKEY is freed at the end of this function
-        if (temp_obj.compile_public_key_from_certificate(&pek, pek_pub_key) != STATUS_SUCCESS)
+        if (SEVCert::compile_public_key_from_certificate(&pek, pek_pub_key) != STATUS_SUCCESS)
             break;
 
         // Validate the report
