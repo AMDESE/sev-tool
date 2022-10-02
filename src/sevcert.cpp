@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <array>
+#include <memory>
 #include <vector>
 #include <string_view>
 
@@ -584,7 +585,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                 std::vector<uint8_t> signature{};
                 signature.resize(parent_cert->pub_key.rsa.modulus_size);
 
-                RSA *rsa_pub_key = EVP_PKEY_get1_RSA(parent_signing_key);   // Signer's (parent's) public key
+                std::unique_ptr<RSA, decltype(&RSA_free)> rsa_pub_key{EVP_PKEY_get1_RSA(parent_signing_key), &RSA_free};   // Signer's (parent's) public key
                 if (!rsa_pub_key) {
                     printf("Error parent signing key is bad\n");
                     break;
@@ -596,28 +597,26 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                     break;
 
                 // Now we will verify the signature. Start by a RAW decrypt of the signature
-                if (RSA_public_decrypt(sig_len, signature.data(), decrypted.data(), rsa_pub_key, RSA_NO_PADDING) == -1)
+                if (RSA_public_decrypt(sig_len, signature.data(), decrypted.data(), rsa_pub_key.get(), RSA_NO_PADDING) == -1)
                     break;
 
                 // Verify the data
                 // SLen of -2 means salt length is recovered from the signature
-                if (RSA_verify_PKCS1_PSS(rsa_pub_key, sha_digest,
+                if (RSA_verify_PKCS1_PSS(rsa_pub_key.get(), sha_digest,
                                         (parent_cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ? EVP_sha256() : EVP_sha384(),
                                         decrypted.data(), -2) != 1)
                 {
-                    RSA_free(rsa_pub_key);
                     continue;
                 }
 
                 found_match = true;
-                RSA_free(rsa_pub_key);
                 break;
             }
             else if ((parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                      (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA384) ||
                      (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA256)  ||
                      (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384)) {      // ecdsa.c -> sign_verify_msg
-                ECDSA_SIG *tmp_ecdsa_sig = ECDSA_SIG_new();
+                std::unique_ptr<ECDSA_SIG, decltype(&ECDSA_SIG_free)>tmp_ecdsa_sig{ECDSA_SIG_new(), &ECDSA_SIG_free};
                 BIGNUM *r_big_num = BN_new();
                 BIGNUM *s_big_num = BN_new();
 
@@ -629,22 +628,17 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                 // Calling ECDSA_SIG_set0() transfers the memory management of the values to
                 // the ECDSA_SIG object, and therefore the values that have been passed
                 // in should not be freed directly after this function has been called
-                if (ECDSA_SIG_set0(tmp_ecdsa_sig, r_big_num, s_big_num) != 1) {
+                if (ECDSA_SIG_set0(tmp_ecdsa_sig.get(), r_big_num, s_big_num) != 1) {
                     BN_free(s_big_num);                   // Frees BIGNUMs manually here
                     BN_free(r_big_num);
-                    ECDSA_SIG_free(tmp_ecdsa_sig);
                     continue;
                 }
-                EC_KEY *tmp_ec_key = EVP_PKEY_get1_EC_KEY(parent_signing_key); // Make a local key so you can free it later
-                if (ECDSA_do_verify(sha_digest, (uint32_t)sha_length, tmp_ecdsa_sig, tmp_ec_key) != 1) {
-                    EC_KEY_free(tmp_ec_key);
-                    ECDSA_SIG_free(tmp_ecdsa_sig);      // Frees BIGNUMs too
+                std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> tmp_ec_key{EVP_PKEY_get1_EC_KEY(parent_signing_key), &EC_KEY_free};
+                if (ECDSA_do_verify(sha_digest, (uint32_t)sha_length, tmp_ecdsa_sig.get(), tmp_ec_key.get()) != 1) {
                     continue;
                 }
 
                 found_match = true;
-                EC_KEY_free(tmp_ec_key);
-                ECDSA_SIG_free(tmp_ecdsa_sig);      // Frees BIGNUMs too
                 break;
             }
             else {       // Bad/unsupported signing key algorithm
@@ -710,22 +704,16 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
-    RSA *rsa_pub_key = nullptr;
-    EC_KEY *ec_pub_key = nullptr;
-    BIGNUM *x_big_num = nullptr;
-    BIGNUM *y_big_num = nullptr;
-    BIGNUM *modulus = nullptr;
-    BIGNUM *pub_exp = nullptr;
 
     do {
         if ((cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
             (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
             // New up the RSA key
-            rsa_pub_key = RSA_new();
+            auto rsa_pub_key = RSA_new();
 
             // Convert the parent to an RSA key to pass into RSA_verify
-            modulus = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&cert->pub_key.rsa.modulus), cert->pub_key.rsa.modulus_size/8, nullptr);  // n    // New's up BigNum
-            pub_exp = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&cert->pub_key.rsa.pub_exp), cert->pub_key.rsa.modulus_size/8, nullptr);  // e
+            auto modulus = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&cert->pub_key.rsa.modulus), cert->pub_key.rsa.modulus_size/8, nullptr);  // n    // New's up BigNum
+            auto pub_exp = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&cert->pub_key.rsa.pub_exp), cert->pub_key.rsa.modulus_size/8, nullptr);  // e
             if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, nullptr) != 1)
                 break;
 
@@ -750,26 +738,30 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA256)  ||
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384) ) {      // ecdsa.c -> sign_verify_msg
 
-            // Store the x and y components as separate BIGNUM objects. The values in the
+            std::unique_ptr<BIGNUM, decltype(&BN_free)> x_big_num{nullptr, &BN_free};
+            std::unique_ptr<BIGNUM, decltype(&BN_free)> y_big_num{nullptr, &BN_free};
+
+        // Store the x and y components as separate BIGNUM objects. The values in the
             // SEV certificate are little-endian, must reverse bytes before storing in BIGNUM
             if ((cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                 (cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA384)) {
-                x_big_num = BN_lebin2bn(cert->pub_key.ecdsa.qx, sizeof(cert->pub_key.ecdsa.qx), nullptr);  // New's up BigNum
-                y_big_num = BN_lebin2bn(cert->pub_key.ecdsa.qy, sizeof(cert->pub_key.ecdsa.qy), nullptr);
+                x_big_num.reset(BN_lebin2bn(cert->pub_key.ecdsa.qx, sizeof(cert->pub_key.ecdsa.qx), nullptr));  // New's up BigNum
+                y_big_num.reset(BN_lebin2bn(cert->pub_key.ecdsa.qy, sizeof(cert->pub_key.ecdsa.qy), nullptr));
             }
             else if ((cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA256)  ||
                     (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384)) {
-                x_big_num = BN_lebin2bn(cert->pub_key.ecdh.qx, sizeof(cert->pub_key.ecdh.qx), nullptr);  // New's up BigNum
-                y_big_num = BN_lebin2bn(cert->pub_key.ecdh.qy, sizeof(cert->pub_key.ecdh.qy), nullptr);
+                x_big_num.reset(BN_lebin2bn(cert->pub_key.ecdh.qx, sizeof(cert->pub_key.ecdh.qx), nullptr));  // New's up BigNum
+                y_big_num.reset(BN_lebin2bn(cert->pub_key.ecdh.qy, sizeof(cert->pub_key.ecdh.qy), nullptr));
             }
 
             int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
 
             // Create/allocate memory for an EC_KEY object using the NID above
-            if (!(ec_pub_key = EC_KEY_new_by_curve_name(nid)))
+            auto ec_pub_key = EC_KEY_new_by_curve_name(nid);
+            if (!ec_pub_key)
                 break;
             // Store the x and y coordinates of the public key
-            if (EC_KEY_set_public_key_affine_coordinates(ec_pub_key, x_big_num, y_big_num) != 1)
+            if (EC_KEY_set_public_key_affine_coordinates(ec_pub_key, x_big_num.get(), y_big_num.get()) != 1)
                 break;
             // Make sure the key is good
             if (EC_KEY_check_key(ec_pub_key) != 1)
@@ -791,12 +783,6 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
         cmd_ret = STATUS_SUCCESS;
     } while (false);
 
-    // Free memory if it was allocated
-    BN_free(y_big_num);     // If NULL, does nothing
-    BN_free(x_big_num);
-    // BN_free(modulus);    // Don't free here. RSA key is associated with these
-    // BN_free(pub_exp);
-
     return cmd_ret;
 }
 
@@ -814,25 +800,19 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
-    EC_KEY *ec_pubkey = nullptr;
-    RSA *rsa_pubkey = nullptr;
-    const BIGNUM *exponent = nullptr;
-    const BIGNUM *modulus = nullptr;
-    BIGNUM *x_bignum = nullptr;
-    BIGNUM *y_bignum = nullptr;
-    EC_GROUP *ec_group = nullptr;
 
     do {
         if ((cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
             (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
             // Pull the RSA key from the EVP_PKEY
-            rsa_pubkey = EVP_PKEY_get1_RSA(evp_pubkey);
+            std::unique_ptr<RSA, decltype(&RSA_free)> rsa_pubkey{nullptr, &RSA_free};
+            rsa_pubkey.reset(EVP_PKEY_get1_RSA(evp_pubkey));
             if (!rsa_pubkey)
                 break;
 
             // Extract the exponent and modulus (RSA_get0_factors() would also work)
-            exponent = RSA_get0_e(rsa_pubkey);   // Exponent
-            modulus = RSA_get0_n(rsa_pubkey);    // Modulus
+            auto exponent = RSA_get0_e(rsa_pubkey.get());   // Exponent
+            auto modulus = RSA_get0_n(rsa_pubkey.get());    // Modulus
 
             cert->pub_key.rsa.modulus_size = 4096;    // Bits
             if (BN_bn2lebinpad(exponent, (unsigned char *)cert->pub_key.rsa.pub_exp, sizeof(cert->pub_key.rsa.pub_exp)) <= 0)
@@ -846,14 +826,15 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
                  (cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384)) {      // ecdsa.c -> sign_verify_msg
 
             // Pull the EC_KEY from the EVP_PKEY
-            ec_pubkey = EVP_PKEY_get1_EC_KEY(evp_pubkey);
+            std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> ec_pubkey{nullptr, &EC_KEY_free};
+            ec_pubkey.reset(EVP_PKEY_get1_EC_KEY(evp_pubkey));
 
             // Make sure the key is good
-            if (EC_KEY_check_key(ec_pubkey) != 1)
+            if (EC_KEY_check_key(ec_pubkey.get()) != 1)
                 break;
 
             // Get the group and nid of the curve
-            const EC_GROUP *ec_group = EC_KEY_get0_group(ec_pubkey);
+            const EC_GROUP *ec_group = EC_KEY_get0_group(ec_pubkey.get());
             int nid = EC_GROUP_get_curve_name(ec_group);
 
             // Set the curve parameter of the cert's pubkey
@@ -863,22 +844,24 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
                 cert->pub_key.ecdh.curve = SEV_EC_P384;
 
             // Get the EC_POINT from the public key
-            const EC_POINT *pub = EC_KEY_get0_public_key(ec_pubkey);
+            const EC_POINT *pub = EC_KEY_get0_public_key(ec_pubkey.get());
 
             // New up the BIGNUMs
-            x_bignum = BN_new();
-            y_bignum = BN_new();
+            std::unique_ptr<BIGNUM, decltype(&BN_free)> x_bignum = {nullptr, &BN_free};
+            std::unique_ptr<BIGNUM, decltype(&BN_free)> y_bignum = {nullptr, &BN_free};
+            x_bignum.reset(BN_new());
+            y_bignum.reset(BN_new());
 
             // Get the x and y coordinates from the EC_POINT and store as separate BIGNUM objects
-            if (!EC_POINT_get_affine_coordinates_GFp(ec_group, pub, x_bignum, y_bignum, nullptr))
+            if (!EC_POINT_get_affine_coordinates_GFp(ec_group, pub, x_bignum.get(), y_bignum.get(), nullptr))
                 break;
 
             // Store the x and y components into the cert. The values in the
             // BIGNUM are stored as big-endian, so must reverse bytes before
             // storing in SEV certificate as little-endian
-            if (BN_bn2lebinpad(x_bignum, (unsigned char *)cert->pub_key.ecdh.qx, sizeof(cert->pub_key.ecdh.qx)) <= 0)
+            if (BN_bn2lebinpad(x_bignum.get(), (unsigned char *)cert->pub_key.ecdh.qx, sizeof(cert->pub_key.ecdh.qx)) <= 0)
                 break;
-            if (BN_bn2lebinpad(y_bignum, (unsigned char *)cert->pub_key.ecdh.qy, sizeof(cert->pub_key.ecdh.qy)) <= 0)
+            if (BN_bn2lebinpad(y_bignum.get(), (unsigned char *)cert->pub_key.ecdh.qy, sizeof(cert->pub_key.ecdh.qy)) <= 0)
                 break;
         }
 
@@ -887,13 +870,6 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
 
         cmd_ret = STATUS_SUCCESS;
     } while (false);
-
-    // Free memory if it was allocated
-    BN_free(y_bignum);       // If NULL, does nothing
-    BN_free(x_bignum);
-    EC_GROUP_free(ec_group);
-    EC_KEY_free(ec_pubkey);
-    RSA_free(rsa_pubkey);
 
     return cmd_ret;
 }
