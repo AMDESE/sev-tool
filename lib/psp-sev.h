@@ -14,6 +14,7 @@
 #define __PSP_SEV_USER_H__
 
 #include <linux/types.h>
+#include <cinttypes>
 
 static_assert(sizeof(void*) == sizeof(uint64_t), "This code requires 64-bit pointers to work");
 
