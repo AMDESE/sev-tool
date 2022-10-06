@@ -92,7 +92,7 @@ enum ccp_required_t {
 
 class Command {
 private:
-    SEVDevice *m_sev_device;
+    SEVDevice *m_sev_device; // non-owning pointer, don't delete it
     tek_tik m_tk{};                   // Unencrypted TIK/TEK. wrap_tk is this enc with KEK
     hmac_sha_256 m_measurement{};     // Measurement. Used in LaunchSecret header HMAC
     std::string m_output_folder;
