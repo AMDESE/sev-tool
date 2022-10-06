@@ -283,7 +283,7 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
             cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
         }
-        if (!cert_obj.create_oca_cert(&oca_priv_key, SEV_SIG_ALGO_ECDSA_SHA256)) {
+        if (!cert_obj.create_oca_cert(oca_priv_key, SEV_SIG_ALGO_ECDSA_SHA256)) {
             printf("Error creating OCA cert\n");
             cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
@@ -291,7 +291,7 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
 
         // Sign CSR
         if (!csr_obj.sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_PEK, SEV_SIG_ALGO_ECDSA_SHA256,
-                              &oca_priv_key, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256)) {
+                              oca_priv_key, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256)) {
             printf("Error self-signing OCA cert.\n");
             cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
@@ -825,7 +825,6 @@ int Command::generate_launch_blob(uint32_t policy)
     std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
     std::string buf_file = m_output_folder + LAUNCH_BLOB_FILENAME;
     sev_cert pdh;
-    EVP_PKEY *godh_key_pair = nullptr;      // Guest Owner Diffie-Hellman
     sev_cert godh_pubkey_cert;
 
     memset(&session_data_buf, 0, sizeof(sev_session_buf));
@@ -839,14 +838,15 @@ int Command::generate_launch_blob(uint32_t policy)
         SEVCert cert_obj(&godh_pubkey_cert);
 
         // Generate a new GODH Public/Private keypair
-        if (!generate_ecdh_key_pair(&godh_key_pair)) {
+        auto godh_key_pair = generate_ecdh_key_pair();
+        if (!godh_key_pair) {
             printf("Error generating new GODH ECDH keypair\n");
             break;
         }
 
         // This cert is really just a way to send over the godh public key,
         // so the api major/minor don't matter here
-        if (!cert_obj.create_godh_cert(&godh_key_pair, 0, 0)) {
+        if (!cert_obj.create_godh_cert(godh_key_pair.get(), 0, 0)) {
             printf("Error creating GODH certificate\n");
             break;
         }
@@ -856,7 +856,7 @@ int Command::generate_launch_blob(uint32_t policy)
         if (sev::write_file(godh_cert_file, &godh_pubkey_cert, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
-        cmd_ret = build_session_buffer(&session_data_buf, policy, godh_key_pair, &pdh);
+        cmd_ret = build_session_buffer(&session_data_buf, policy, godh_key_pair.get(), &pdh);
         if (cmd_ret == STATUS_SUCCESS) {
             if (m_verbose_flag) {
                 printf("Guest Policy (input): %08x\n", policy);
@@ -1017,7 +1017,7 @@ int Command::validate_attestation()
 
         // Validate the report
         success = verify_message(reinterpret_cast<sev_sig *>(&report.sig1), // FIXME: sig1 seems to be smaller than sev_sig
-                                  &pek_pub_key, reinterpret_cast<uint8_t *>(&report),
+                                  pek_pub_key, reinterpret_cast<uint8_t *>(&report),
                                   offsetof(attestation_report, sig_usage),
                                   SEV_SIG_ALGO_ECDSA_SHA256);
         if (!success) {
@@ -1076,7 +1076,7 @@ int Command::validate_guest_report()
 
         // Validate the report
         success = verify_message(reinterpret_cast<sev_sig *>(&report.signature),
-                                  &vcek_pub_key, reinterpret_cast<uint8_t *>(&report),
+                                  vcek_pub_key, reinterpret_cast<uint8_t *>(&report),
                                   offsetof(snp_attestation_report_t, signature),
                                   SEV_SIG_ALGO_ECDSA_SHA384);
         if (!success) {

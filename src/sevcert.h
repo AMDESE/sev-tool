@@ -58,13 +58,13 @@ public:
 
     const sev_cert *data() { return m_child_cert; }
 
-    bool create_godh_cert(EVP_PKEY **godh_key_pair,
+    bool create_godh_cert(EVP_PKEY *godh_key_pair,
                           uint8_t api_major,
                           uint8_t api_minor);
-    bool create_oca_cert(EVP_PKEY **oca_key_pair,
+    bool create_oca_cert(EVP_PKEY *oca_key_pair,
                          SEV_SIG_ALGO algo);
     bool sign_with_key(uint32_t version, uint32_t pub_key_usage,
-                                uint32_t pub_key_algo, EVP_PKEY **priv_evp_key,
+                                uint32_t pub_key_algo, EVP_PKEY *priv_evp_key,
                                 uint32_t sig_1_usage, SEV_SIG_ALGO sig_1_algo);
     static SEV_ERROR_CODE compile_public_key_from_certificate(const sev_cert *cert,
                                                        EVP_PKEY *evp_pub_key);

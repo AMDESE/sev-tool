@@ -27,6 +27,7 @@
 #include <openssl/hmac.h>
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
+#include <memory>
 
 /**
  * NIST_KDF
@@ -76,16 +77,16 @@ typedef enum __attribute__((mode(QI))) SHA_TYPE
     SHA_TYPE_384 = 1,
 } SHA_TYPE;
 
-bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair, SEV_EC curve = SEV_EC_P384);
+std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> generate_ecdh_key_pair(SEV_EC curve = SEV_EC_P384);
 
 bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
                 size_t digest_len, SHA_TYPE sha_type);
 
-bool ecdsa_verify(sev_sig *sig, EVP_PKEY **pub_evp_key, uint8_t *digest, size_t length);
+bool ecdsa_verify(sev_sig *sig, EVP_PKEY *pub_evp_key, uint8_t *digest, size_t length);
 
-bool sign_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uint8_t *msg,
+bool sign_message(sev_sig *sig, EVP_PKEY *evp_key_pair, const uint8_t *msg,
                   size_t length, const SEV_SIG_ALGO algo);
-bool verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uint8_t *msg,
+bool verify_message(sev_sig *sig, EVP_PKEY *evp_key_pair, const uint8_t *msg,
                     size_t length, const SEV_SIG_ALGO algo);
 
 #endif /* CRYPTO_H */

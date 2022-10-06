@@ -34,18 +34,17 @@
  * Note:          This key must be initialized (with EVP_PKEY_new())
  *                before passing in
  */
-bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair, SEV_EC curve)
+std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> generate_ecdh_key_pair(SEV_EC curve)
 {
-    if (!evp_key_pair)
-        return false;
+    std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> evp_key_pair{nullptr, &EVP_PKEY_free};
 
-    bool ret = false;
     int nid = 0;
     EC_KEY *ec_key_pair = nullptr;
 
     do {
         // New up the Guest Owner's private EVP_PKEY
-        if (!(*evp_key_pair = EVP_PKEY_new()))
+        evp_key_pair.reset(EVP_PKEY_new());
+        if (!evp_key_pair)
             break;
 
         // New up the EC_KEY with the EC_GROUP
@@ -57,8 +56,10 @@ bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair, SEV_EC curve)
 
         // Create the new public/private EC key pair. EC_key must have a group
         // associated with it before calling this function
-        if (EC_KEY_generate_key(ec_key_pair) != 1)
+        if (EC_KEY_generate_key(ec_key_pair) != 1) {
+            evp_key_pair.reset();
             break;
+        }
 
         /*
          * Convert EC key to EVP_PKEY
@@ -66,16 +67,14 @@ bool generate_ecdh_key_pair(EVP_PKEY **evp_key_pair, SEV_EC curve)
          *  freed, ec_key_pair is freed. We don't want the user to have to manage 2
          *  keys, so just return EVP_PKEY and make sure user free's it
          */
-        if (EVP_PKEY_assign_EC_KEY(*evp_key_pair, ec_key_pair) != 1)
+        if (EVP_PKEY_assign_EC_KEY(evp_key_pair.get(), ec_key_pair) != 1) {
+            evp_key_pair.reset();
             break;
+        }
 
-        if (!evp_key_pair)
-            break;
-
-        ret = true;
     } while (false);
 
-    return ret;
+    return evp_key_pair;
 }
 
 /**
@@ -128,7 +127,7 @@ bool digest_sha(const void *msg, size_t msg_len, uint8_t *digest,
     return ret;
 }
 
-static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *digest,
+static bool rsa_sign(sev_sig *sig, EVP_PKEY *priv_evp_key, const uint8_t *digest,
                      size_t length, SHA_TYPE sha_type, bool pss)
 {
     bool is_valid = false;
@@ -137,7 +136,7 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *diges
 
     do {
         // Pull the RSA key from the EVP_PKEY
-        priv_rsa_key = EVP_PKEY_get1_RSA(*priv_evp_key);
+        priv_rsa_key = EVP_PKEY_get1_RSA(priv_evp_key);
         if (!priv_rsa_key)
             break;
 
@@ -190,7 +189,7 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key, const uint8_t *diges
 /**
  * rsa_pss_verify
  */
-static bool rsa_verify(sev_sig *sig, EVP_PKEY **evp_pub_key, const uint8_t *sha_digest,
+static bool rsa_verify(sev_sig *sig, EVP_PKEY *evp_pub_key, const uint8_t *sha_digest,
                        size_t sha_length, SHA_TYPE sha_type, bool pss)
 {
     bool is_valid = false;
@@ -199,7 +198,7 @@ static bool rsa_verify(sev_sig *sig, EVP_PKEY **evp_pub_key, const uint8_t *sha_
 
     do {
         // Pull the RSA key from the EVP_PKEY
-        rsa_pub_key = EVP_PKEY_get1_RSA(*evp_pub_key);
+        rsa_pub_key = EVP_PKEY_get1_RSA(evp_pub_key);
         if (!rsa_pub_key)
             break;
 
@@ -254,14 +253,14 @@ static bool rsa_verify(sev_sig *sig, EVP_PKEY **evp_pub_key, const uint8_t *sha_
 /**
  * Call sign_verify_message and it will call this
  */
-static bool ecdsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
+static bool ecdsa_sign(sev_sig *sig, EVP_PKEY *priv_evp_key,
                        const uint8_t *digest, size_t length)
 {
     bool is_valid = false;
 
     do {
         std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> priv_ec_key{nullptr, &EC_KEY_free};
-        priv_ec_key.reset(EVP_PKEY_get1_EC_KEY(*priv_evp_key));
+        priv_ec_key.reset(EVP_PKEY_get1_EC_KEY(priv_evp_key));
         if (!priv_ec_key)
             break;
 
@@ -289,13 +288,13 @@ static bool ecdsa_sign(sev_sig *sig, EVP_PKEY **priv_evp_key,
  *  do need to ecdsa_verify to verify something signed by firmware, so we
  *  wouldn't have the ECDSA_SIG
  */
-bool ecdsa_verify(sev_sig *sig, EVP_PKEY **pub_evp_key, uint8_t *digest, size_t length)
+bool ecdsa_verify(sev_sig *sig, EVP_PKEY *pub_evp_key, uint8_t *digest, size_t length)
 {
     bool is_valid = false;
 
     do {
         std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> pub_ec_key{nullptr, &EC_KEY_free};
-        pub_ec_key.reset(EVP_PKEY_get1_EC_KEY(*pub_evp_key));
+        pub_ec_key.reset(EVP_PKEY_get1_EC_KEY(pub_evp_key));
         if (!pub_ec_key)
             break;
 
@@ -327,7 +326,7 @@ bool ecdsa_verify(sev_sig *sig, EVP_PKEY **pub_evp_key, uint8_t *digest, size_t 
  * Note that verify always happens, even after a sign operation, just to make
  *  sure the sign worked correctly
  */
-static bool sign_verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uint8_t *msg,
+static bool sign_verify_message(sev_sig *sig, EVP_PKEY *evp_key_pair, const uint8_t *msg,
                                 size_t length, const SEV_SIG_ALGO algo, bool sign)
 {
     bool is_valid = false;
@@ -391,13 +390,13 @@ static bool sign_verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uin
     return is_valid;
 }
 
-bool sign_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uint8_t *msg,
+bool sign_message(sev_sig *sig, EVP_PKEY *evp_key_pair, const uint8_t *msg,
                  size_t length, const SEV_SIG_ALGO algo)
 {
     return sign_verify_message(sig, evp_key_pair, msg, length, algo, true);
 }
 
-bool verify_message(sev_sig *sig, EVP_PKEY **evp_key_pair, const uint8_t *msg,
+bool verify_message(sev_sig *sig, EVP_PKEY *evp_key_pair, const uint8_t *msg,
                     size_t length, const SEV_SIG_ALGO algo)
 {
     return sign_verify_message(sig, evp_key_pair, msg, length, algo, false);

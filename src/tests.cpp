@@ -58,13 +58,13 @@ bool Tests::test_factory_reset()
         printf("*Starting factory_reset tests\n");
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = nullptr;
-        if (!generate_ecdh_key_pair(&oca_key_pair))
+        auto oca_key_pair = generate_ecdh_key_pair();
+        if (!oca_key_pair)
             break;
 
         // Export the priv key to a pem file
         std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
-        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair.get());
 
         // The only way to go from externally owned to self-owned is to do a
         // factory reset, so that's the best way to tell factory_reset working
@@ -341,10 +341,11 @@ bool Tests::test_sign_pek_csr()
         printf("*Starting sign_pek_csr tests\n");
 
         // Generate a new random ECDH keypair
-        if (!generate_ecdh_key_pair(&oca_key_pair))
+        auto oca_key_pair = generate_ecdh_key_pair();
+        if (!oca_key_pair)
             break;
         // Export the priv key to a pem file
-        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair.get());
 
         // Set self-Owned
         if (cmd.set_self_owned() != STATUS_SUCCESS)
@@ -415,12 +416,12 @@ bool Tests::test_pek_cert_import()
             break;
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = nullptr;
-        if (!generate_ecdh_key_pair(&oca_key_pair))
+        auto oca_key_pair = generate_ecdh_key_pair();
+        if (!oca_key_pair)
             break;
 
         // Export the priv key to a pem file
-        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair.get());
 
         // Export the new PEK/PDH certs from the Platform
         if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
@@ -506,13 +507,13 @@ bool Tests::test_set_self_owned()
         printf("*Starting factory_reset tests\n");
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = nullptr;
-        if (!generate_ecdh_key_pair(&oca_key_pair))
+        auto oca_key_pair = generate_ecdh_key_pair();
+        if (!oca_key_pair)
             break;
 
         // Export the priv key to a pem file
         std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
-        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair.get());
 
         // The only way to go from externally owned to self-owned is to do a
         // factory reset, so that's the best way to tell factory_reset working
@@ -563,13 +564,13 @@ bool Tests::test_set_externally_owned()
         }
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = nullptr;
-        if (!generate_ecdh_key_pair(&oca_key_pair))
+        auto oca_key_pair = generate_ecdh_key_pair();
+        if (!oca_key_pair)
             break;
 
         //  Export the priv key to a pem file
         std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
-        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair.get());
 
         // Call set_externally_owned which calls pek_cert_import (which needs
         //  the oca private key's pem file's location)

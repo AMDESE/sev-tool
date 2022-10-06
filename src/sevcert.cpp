@@ -299,13 +299,10 @@ bool write_priv_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
  *                [api_minor] the api_minor returned from a PlatformStatus
  *                  command as input to this function, to help populate the cert
  */
-bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
+bool SEVCert::create_godh_cert(EVP_PKEY *godh_key_pair, uint8_t api_major,
                                uint8_t api_minor)
 {
     bool cmd_ret = false;
-
-    if (!godh_key_pair)
-        return false;
 
     do {
         memset(m_child_cert, 0, sizeof(sev_cert));
@@ -321,7 +318,7 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
         m_child_cert->sig_2_algo = SEV_SIG_ALGO_INVALID;
 
         // Set the pubkey portion of the cert
-        if (decompile_public_key_into_certificate(m_child_cert, *godh_key_pair) != STATUS_SUCCESS)
+        if (decompile_public_key_into_certificate(m_child_cert, godh_key_pair) != STATUS_SUCCESS)
             break;
 
         /*
@@ -349,12 +346,9 @@ bool SEVCert::create_godh_cert(EVP_PKEY **godh_key_pair, uint8_t api_major,
  *                [algo] the algorithm with which to create the pubkey and
  *                  signature, ECDSA or RSA, and SHA256 or SHA384
  */
-bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, SEV_SIG_ALGO algo)
+bool SEVCert::create_oca_cert(EVP_PKEY *oca_key_pair, SEV_SIG_ALGO algo)
 {
     bool cmd_ret = false;
-
-    if (!oca_key_pair)
-        return false;
 
     do {
         memset(m_child_cert, 0, sizeof(sev_cert));
@@ -370,7 +364,7 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, SEV_SIG_ALGO algo)
         m_child_cert->sig_2_algo = SEV_SIG_ALGO_INVALID;
 
         // Set the pubkey portion of the cert
-        if (decompile_public_key_into_certificate(m_child_cert, *oca_key_pair) != STATUS_SUCCESS)
+        if (decompile_public_key_into_certificate(m_child_cert, oca_key_pair) != STATUS_SUCCESS)
             break;
 
         /*
@@ -411,7 +405,7 @@ bool SEVCert::create_oca_cert(EVP_PKEY **oca_key_pair, SEV_SIG_ALGO algo)
  * correctly)
  */
 bool SEVCert::sign_with_key(uint32_t version, uint32_t pub_key_usage,
-                            uint32_t pub_key_algo, EVP_PKEY **priv_evp_key,
+                            uint32_t pub_key_algo, EVP_PKEY *priv_evp_key,
                             uint32_t sig_1_usage, SEV_SIG_ALGO sig_1_algo)
 {
     // Sign the certificate    sev_cert.c -> sev_cert_sign()
