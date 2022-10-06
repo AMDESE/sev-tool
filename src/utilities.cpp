@@ -22,26 +22,26 @@
 #include <ctime>
 #include <sys/random.h>
 #include <array>
+#include <memory>
 #include <vector>
 
 bool sev::execute_system_command(const std::string cmd, std::string *log)
 {
-    FILE *pipe = popen(cmd.c_str(), "r");
+    std::unique_ptr<FILE, decltype(&pclose)> pipe{nullptr, &pclose};
+    pipe.reset(popen(cmd.c_str(), "r"));
     if (!pipe) {
         return false;
     }
 
-    while (!feof(pipe)) {
+    while (!feof(pipe.get())) {
         std::array<char, 4096> output;
         size_t count;
-        if ((count = fread(output.data(), 1, output.size(), pipe)) > 0) {
+        if ((count = fread(output.data(), 1, output.size(), pipe.get())) > 0) {
             if (log) {
                 log->append(output.data(), count);
             }
         }
     }
-
-    pclose(pipe);
 
     return true;
 }
