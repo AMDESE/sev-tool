@@ -57,14 +57,13 @@ ePSP_DEVICE_TYPE sev::get_device_type()
     if (family == NAPLES_FAMILY && (int)model >= (int)NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
         return PSP_DEVICE_TYPE_NAPLES;
     }
-    else if (family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
+    if (family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
         return PSP_DEVICE_TYPE_ROME;
     }
-    else if (family == MILAN_FAMILY && (int)model >= (int)MILAN_MODEL_LOW && model <= MILAN_MODEL_HIGH) {
+    if (family == MILAN_FAMILY && (int)model >= (int)MILAN_MODEL_LOW && model <= MILAN_MODEL_HIGH) {
         return PSP_DEVICE_TYPE_MILAN;
     }
-    else
-        return PSP_DEVICE_TYPE_INVALID;
+            return PSP_DEVICE_TYPE_INVALID;
 }
 
 /**

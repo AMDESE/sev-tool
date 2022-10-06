@@ -612,7 +612,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                 found_match = true;
                 break;
             }
-            else if ((parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
+            if ((parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA256) ||
                      (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDSA_SHA384) ||
                      (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA256)  ||
                      (parent_cert->pub_key_algo == SEV_SIG_ALGO_ECDH_SHA384)) {      // ecdsa.c -> sign_verify_msg
@@ -641,10 +641,10 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                 found_match = true;
                 break;
             }
-            else {       // Bad/unsupported signing key algorithm
+                  // Bad/unsupported signing key algorithm
                 printf("Unexpected algorithm! %x\n", parent_cert->pub_key_algo);
                 break;
-            }
+           
         }
         if (!found_match)
             break;

@@ -327,7 +327,7 @@ int main(int argc, char **argv)
         printf("\nCommand Successful\n");
         return EXIT_SUCCESS;
     }
-    else if (cmd_ret == 0xFFFF) {
+    if (cmd_ret == 0xFFFF) {
         printf("\nCommand not supported/recognized. Possibly bad formatting\n");
     }
     else {
