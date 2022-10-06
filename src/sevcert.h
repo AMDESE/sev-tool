@@ -53,7 +53,7 @@ private:
     sev_cert *m_child_cert;
 
 public:
-    SEVCert(sev_cert *cert) { m_child_cert = cert; }
+    SEVCert(sev_cert *cert) : m_child_cert(cert) { }
     ~SEVCert() = default;;
 
     const sev_cert *data() { return m_child_cert; }
