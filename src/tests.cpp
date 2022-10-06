@@ -632,7 +632,6 @@ bool Tests::test_get_ask_ark()
     std::string ask_ark_full = m_output_folder + ASK_ARK_FILENAME;
     amd_cert ask;
     amd_cert ark;
-    AMDCert tmp_amd;
 
     do {
         printf("*Starting get_ask_ark tests\n");

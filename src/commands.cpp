@@ -471,7 +471,6 @@ int Command::generate_all_certs()
     std::string cek_full = m_output_folder + CEK_FILENAME;
     std::string ask_full = m_output_folder + ASK_FILENAME;
     std::string ark_full = m_output_folder + ARK_FILENAME;
-    AMDCert tmp_amd;
     std::string ask_string; // For printing. AMD certs can't just print straight
     std::string ark_string; // bytes because they're unions based on key sizes
 
@@ -708,7 +707,6 @@ int Command::import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
                               sev_cert *cek, amd_cert *ask, amd_cert *ark)
 {
     int cmd_ret = ERROR_INVALID_CERTIFICATE;
-    AMDCert tmp_amd;
     std::string ark_full = m_output_folder + ARK_FILENAME;
     std::string ask_full = m_output_folder + ASK_FILENAME;
     std::string cek_full = m_output_folder + CEK_FILENAME;
@@ -780,7 +778,6 @@ int Command::validate_cert_chain()
         SEVCert tmp_sev_cek(&cek);   // Pass in child cert in constructor
         SEVCert tmp_sev_pek(&pek);
         SEVCert tmp_sev_pdh(&pdh);
-        AMDCert tmp_amd;
 
         // Validate the ARK
         cmd_ret = AMDCert::amd_cert_validate_ark(&ark);
