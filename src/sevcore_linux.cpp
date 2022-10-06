@@ -478,7 +478,7 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
         uint32_t id_length;
     };
 
-    auto dataptr = reinterpret_cast<data_type *>(data);
+    auto *dataptr = reinterpret_cast<data_type *>(data);
     dataptr->id_mem = id_mem;
     dataptr->id_length = id_length;
 

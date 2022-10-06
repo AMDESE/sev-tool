@@ -301,8 +301,8 @@ bool ecdsa_verify(sev_sig *sig, EVP_PKEY **pub_evp_key, uint8_t *digest, size_t 
 
         // Store the x and y components as separate BIGNUM objects. The values in the
         // SEV certificate are little-endian, must reverse bytes before storing in BIGNUM
-        auto r = BN_lebin2bn(sig->ecdsa.r, sizeof(sig->ecdsa.r), nullptr);  // New's up BigNum
-        auto s = BN_lebin2bn(sig->ecdsa.s, sizeof(sig->ecdsa.s), nullptr);
+        auto *r = BN_lebin2bn(sig->ecdsa.r, sizeof(sig->ecdsa.r), nullptr);  // New's up BigNum
+        auto *s = BN_lebin2bn(sig->ecdsa.s, sizeof(sig->ecdsa.s), nullptr);
 
         // Create a ecdsa_sig from the bignums and store in sig
         std::unique_ptr<ECDSA_SIG, decltype(&ECDSA_SIG_free)> ecdsa_sig{nullptr, &ECDSA_SIG_free};

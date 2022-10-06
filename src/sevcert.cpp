@@ -709,11 +709,11 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
         if ((cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA256) ||
             (cert->pub_key_algo == SEV_SIG_ALGO_RSA_SHA384)) {
             // New up the RSA key
-            auto rsa_pub_key = RSA_new();
+            auto *rsa_pub_key = RSA_new();
 
             // Convert the parent to an RSA key to pass into RSA_verify
-            auto modulus = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&cert->pub_key.rsa.modulus), cert->pub_key.rsa.modulus_size/8, nullptr);  // n    // New's up BigNum
-            auto pub_exp = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&cert->pub_key.rsa.pub_exp), cert->pub_key.rsa.modulus_size/8, nullptr);  // e
+            auto *modulus = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&cert->pub_key.rsa.modulus), cert->pub_key.rsa.modulus_size/8, nullptr);  // n    // New's up BigNum
+            auto *pub_exp = BN_lebin2bn(reinterpret_cast<uint8_t const *>(&cert->pub_key.rsa.pub_exp), cert->pub_key.rsa.modulus_size/8, nullptr);  // e
             if (RSA_set0_key(rsa_pub_key, modulus, pub_exp, nullptr) != 1)
                 break;
 
@@ -757,7 +757,7 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
             int nid = EC_curve_nist2nid("P-384");   // NID_secp384r1
 
             // Create/allocate memory for an EC_KEY object using the NID above
-            auto ec_pub_key = EC_KEY_new_by_curve_name(nid);
+            auto *ec_pub_key = EC_KEY_new_by_curve_name(nid);
             if (!ec_pub_key)
                 break;
             // Store the x and y coordinates of the public key
@@ -811,8 +811,8 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
                 break;
 
             // Extract the exponent and modulus (RSA_get0_factors() would also work)
-            auto exponent = RSA_get0_e(rsa_pubkey.get());   // Exponent
-            auto modulus = RSA_get0_n(rsa_pubkey.get());    // Modulus
+            const auto *exponent = RSA_get0_e(rsa_pubkey.get());   // Exponent
+            const auto *modulus = RSA_get0_n(rsa_pubkey.get());    // Modulus
 
             cert->pub_key.rsa.modulus_size = 4096;    // Bits
             if (BN_bn2lebinpad(exponent, (unsigned char *)cert->pub_key.rsa.pub_exp, sizeof(cert->pub_key.rsa.pub_exp)) <= 0)
