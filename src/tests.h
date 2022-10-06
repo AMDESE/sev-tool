@@ -28,7 +28,7 @@ private:
 
 public:
     Tests(std::string output_folder, int verbose_flag);
-    ~Tests() {};
+    ~Tests() = default;;
 
     bool test_factory_reset();
     bool test_platform_status();

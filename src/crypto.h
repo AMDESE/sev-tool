@@ -23,7 +23,6 @@
 #include <cstring>                  // memset
 #include <cstdio>
 #include <stdexcept>
-#include <cstdio>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rsa.h>
