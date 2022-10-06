@@ -99,15 +99,15 @@ private:
     // Do NOT create ANY other constructors or destructors of any kind.
     SEVDevice()  = default;
 
+public:
+    // Singleton Constructor - Threadsafe in C++ 11 and greater.
+    static SEVDevice& get_sev_device();
+
     // Delete the copy and assignment operators which
     // may be automatically created by the compiler. The user
     // should not be able to modify the SEVDevice, as it is unique.
     SEVDevice(const SEVDevice&) = delete;
     SEVDevice& operator=(const SEVDevice&) = delete;
-
-public:
-    // Singleton Constructor - Threadsafe in C++ 11 and greater.
-    static SEVDevice& get_sev_device();
 
     // Do NOT create ANY other constructors or destructors of any kind.
     ~SEVDevice();
