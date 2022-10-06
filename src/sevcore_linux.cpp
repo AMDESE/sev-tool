@@ -34,9 +34,9 @@
 // -------------- Global Functions that don't require ioctls -------------- //
 void sev::get_family_model(uint32_t *family, uint32_t *model)
 {
-    std::string cmd = "";
-    std::string fam_str = "";
-    std::string model_str = "";
+    std::string cmd;
+    std::string fam_str;
+    std::string model_str;
 
     cmd = "lscpu | grep -E \"^CPU family:\" | awk {'print $3'}";
     sev::execute_system_command(cmd, &fam_str);
@@ -87,9 +87,9 @@ int sev::get_ask_ark(const std::string output_folder, const std::string cert_fil
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     std::string cmd = "wget ";
-    std::string output = "";
+    std::string output;
     ePSP_DEVICE_TYPE device_type = PSP_DEVICE_TYPE_INVALID;
-    std::string cert_w_path = "";
+    std::string cert_w_path;
 
     do {
         cmd += "-O " + output_folder + cert_file + " ";
@@ -144,7 +144,7 @@ int sev::get_ask_ark_pem(const std::string output_folder, const std::string cert
     int cmd_ret = SEV_RET_UNSUPPORTED;
     struct stat file_details;
     std::string cmd = "wget ";
-    std::string output = "";
+    std::string output;
     std::string cert_chain_w_path = output_folder + cert_chain_file;
     std::string ask_w_path = output_folder + ask_file;
     std::string ark_w_path = output_folder + ark_file;
@@ -218,8 +218,8 @@ int sev::zip_certs(const std::string output_folder, const std::string zip_name,
                    const std::string files_to_zip)
 {
     int cmd_ret = SEV_RET_SUCCESS;
-    std::string cmd = "";
-    std::string output = "";
+    std::string cmd;
+    std::string output;
     std::string error = "zip error";
 
     cmd = "zip -j " + output_folder + zip_name + " " + files_to_zip;
@@ -516,8 +516,8 @@ std::string SEVDevice::display_build_info()
 int SEVDevice::sys_info()
 {
     int cmd_ret = SEV_RET_SUCCESS;
-    std::string cmd = "";
-    std::string output = "";
+    std::string cmd;
+    std::string output;
     uint32_t family = 0;
     uint32_t model = 0;
 
@@ -603,7 +603,7 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
     int ioctl_ret = -1;
     sev_user_data_get_id id_buf;
     std::string cmd = "wget ";
-    std::string output = "";
+    std::string output;
     std::string to_cert_w_path = output_folder + cert_file;
 
     // Set struct to 0
@@ -684,7 +684,7 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
     sev_user_data_get_id id_buf{};
     std::array<char, 235> cmd{};
     std::string fmt;
-    std::string output = "";
+    std::string output;
     std::string der_cert_w_path = output_folder + vcek_der_file;
     std::string pem_cert_w_path = output_folder + vcek_pem_file;
 

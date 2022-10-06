@@ -146,7 +146,7 @@ bool sev::verify_access(uint8_t *buf, size_t len)
 bool sev::str_to_array(const std::string in_string, uint8_t *array,
                        uint32_t array_size)
 {
-    std::string substring = "";
+    std::string substring{};
 
     if (array_size < in_string.size() / 2) {
         return false;

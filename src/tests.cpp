@@ -39,7 +39,7 @@ bool Tests::clear_output_folder()
 
     std::string cmd = "rm -rf " + m_output_folder + "*";
     // std::string cmd = "find " + m_output_folder + " -type f \\( -name \\*.cert -o -name \\*.txt -o -name \\*.pem -o -name \\*.bin \\) -delete";
-    std::string output = "";
+    std::string output;
     if (!sev::execute_system_command(cmd, &output))
         return false;
     return true;
@@ -791,8 +791,8 @@ bool Tests::test_package_secret()
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
     uint32_t policy = 0;
-    std::string sys_cmd = "";
-    std::string output = "";
+    std::string sys_cmd;
+    std::string output;
 
     do {
         printf("*Starting package_secret tests\n");

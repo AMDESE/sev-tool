@@ -127,7 +127,7 @@ int Command::pek_csr()
             print_sev_cert_readable(&pek_csr);
         }
         if (m_output_folder != "") {     // Print off the cert to a text file
-            std::string pek_csr_readable = "";
+            std::string pek_csr_readable;
 
             print_sev_cert_readable(&pek_csr, pek_csr_readable);
             sev::write_file(pek_csr_readable_path, (void *)pek_csr_readable.c_str(), pek_csr_readable.size());
@@ -171,8 +171,8 @@ int Command::pdh_cert_export()
             print_cert_chain_buf_readable(cert_chain_mem.get());
         }
         if (m_output_folder != "") {     // Print off the cert to a text file
-            std::string PDH_readable = "";
-            std::string cc_readable = "";
+            std::string PDH_readable;
+            std::string cc_readable;
 
             print_sev_cert_readable(pdh_cert_mem.get(), PDH_readable);
             print_cert_chain_buf_readable(cert_chain_mem.get(), cc_readable);
@@ -472,8 +472,8 @@ int Command::generate_all_certs()
     std::string ask_full = m_output_folder + ASK_FILENAME;
     std::string ark_full = m_output_folder + ARK_FILENAME;
     AMDCert tmp_amd;
-    std::string ask_string = ""; // For printing. AMD certs can't just print straight
-    std::string ark_string = ""; // bytes because they're unions based on key sizes
+    std::string ask_string; // For printing. AMD certs can't just print straight
+    std::string ark_string; // bytes because they're unions based on key sizes
 
     do {
         // Get the pdh Cert Chain (pdh and pek, oca, cek)

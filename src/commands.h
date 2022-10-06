@@ -95,7 +95,7 @@ private:
     SEVDevice *m_sev_device;
     tek_tik m_tk;                   // Unencrypted TIK/TEK. wrap_tk is this enc with KEK
     hmac_sha_256 m_measurement;     // Measurement. Used in LaunchSecret header HMAC
-    std::string m_output_folder = "";
+    std::string m_output_folder;
     int m_verbose_flag = 0;
 
     int calculate_measurement(measurement_t *user_data, hmac_sha_256 *final_meas);

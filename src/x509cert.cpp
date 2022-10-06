@@ -33,7 +33,7 @@
 void convert_txt_to_der(const std::string in_file_name, const std::string out_file_name)
 {
     std::string cmd = "openssl x509 -outform der -in " + in_file_name + " -out " + out_file_name;
-    std::string output = "";
+    std::string output;
 
     sev::execute_system_command(cmd, &output);
 }
@@ -41,7 +41,7 @@ void convert_txt_to_der(const std::string in_file_name, const std::string out_fi
 void convert_der_to_pem(const std::string in_file_name, const std::string out_file_name)
 {
     std::string cmd = "openssl x509 -inform der -in " + in_file_name + " -out " + out_file_name;
-    std::string output = "";
+    std::string output;
 
     sev::execute_system_command(cmd, &output);
 }

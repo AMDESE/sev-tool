@@ -105,7 +105,7 @@ void print_cert_chain_buf_readable(const sev_cert_chain_buf *p, std::string &out
     std::array<char, 50> out_oca{};
     std::array<char, 50> out_cek{};
 
-    std::string out_str_local = "";
+    std::string out_str_local;
 
     sprintf(out_pek.data(), "PEK Memory: %ld bytes\n", sizeof(sev_cert));
     out_str_local += out_pek.data();

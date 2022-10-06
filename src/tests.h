@@ -21,7 +21,7 @@
 
 class Tests {
 private:
-    std::string m_output_folder = "";
+    std::string m_output_folder;
     int m_verbose_flag = 0;
 
     bool clear_output_folder();
