@@ -698,7 +698,7 @@ bool Tests::test_calc_measurement()
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
 
-    measurement_t data;
+    measurement_t data{};
     data.meas_ctx  = 0x04;
     data.api_major = 0x00;
     data.api_minor = 0x12;
@@ -720,7 +720,7 @@ bool Tests::test_calc_measurement()
             break;
 
         // Read in the actual output as a readable hex string
-        std::array<uint8_t, 2*sizeof(hmac_sha_256)> actual_output_readable;  // 2 chars per byte +1 for null term
+        std::array<uint8_t, 2*sizeof(hmac_sha_256)> actual_output_readable{};  // 2 chars per byte +1 for null term
         std::string meas_out_readable_full = m_output_folder + CALC_MEASUREMENT_READABLE_FILENAME;
         if (sev::read_file(meas_out_readable_full, actual_output_readable.data(), sizeof(actual_output_readable)) != sizeof(actual_output_readable))
             break;

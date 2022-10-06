@@ -34,7 +34,7 @@ bool sev::execute_system_command(const std::string cmd, std::string *log)
     }
 
     while (!feof(pipe.get())) {
-        std::array<char, 4096> output;
+        std::array<char, 4096> output{};
         size_t count;
         if ((count = fread(output.data(), 1, output.size(), pipe.get())) > 0) {
             if (log) {

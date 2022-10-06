@@ -1168,7 +1168,7 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
     bool cmd_ret = false;
     uint8_t null_byte = '\0';
     unsigned int out_len = 0;
-    std::array<uint8_t, NIST_KDF_H_BYTES> prf_out;      // Buffer to collect PRF output
+    std::array<uint8_t, NIST_KDF_H_BYTES> prf_out{};      // Buffer to collect PRF output
 
     // length in bits of derived key
     auto l = (uint32_t)(key_out_length * BITS_PER_BYTE);

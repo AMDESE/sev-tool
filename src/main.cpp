@@ -256,7 +256,7 @@ int main(int argc, char **argv)
                     return EXIT_FAILURE;
                 }
 
-                measurement_t user_data;
+                measurement_t user_data{};
                 user_data.meas_ctx  = (uint8_t)strtol(argv[optind++], nullptr, 16);
                 user_data.api_major = (uint8_t)strtol(argv[optind++], nullptr, 16);
                 user_data.api_minor = (uint8_t)strtol(argv[optind++], nullptr, 16);

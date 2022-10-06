@@ -138,7 +138,7 @@ int sev::get_ask_ark_pem(const std::string output_folder, const std::string cert
                          const std::string ask_file, const std::string ark_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
-    struct stat file_details;
+    struct stat file_details{};
     std::string cmd = "wget ";
     std::string output;
     std::string cert_chain_w_path = output_folder + cert_chain_file;
@@ -251,7 +251,7 @@ SEVDevice& SEVDevice::get_sev_device()
 int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
 {
     int ioctl_ret = -1;
-    sev_issue_cmd arg;
+    sev_issue_cmd arg{};
 
     arg.cmd = (uint32_t)cmd;
     arg.data = data;
@@ -264,7 +264,7 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
          *       a bootup or when it's run a few seconds after switching between
          *       self-owned and externally-owned (both directions).
          */
-        sev_user_data_status status_data;  // Platform Status
+        sev_user_data_status status_data{};  // Platform Status
         *cmd_ret = platform_status(reinterpret_cast<uint8_t *>(&status_data));
         if (*cmd_ret != 0)
             return ioctl_ret;
@@ -451,7 +451,7 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_get_id id_buf;    // Linux buffer is different than API spec. Don't point it to *data
+    sev_user_data_get_id id_buf{};    // Linux buffer is different than API spec. Don't point it to *data
 
     // Set struct to 0
     memset(&id_buf, 0, sizeof(sev_user_data_get_id));
@@ -498,9 +498,9 @@ std::string SEVDevice::display_build_info()
     if (cmd_ret != 0)
         return "";
 
-    std::array<char, 4> major_buf;
-    std::array<char, 4> minor_buf;
-    std::array<char, 4> build_id_buf;   // +1 for Null char
+    std::array<char, 4> major_buf{};
+    std::array<char, 4> minor_buf{};
+    std::array<char, 4> build_id_buf{};   // +1 for Null char
     sprintf(major_buf.data(), "%d", status.api_major);
     sprintf(minor_buf.data(), "%d", status.api_minor);
     sprintf(build_id_buf.data(), "%d", status.build_id);
@@ -560,7 +560,7 @@ int SEVDevice::sys_info()
  */
 int SEVDevice::set_self_owned()
 {
-    sev_user_data_status status_data;  // Platform Status
+    sev_user_data_status status_data{};  // Platform Status
     int cmd_ret = SEV_RET_UNSUPPORTED;
 
     cmd_ret = platform_status(reinterpret_cast<uint8_t *>(&status_data));
@@ -599,7 +599,7 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_get_id id_buf;
+    sev_user_data_get_id id_buf{};
     std::string cmd = "wget ";
     std::string output;
     std::string to_cert_w_path = output_folder + cert_file;
