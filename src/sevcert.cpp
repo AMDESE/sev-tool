@@ -1000,8 +1000,10 @@ SEV_ERROR_CODE SEVCert::verify_signed_pek_csr(const sev_cert *oca_cert)
             oca_cert->pub_key_usage      != SEV_USAGE_OCA ) {
                 break;
         }
-        uint32_t usage1 = m_child_cert->sig_1_usage, usage2 = m_child_cert->sig_2_usage;
-        uint32_t algo1 = m_child_cert->sig_1_algo, algo2 = m_child_cert->sig_2_algo;
+        uint32_t usage1 = m_child_cert->sig_1_usage;
+        uint32_t usage2 = m_child_cert->sig_2_usage;
+        uint32_t algo1 = m_child_cert->sig_1_algo;
+        uint32_t algo2 = m_child_cert->sig_2_algo;
 
         std::array<char, SEV_SIG_SIZE> testblock{};
         // Check that exactly one field empty

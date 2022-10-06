@@ -63,7 +63,10 @@ namespace sev
 
     static inline unsigned int cpuid_ebx(unsigned int op)
     {
-        unsigned int eax = op, ebx = 0, ecx = 0, edx = 0;
+        unsigned int eax = op;
+        unsigned int ebx = 0;
+        unsigned int ecx = 0;
+        unsigned int edx = 0;
 
         native_cpuid(&eax, &ebx, &ecx, &edx);
         return ebx;

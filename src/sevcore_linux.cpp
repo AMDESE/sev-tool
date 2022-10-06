@@ -498,7 +498,9 @@ std::string SEVDevice::display_build_info()
     if (cmd_ret != 0)
         return "";
 
-    std::array<char, 4> major_buf, minor_buf, build_id_buf;   // +1 for Null char
+    std::array<char, 4> major_buf;
+    std::array<char, 4> minor_buf;
+    std::array<char, 4> build_id_buf;   // +1 for Null char
     sprintf(major_buf.data(), "%d", status.api_major);
     sprintf(minor_buf.data(), "%d", status.api_minor);
     sprintf(build_id_buf.data(), "%d", status.build_id);

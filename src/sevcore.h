@@ -91,7 +91,7 @@ class SEVDevice {
 private:
     int mFd{-1};
 
-    inline int get_fd() const { return mFd; }
+    [[nodiscard]] inline int get_fd() const { return mFd; }
     int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
     static std::string display_build_info();
