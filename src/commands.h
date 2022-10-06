@@ -141,7 +141,7 @@ public:
     int get_id();
 
     // Non-ioctl (custom) commands
-    int sys_info();
+    static int sys_info();
     int get_platform_owner();
     int get_platform_es();
     int sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_file);

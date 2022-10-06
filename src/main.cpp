@@ -135,7 +135,7 @@ int main(int argc, char **argv)
             case 'i':           // sys_info
             case 'I': {
                 Command cmd(output_folder, verbose_flag);
-                cmd_ret = cmd.sys_info();  // Display system info
+                cmd_ret = Command::sys_info();  // Display system info
                 break;
             }
             case 'o':           // ofolder

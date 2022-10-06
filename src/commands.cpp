@@ -365,7 +365,7 @@ int Command::sys_info()
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device->sys_info();
+    cmd_ret = SEVDevice::sys_info();
 
     return (int)cmd_ret;
 }
@@ -379,7 +379,7 @@ int Command::get_platform_owner()
     if (cmd_ret != STATUS_SUCCESS)
         return -1;
 
-    return m_sev_device->get_platform_owner(reinterpret_cast<uint8_t *>(&data));
+    return SEVDevice::get_platform_owner(reinterpret_cast<uint8_t *>(&data));
 }
 
 int Command::get_platform_es()
@@ -391,7 +391,7 @@ int Command::get_platform_es()
     if (cmd_ret != STATUS_SUCCESS)
         return -1;
 
-    return m_sev_device->get_platform_es(reinterpret_cast<uint8_t *>(&data));
+    return SEVDevice::get_platform_es(reinterpret_cast<uint8_t *>(&data));
 }
 
 int Command::set_self_owned()
@@ -497,14 +497,14 @@ int Command::generate_all_certs()
             break;
 
         // Initialize the ask
-        cmd_ret = tmp_amd.amd_cert_init(&ask, ask_ark_buf.data());
+        cmd_ret = AMDCert::amd_cert_init(&ask, ask_ark_buf.data());
         if (cmd_ret != STATUS_SUCCESS)
             break;
         // print_amd_cert_readable(&ask);
 
         // Initialize the ark
-        size_t ask_size = tmp_amd.amd_cert_get_size(&ask);
-        cmd_ret = tmp_amd.amd_cert_init(&ark, (uint8_t *)(ask_ark_buf.data() + ask_size));
+        size_t ask_size = AMDCert::amd_cert_get_size(&ask);
+        cmd_ret = AMDCert::amd_cert_init(&ark, (uint8_t *)(ask_ark_buf.data() + ask_size));
         if (cmd_ret != STATUS_SUCCESS)
             break;
         // print_amd_cert_readable(&ark);
@@ -513,7 +513,7 @@ int Command::generate_all_certs()
         // Note that the CEK in the cert chain is unsigned, so we want to use
         //   the one 'cached by the hypervisor' that's signed by the ask
         //   (the one from the AMD dev site)
-        size_t ark_size = tmp_amd.amd_cert_get_size(&ark);
+        size_t ark_size = AMDCert::amd_cert_get_size(&ark);
         if (sev::write_file(pdh_full, pdh.get(), sizeof(sev_cert)) != sizeof(sev_cert))
             break;
         if (sev::write_file(pek_full, PEK_IN_CERT_CHAIN(cert_chain.get()), sizeof(sev_cert)) != sizeof(sev_cert))
@@ -723,7 +723,7 @@ int Command::import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
             break;
 
         // Initialize the ark
-        cmd_ret = tmp_amd.amd_cert_init(ark, reinterpret_cast<uint8_t *>(&ark_buf));
+        cmd_ret = AMDCert::amd_cert_init(ark, reinterpret_cast<uint8_t *>(&ark_buf));
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -733,7 +733,7 @@ int Command::import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
             break;
 
         // Initialize the ark
-        cmd_ret = tmp_amd.amd_cert_init(ask, reinterpret_cast<uint8_t *>(&ask_buf));
+        cmd_ret = AMDCert::amd_cert_init(ask, reinterpret_cast<uint8_t *>(&ask_buf));
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -783,12 +783,12 @@ int Command::validate_cert_chain()
         AMDCert tmp_amd;
 
         // Validate the ARK
-        cmd_ret = tmp_amd.amd_cert_validate_ark(&ark);
+        cmd_ret = AMDCert::amd_cert_validate_ark(&ark);
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
         // Validate the ASK
-        cmd_ret = tmp_amd.amd_cert_validate_ask(&ask, &ark);
+        cmd_ret = AMDCert::amd_cert_validate_ask(&ask, &ark);
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -796,7 +796,7 @@ int Command::validate_cert_chain()
         // The verify_sev_cert function takes in a parent of an sev_cert not
         //   an amd_cert, so need to pull the pubkey out of the amd_cert and
         //   place it into a tmp sev_cert to help validate the cek
-        cmd_ret = tmp_amd.amd_cert_export_pub_key(&ask, &ask_pubkey);
+        cmd_ret = AMDCert::amd_cert_export_pub_key(&ask, &ask_pubkey);
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -1305,7 +1305,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
         // This function allocates memory and attaches an EC_Key
         //  to your EVP_PKEY so, to prevent mem leaks, make sure
         //  the EVP_PKEY is freed at the end of this function
-        if (temp_obj.compile_public_key_from_certificate(pdh_public, plat_pub_key) != STATUS_SUCCESS)
+        if (SEVCert::compile_public_key_from_certificate(pdh_public, plat_pub_key) != STATUS_SUCCESS)
             break;
 
         // Calculate the shared secret

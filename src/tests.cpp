@@ -648,15 +648,15 @@ bool Tests::test_get_ask_ark()
         }
 
         // Initialize the ASK
-        if (tmp_amd.amd_cert_init(&ask, ask_ark_buf.data()) != STATUS_SUCCESS) {
+        if (AMDCert::amd_cert_init(&ask, ask_ark_buf.data()) != STATUS_SUCCESS) {
             printf("Error: Failed to initialize ASK certificate\n");
             break;
         }
         // print_amd_cert_readable(&ask);
 
         // Initialize the ARK
-        size_t ask_size = tmp_amd.amd_cert_get_size(&ask);
-        if (tmp_amd.amd_cert_init(&ark, ask_ark_buf.data() + ask_size) != STATUS_SUCCESS) {
+        size_t ask_size = AMDCert::amd_cert_get_size(&ask);
+        if (AMDCert::amd_cert_init(&ark, ask_ark_buf.data() + ask_size) != STATUS_SUCCESS) {
             printf("Error: Failed to initialize ARK certificate\n");
             break;
         }
