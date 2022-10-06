@@ -126,7 +126,7 @@ int Command::pek_csr()
             // print_sev_cert_hex(&pek_csr);
             print_sev_cert_readable(&pek_csr);
         }
-        if (m_output_folder != "") {     // Print off the cert to a text file
+        if (!m_output_folder.empty()) {     // Print off the cert to a text file
             std::string pek_csr_readable;
 
             print_sev_cert_readable(&pek_csr, pek_csr_readable);
@@ -170,7 +170,7 @@ int Command::pdh_cert_export()
             print_sev_cert_hex(pdh_cert_mem.get()); printf("\n");
             print_cert_chain_buf_readable(cert_chain_mem.get());
         }
-        if (m_output_folder != "") {     // Print off the cert to a text file
+        if (!m_output_folder.empty()) {     // Print off the cert to a text file
             std::string PDH_readable;
             std::string cc_readable;
 
@@ -346,7 +346,7 @@ int Command::get_id()
             printf("\n* GetID Socket1:\n%s", id1_buf.data());
             printf("\n");
         }
-        if (m_output_folder != "") {     // Print the IDs to a text file
+        if (!m_output_folder.empty()) {     // Print the IDs to a text file
             sev::write_file(id0_path, id0_buf.data(), id0_buf.size());  // Don't write null term
             sev::write_file(id1_path, id1_buf.data(), id1_buf.size());
         }
@@ -695,7 +695,7 @@ int Command::calc_measurement(measurement_t *user_data)
             // Print output
             printf("\n\n%s\n", meas_str.c_str());
         }
-        if (m_output_folder != "") {     // Print the IDs to a text file
+        if (!m_output_folder.empty()) {     // Print the IDs to a text file
             sev::write_file(meas_readable_path, (void *)meas_str.c_str(), meas_str.size());
             sev::write_file(meas_path, (void *)final_meas, sizeof(final_meas));
         }
