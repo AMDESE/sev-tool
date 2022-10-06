@@ -76,11 +76,8 @@ ePSP_DEVICE_TYPE sev::get_device_type()
 bool sev::min_api_version(unsigned platform_major, unsigned platform_minor,
                           unsigned api_major, unsigned api_minor)
 {
-    if ((platform_major < api_major) ||
-        (platform_major == api_major && platform_minor < api_minor))
-        return false;
-    else
-        return true;
+    return !((platform_major < api_major) ||
+        (platform_major == api_major && platform_minor < api_minor));
 }
 
 int sev::get_ask_ark(const std::string output_folder, const std::string cert_file)

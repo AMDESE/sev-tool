@@ -1356,10 +1356,7 @@ bool Command::gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t
     HMAC(EVP_sha256(), key, sizeof(hmac_key_128), msg,    // Returns NULL or value of out
          msg_len, reinterpret_cast<uint8_t *>(out), &out_len);
 
-    if ((out != nullptr) && (out_len == sizeof(hmac_sha_256)))
-        return true;
-    else
-        return false;
+    return (out != nullptr) && (out_len == sizeof(hmac_sha_256));
 }
 
 /*
