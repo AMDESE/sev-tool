@@ -98,24 +98,24 @@ private:
     std::string m_output_folder;
     int m_verbose_flag = 0;
 
-    int calculate_measurement(measurement_t *user_data, hmac_sha_256 *final_meas);
+    static int calculate_measurement(measurement_t *user_data, hmac_sha_256 *final_meas);
     int generate_all_certs();
     int generate_all_certs_vcek();
     int import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
                          sev_cert *cek, amd_cert *ask, amd_cert *ark);
-    bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
+    static bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
              size_t key_in_length, const uint8_t *label, size_t label_length,
              const uint8_t *context, size_t context_length);
-    uint8_t *calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
+    static uint8_t *calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
                                      size_t& shared_key_len_out);
-    bool derive_master_secret(aes_128_key master_secret,
+    static bool derive_master_secret(aes_128_key master_secret,
                               EVP_PKEY *godh_priv_key,
                               const sev_cert *pdh_public,
                               const nonce_128 nonce);
-    bool derive_kek(aes_128_key kek, const aes_128_key master_secret);
-    bool derive_kik(hmac_key_128 kik, const aes_128_key master_secret);
-    bool gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len);
-    bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
+    static bool derive_kek(aes_128_key kek, const aes_128_key master_secret);
+    static bool derive_kik(hmac_key_128 kik, const aes_128_key master_secret);
+    static bool gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len);
+    static bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
                  const aes_128_key Key, const uint8_t IV[128/8]);
     int build_session_buffer(sev_session_buf *buf, uint32_t guest_policy,
                              EVP_PKEY *godh_priv_key, sev_cert *pdh_pub);

@@ -94,7 +94,7 @@ private:
     inline int get_fd() { return mFd; }
     int sev_ioctl(int cmd, void *data, int *cmd_ret);
 
-    std::string display_build_info();
+    static std::string display_build_info();
 
     // Do NOT create ANY other constructors or destructors of any kind.
     SEVDevice()  = default;
@@ -130,10 +130,10 @@ public:
                         sev_cert *oca_cert);
     int get_id(void *data, void *id_mem, uint32_t id_length = 0);
 
-    int sys_info();
+    static int sys_info();
     int set_self_owned();
-    int get_platform_owner(void *data);
-    int get_platform_es(void *data);
+    static int get_platform_owner(void *data);
+    static int get_platform_es(void *data);
     int generate_cek_ask(const std::string output_folder,
                          const std::string cert_file);
     int generate_vcek_ask(const std::string output_folder,

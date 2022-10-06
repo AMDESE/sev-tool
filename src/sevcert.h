@@ -40,15 +40,15 @@ bool write_priv_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair);
 
 class SEVCert {
 private:
-    SEV_ERROR_CODE validate_usage(uint32_t Usage);
-    SEV_ERROR_CODE validate_rsa_pub_key(const sev_cert *cert,
+    static SEV_ERROR_CODE validate_usage(uint32_t Usage);
+    static SEV_ERROR_CODE validate_rsa_pub_key(const sev_cert *cert,
                                         const EVP_PKEY *PublicKey);
-    SEV_ERROR_CODE validate_public_key(const sev_cert *cert,
+    static SEV_ERROR_CODE validate_public_key(const sev_cert *cert,
                                        const EVP_PKEY *PublicKey);
-    SEV_ERROR_CODE validate_signature(const sev_cert *child_cert,
+    static SEV_ERROR_CODE validate_signature(const sev_cert *child_cert,
                                       const sev_cert *parent_cert,
                                       EVP_PKEY *parent_signing_key);
-    SEV_ERROR_CODE validate_body(const sev_cert *cert);
+    static SEV_ERROR_CODE validate_body(const sev_cert *cert);
 
     sev_cert *m_child_cert;
 
