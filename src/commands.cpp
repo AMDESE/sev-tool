@@ -45,7 +45,7 @@ Command::Command(std::string output_folder, int verbose_flag, ccp_required_t ccp
 
 Command::~Command()
 {
-    //delete m_sev_device;
+    delete m_sev_device;
 }
 
 int Command::factory_reset()
