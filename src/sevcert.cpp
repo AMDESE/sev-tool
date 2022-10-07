@@ -219,17 +219,21 @@ bool read_priv_key_pem_into_eckey(const std::string file_name, EC_KEY **ec_priv_
  * Parameters:    [file_name] file of the PEM file to read in
  *                [evp_priv_key] Output EVP key
  */
-bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_priv_key)
+std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> read_priv_key_pem_into_evpkey(const std::string file_name)
 {
-    EC_KEY *ec_privkey = nullptr;
+    std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> evp_priv_key{nullptr, &EVP_PKEY_free};
 
+    evp_priv_key.reset(EVP_PKEY_new());
     // New up the EVP_PKEY
-    if (!(*evp_priv_key = EVP_PKEY_new()))
-        return false;
+    if (!evp_priv_key)
+        return evp_priv_key;
 
     // Read in the file as an EC key
-    if (!read_priv_key_pem_into_eckey(file_name, &ec_privkey))
-        return false;
+    EC_KEY *ec_privkey = nullptr;
+    if (!read_priv_key_pem_into_eckey(file_name, &ec_privkey)) {
+        evp_priv_key.reset();
+        return evp_priv_key;
+    }
 
     /*
      * Convert EC key to EVP_PKEY
@@ -237,10 +241,11 @@ bool read_priv_key_pem_into_evpkey(const std::string file_name, EVP_PKEY **evp_p
      *  is freed, EC_pubKey is freed. We don't want the user to have to
      *  manage 2 keys, so just return EVP_PKEY and make sure user free's it
      */
-    if (EVP_PKEY_assign_EC_KEY(*evp_priv_key, ec_privkey) != 1)
-        return false;
+    if (EVP_PKEY_assign_EC_KEY(evp_priv_key.get(), ec_privkey) != 1) {
+        evp_priv_key.reset();
+    }
 
-    return true;
+    return evp_priv_key;
 }
 
 /**
@@ -752,7 +757,7 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
 
             // Create/allocate memory for an EC_KEY object using the NID above
             auto *ec_pub_key = EC_KEY_new_by_curve_name(nid);
-            if (!ec_pub_key)
+            if (ec_pub_key == nullptr)
                 break;
             // Store the x and y coordinates of the public key
             if (EC_KEY_set_public_key_affine_coordinates(ec_pub_key, x_big_num.get(), y_big_num.get()) != 1)
@@ -771,7 +776,7 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
                 break;
         }
 
-        if (!evp_pub_key)
+        if (evp_pub_key == nullptr)
             break;
 
         cmd_ret = STATUS_SUCCESS;

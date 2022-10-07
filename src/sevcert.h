@@ -18,8 +18,9 @@
 #define SEVCERT_H
 
 #include "sevapi.h"
-#include <string>
 #include <openssl/evp.h>
+#include <memory>
+#include <string>
 
 // Public global functions
 static std::string sev_empty = "NULL";
@@ -33,8 +34,7 @@ void read_priv_key_pem_into_rsakey(const std::string file_name,
                                    RSA **rsa_priv_key);
 bool read_priv_key_pem_into_eckey(const std::string file_name,
                                   EC_KEY **ec_priv_key);
-bool read_priv_key_pem_into_evpkey(const std::string file_name,
-                                   EVP_PKEY **evp_priv_key);
+std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> read_priv_key_pem_into_evpkey(const std::string file_name);
 bool write_pub_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair);
 bool write_priv_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair);
 

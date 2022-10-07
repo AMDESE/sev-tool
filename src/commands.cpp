@@ -254,7 +254,6 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
 {
     int cmd_ret = ERROR_UNSUPPORTED;
 
-    EVP_PKEY *oca_priv_key = nullptr;
     sev_cert oca_cert;
     SEVCert cert_obj(&oca_cert);
     sev_cert pek_csr;
@@ -275,12 +274,13 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
         }
 
         // Import the OCA pem file and turn it into an sev_cert
-        if (!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key)) {
+        auto oca_priv_key = read_priv_key_pem_into_evpkey(oca_priv_key_file);
+        if (!oca_priv_key) {
             printf("Error importing OCA Priv Key\n");
             cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
         }
-        if (!cert_obj.create_oca_cert(oca_priv_key, SEV_SIG_ALGO_ECDSA_SHA256)) {
+        if (!cert_obj.create_oca_cert(oca_priv_key.get(), SEV_SIG_ALGO_ECDSA_SHA256)) {
             printf("Error creating OCA cert\n");
             cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
@@ -288,7 +288,7 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
 
         // Sign CSR
         if (!csr_obj.sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_PEK, SEV_SIG_ALGO_ECDSA_SHA256,
-                              oca_priv_key, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256)) {
+                              oca_priv_key.get(), SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256)) {
             printf("Error self-signing OCA cert.\n");
             cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
@@ -298,7 +298,7 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
         sev::write_file(pek_csr_signed_path, (void *)&pek_csr, sizeof(pek_csr));
         cmd_ret = STATUS_SUCCESS;
     } while (false);
-    EVP_PKEY_free(oca_priv_key);
+
     return cmd_ret;
 }
 
@@ -979,13 +979,19 @@ int Command::package_secret()
     return (int)cmd_ret;
 }
 
+auto create_EVP_PKEY()
+{
+    std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> result{nullptr, &EVP_PKEY_free};
+    result.reset(EVP_PKEY_new());
+    return result;
+}
+
 int Command::validate_attestation()
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     std::string report_file = m_output_folder + ATTESTATION_REPORT_FILENAME;
     std::string pek_full = m_output_folder + PEK_FILENAME;
     bool success = false;
-    EVP_PKEY *pek_pub_key = nullptr;
     sev_cert pek;
 
     do {
@@ -1008,19 +1014,20 @@ int Command::validate_attestation()
 
         // Build up a pek_pub_key so we can verify the signature on the report
         // New up the pek_pub_key
-        if (!(pek_pub_key = EVP_PKEY_new()))
+        auto pek_pub_key = create_EVP_PKEY();
+        if (!pek_pub_key)
             break;
 
         // Get the friend's Public EVP_PKEY from the certificate
         // This function allocates memory and attaches an EC_Key
         //  to your EVP_PKEY so, to prevent mem leaks, make sure
         //  the EVP_PKEY is freed at the end of this function
-        if (SEVCert::compile_public_key_from_certificate(&pek, pek_pub_key) != STATUS_SUCCESS)
+        if (SEVCert::compile_public_key_from_certificate(&pek, pek_pub_key.get()) != STATUS_SUCCESS)
             break;
 
         // Validate the report
         success = verify_message(reinterpret_cast<sev_sig *>(&report.sig1), // FIXME: sig1 seems to be smaller than sev_sig
-                                  pek_pub_key, reinterpret_cast<uint8_t *>(&report),
+                                  pek_pub_key.get(), reinterpret_cast<uint8_t *>(&report),
                                   offsetof(attestation_report, sig_usage),
                                   SEV_SIG_ALGO_ECDSA_SHA256);
         if (!success) {
@@ -1032,10 +1039,14 @@ int Command::validate_attestation()
         cmd_ret = STATUS_SUCCESS;
     } while (false);
 
-    // Free memory
-    EVP_PKEY_free(pek_pub_key);
-
     return (int)cmd_ret;
+}
+
+auto EVP_PKEY_from_X509(X509 *x509)
+{
+    std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> result{nullptr, &EVP_PKEY_free};
+    result.reset(X509_get_pubkey(x509));
+    return result;
 }
 
 int Command::validate_guest_report()
@@ -1044,7 +1055,6 @@ int Command::validate_guest_report()
     std::string report_file = m_output_folder + GUEST_REPORT_FILENAME;
     std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;
     bool success = false;
-    EVP_PKEY *vcek_pub_key = nullptr;
 
     do {
         // Get the size of the report, so we can allocate that much memory
@@ -1066,7 +1076,7 @@ int Command::validate_guest_report()
             break;
         // X509_print_fp(stdout, x509_vcek);
 
-        vcek_pub_key = X509_get_pubkey(x509_vcek.get());
+        auto vcek_pub_key = EVP_PKEY_from_X509(x509_vcek.get());
         if (!vcek_pub_key)
             break;
 
@@ -1079,7 +1089,7 @@ int Command::validate_guest_report()
 
         // Validate the report
         success = verify_message(reinterpret_cast<sev_sig *>(&report.signature),
-                                  vcek_pub_key, reinterpret_cast<uint8_t *>(&report),
+                                  vcek_pub_key.get(), reinterpret_cast<uint8_t *>(&report),
                                   offsetof(snp_attestation_report_t, signature),
                                   SEV_SIG_ALGO_ECDSA_SHA384);
         if (!success) {
@@ -1091,9 +1101,6 @@ int Command::validate_guest_report()
         cmd_ret = STATUS_SUCCESS;
     } while (false);
 
-    // Free memory
-    EVP_PKEY_free(vcek_pub_key);
-
     return (int)cmd_ret;
 }
 
@@ -1103,7 +1110,6 @@ int Command::validate_cert_chain_vcek()
     std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;
     std::string ask_file = m_output_folder + VCEK_ASK_PEM_FILENAME;
     std::string ark_file = m_output_folder + VCEK_ARK_PEM_FILENAME;
-    EVP_PKEY *vcek_pub_key = nullptr;
 
     do {
         // Read in the ARK, ASK, and VCEK pem files
@@ -1117,11 +1123,6 @@ int Command::validate_cert_chain_vcek()
         if (!x509_vcek)
             break;
         // X509_print_fp(stdout, x509_vcek);
-
-        // Extract the vcek public key
-        vcek_pub_key = X509_get_pubkey(x509_vcek.get());
-        if (!vcek_pub_key)
-            break;
 
         // Verify the signatures of the certs
         if (!x509_validate_signature(x509_ark.get(), nullptr, x509_ark.get())) {   // Verify the ARK self-signed the ARK
@@ -1142,9 +1143,6 @@ int Command::validate_cert_chain_vcek()
         printf("VCEK cert chain validated successfully!\n");
         cmd_ret = STATUS_SUCCESS;
     } while (false);
-
-    // Free memory
-    EVP_PKEY_free(vcek_pub_key);
 
     return (int)cmd_ret;
 }
@@ -1231,7 +1229,7 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
 uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
                                            size_t& shared_key_len_out)
 {
-    if (!priv_key || !peer_key)
+    if ((priv_key == nullptr) || (peer_key == nullptr))
         return nullptr;
 
     bool success = false;
@@ -1288,25 +1286,25 @@ bool Command::derive_master_secret(aes_128_key master_secret,
     memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
     SEVCert temp_obj(&dummy);                // TODO. Hack b/c just want to call function later
     bool ret = false;
-    EVP_PKEY *plat_pub_key = nullptr;    // Platform public key
     size_t shared_key_len = 0;
 
     do {
         // New up the Platform's public EVP_PKEY
-        if (!(plat_pub_key = EVP_PKEY_new()))
+        auto platform_public_key = create_EVP_PKEY();
+        if (!platform_public_key)
             break;
 
         // Get the friend's Public EVP_PKEY from the certificate
         // This function allocates memory and attaches an EC_Key
         //  to your EVP_PKEY so, to prevent mem leaks, make sure
         //  the EVP_PKEY is freed at the end of this function
-        if (SEVCert::compile_public_key_from_certificate(pdh_public, plat_pub_key) != STATUS_SUCCESS)
+        if (SEVCert::compile_public_key_from_certificate(pdh_public, platform_public_key.get()) != STATUS_SUCCESS)
             break;
 
         // Calculate the shared secret
         // This function is allocating memory for this uint8_t[],
         //  must free it at the end of this function
-        uint8_t *shared_key = calculate_shared_secret(godh_priv_key, plat_pub_key, shared_key_len);
+        uint8_t *shared_key = calculate_shared_secret(godh_priv_key, platform_public_key.get(), shared_key_len);
         if (!shared_key)
             break;
 
@@ -1321,9 +1319,6 @@ bool Command::derive_master_secret(aes_128_key master_secret,
 
         ret = true;
     } while (false);
-
-    // Free memory
-    EVP_PKEY_free(plat_pub_key);
 
     return ret;
 }
