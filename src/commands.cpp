@@ -609,6 +609,13 @@ int Command::export_cert_chain_vcek()
     return (int)cmd_ret;
 }
 
+auto create_HMAC_CTX()
+{
+    std::unique_ptr<HMAC_CTX, decltype(&HMAC_CTX_free)> result{nullptr, &HMAC_CTX_free};
+    result.reset(HMAC_CTX_new());
+    return result;
+}
+
 // We cannot call LaunchMeasure to get the MNonce because that command doesn't
 // exist in this context, so we read the user input params for all of our data
 int Command::calculate_measurement(measurement_t *user_data, hmac_sha_256 *final_meas)
@@ -618,37 +625,36 @@ int Command::calculate_measurement(measurement_t *user_data, hmac_sha_256 *final
     uint32_t measurement_length = sizeof(final_meas);
 
     // Create and initialize the context
-    HMAC_CTX *ctx;
-    if (!(ctx = HMAC_CTX_new()))
+    auto ctx = create_HMAC_CTX();
+    if (!ctx)
         return ERROR_BAD_MEASUREMENT;
 
     do {
-        if (HMAC_Init_ex(ctx, user_data->tik, sizeof(user_data->tik), EVP_sha256(), nullptr) != 1)
+        if (HMAC_Init_ex(ctx.get(), user_data->tik, sizeof(user_data->tik), EVP_sha256(), nullptr) != 1)
             break;
         if (sev::min_api_version(user_data->api_major, user_data->api_minor, 0, 17)) {
-            if (HMAC_Update(ctx, &user_data->meas_ctx, sizeof(user_data->meas_ctx)) != 1)
+            if (HMAC_Update(ctx.get(), &user_data->meas_ctx, sizeof(user_data->meas_ctx)) != 1)
                 break;
-            if (HMAC_Update(ctx, &user_data->api_major, sizeof(user_data->api_major)) != 1)
+            if (HMAC_Update(ctx.get(), &user_data->api_major, sizeof(user_data->api_major)) != 1)
                 break;
-            if (HMAC_Update(ctx, &user_data->api_minor, sizeof(user_data->api_minor)) != 1)
+            if (HMAC_Update(ctx.get(), &user_data->api_minor, sizeof(user_data->api_minor)) != 1)
                 break;
-            if (HMAC_Update(ctx, &user_data->build_id, sizeof(user_data->build_id)) != 1)
+            if (HMAC_Update(ctx.get(), &user_data->build_id, sizeof(user_data->build_id)) != 1)
                 break;
         }
-        if (HMAC_Update(ctx, reinterpret_cast<uint8_t *>(&user_data->policy), sizeof(user_data->policy)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t *>(&user_data->policy), sizeof(user_data->policy)) != 1)
             break;
-        if (HMAC_Update(ctx, reinterpret_cast<uint8_t *>(&user_data->digest), sizeof(user_data->digest)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t *>(&user_data->digest), sizeof(user_data->digest)) != 1)
             break;
         // Use the same random MNonce as the FW in our validation calculations
-        if (HMAC_Update(ctx, reinterpret_cast<uint8_t *>(&user_data->mnonce), sizeof(user_data->mnonce)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t *>(&user_data->mnonce), sizeof(user_data->mnonce)) != 1)
             break;
-        if (HMAC_Final(ctx, reinterpret_cast<uint8_t *>(final_meas), &measurement_length) != 1)  // size = 32
+        if (HMAC_Final(ctx.get(), reinterpret_cast<uint8_t *>(final_meas), &measurement_length) != 1)  // size = 32
             break;
 
         cmd_ret = STATUS_SUCCESS;
     } while (false);
 
-    HMAC_CTX_free(ctx);
     return cmd_ret;
 }
 
@@ -1173,31 +1179,31 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
     uint32_t offset = 0;
 
     // Create and initialize the context
-    HMAC_CTX *ctx;
-    if (!(ctx = HMAC_CTX_new()))
+    auto ctx = create_HMAC_CTX();
+    if (!ctx)
         return cmd_ret;
 
     for (unsigned int i = 1; i <= n; i++)
     {
-        if (HMAC_CTX_reset(ctx) != 1)
+        if (HMAC_CTX_reset(ctx.get()) != 1)
             break;
 
         // calculate a chunk of random data from the PRF
-        if (HMAC_Init_ex(ctx, key_in, (int)key_in_length, EVP_sha256(), nullptr) != 1)
+        if (HMAC_Init_ex(ctx.get(), key_in, (int)key_in_length, EVP_sha256(), nullptr) != 1)
             break;
-        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&i), sizeof(i)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&i), sizeof(i)) != 1)
             break;
-        if (HMAC_Update(ctx, reinterpret_cast<unsigned char const *>(label), label_length) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<unsigned char const *>(label), label_length) != 1)
             break;
-        if (HMAC_Update(ctx, &null_byte, sizeof(null_byte)) != 1)
+        if (HMAC_Update(ctx.get(), &null_byte, sizeof(null_byte)) != 1)
             break;
         if ((context) && (context_length != 0)) {
-            if (HMAC_Update(ctx, (unsigned char const*)context, context_length) != 1)
+            if (HMAC_Update(ctx.get(), (unsigned char const*)context, context_length) != 1)
                 break;
         }
-        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&l), sizeof(l)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&l), sizeof(l)) != 1)
             break;
-        if (HMAC_Final(ctx, prf_out.data(), &out_len) != 1)
+        if (HMAC_Final(ctx.get(), prf_out.data(), &out_len) != 1)
             break;
 
         // Write out the key bytes
@@ -1214,7 +1220,6 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
             cmd_ret = true;
     }
 
-    HMAC_CTX_free(ctx);
     return cmd_ret;
 }
 
@@ -1478,37 +1483,35 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
     header.flags = hdr_flags;
 
     // Create and initialize the context
-    HMAC_CTX *ctx;
-    if (!(ctx = HMAC_CTX_new()))
+    auto ctx = create_HMAC_CTX();
+    if (!ctx)
         return ret;
 
     do {
-        if (HMAC_Init_ex(ctx, m_tk.tik, sizeof(m_tk.tik), EVP_sha256(), nullptr) != 1)
+        if (HMAC_Init_ex(ctx.get(), m_tk.tik, sizeof(m_tk.tik), EVP_sha256(), nullptr) != 1)
             break;
-        if (HMAC_Update(ctx, &meas_ctx, sizeof(meas_ctx)) != 1)
+        if (HMAC_Update(ctx.get(), &meas_ctx, sizeof(meas_ctx)) != 1)
             break;
-        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&header.flags), sizeof(header.flags)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&header.flags), sizeof(header.flags)) != 1)
             break;
-        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&header.iv), sizeof(header.iv)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&header.iv), sizeof(header.iv)) != 1)
             break;
-        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&buf_len), sizeof(buf_len)) != 1) // Guest Length
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&buf_len), sizeof(buf_len)) != 1) // Guest Length
             break;
-        if (HMAC_Update(ctx, reinterpret_cast<uint8_t const *>(&buf_len), sizeof(buf_len)) != 1) // Trans Length
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&buf_len), sizeof(buf_len)) != 1) // Trans Length
             break;
-        if (HMAC_Update(ctx, buf, buf_len) != 1)                        // Data
+        if (HMAC_Update(ctx.get(), buf, buf_len) != 1)                        // Data
             break;
         if (sev::min_api_version(api_major, api_minor, 0, 17)) {
-            if (HMAC_Update(ctx, m_measurement, sizeof(m_measurement)) != 1) // Measure
+            if (HMAC_Update(ctx.get(), m_measurement, sizeof(m_measurement)) != 1) // Measure
                 break;
         }
-        if (HMAC_Final(ctx, reinterpret_cast<uint8_t *>(&header.mac), &measurement_length) != 1)
+        if (HMAC_Final(ctx.get(), reinterpret_cast<uint8_t *>(&header.mac), &measurement_length) != 1)
             break;
 
         memcpy(out_header, &header, sizeof(sev_hdr_buf));
         ret = true;
     } while (false);
-
-    HMAC_CTX_free(ctx);
 
     return ret;
 }
