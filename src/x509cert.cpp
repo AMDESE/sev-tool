@@ -120,13 +120,13 @@ bool x509_validate_signature(X509 *child_cert, X509 *intermediate_cert, X509 *pa
         X509_STORE_CTX_set_cert(store_ctx.get(), child_cert);
 
         // Verify the certificate
-        ret = X509_verify_cert(store_ctx.get());
+        auto verification = X509_verify_cert(store_ctx.get());
 
         // Print out error code
-        if (ret == 0)
+        if (verification == 0)
             printf("Error verifying cert: %s\n", X509_verify_cert_error_string(X509_STORE_CTX_get_error(store_ctx.get())));
 
-        if (ret != 1)
+        if (verification != 1)
             break;
 
         ret = true;
