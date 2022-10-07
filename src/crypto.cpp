@@ -131,13 +131,12 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY *priv_evp_key, const uint8_t *digest
                      size_t length, SHA_TYPE sha_type, bool pss)
 {
     bool is_valid = false;
-    RSA *priv_rsa_key = nullptr;
     uint32_t sig_len = 0;
 
     do {
         // Pull the RSA key from the EVP_PKEY
-        priv_rsa_key = EVP_PKEY_get1_RSA(priv_evp_key);
-        if (!priv_rsa_key)
+        auto *priv_rsa_key = EVP_PKEY_get1_RSA(priv_evp_key);
+        if (priv_rsa_key == nullptr)
             break;
 
         if ((size_t)RSA_size(priv_rsa_key) > sizeof(sev_sig::rsa)) {
@@ -180,9 +179,6 @@ static bool rsa_sign(sev_sig *sig, EVP_PKEY *priv_evp_key, const uint8_t *digest
         is_valid = true;
     } while (false);
 
-    // Free memory
-    // RSA_free(priv_rsa_key);
-
     return is_valid;
 }
 
@@ -193,13 +189,12 @@ static bool rsa_verify(sev_sig *sig, EVP_PKEY *evp_pub_key, const uint8_t *sha_d
                        size_t sha_length, SHA_TYPE sha_type, bool pss)
 {
     bool is_valid = false;
-    RSA *rsa_pub_key = nullptr;
     uint32_t sig_len = 0;
 
     do {
         // Pull the RSA key from the EVP_PKEY
-        rsa_pub_key = EVP_PKEY_get1_RSA(evp_pub_key);
-        if (!rsa_pub_key)
+        auto *rsa_pub_key = EVP_PKEY_get1_RSA(evp_pub_key);
+        if (rsa_pub_key == nullptr)
             break;
 
         sig_len = RSA_size(rsa_pub_key);
@@ -239,13 +234,6 @@ static bool rsa_verify(sev_sig *sig, EVP_PKEY *evp_pub_key, const uint8_t *sha_d
 
         is_valid = true;
     } while (false);
-
-    // Free the keys and contexts
-    // if (rsa_pub_key)
-    //     RSA_free(rsa_pub_key);
-
-    // if (md_ctx)
-    //     EVP_MD_CTX_free(md_ctx);
 
     return is_valid;
 }

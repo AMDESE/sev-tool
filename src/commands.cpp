@@ -25,7 +25,6 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 #include <cstdio>          // printf
-#include <cstdlib>         // malloc
 #include <memory>
 #include <utility>
 
@@ -322,11 +321,10 @@ int Command::get_id()
 
     // Always allocate 2 ID's worth because Linux will always write 2 ID's worth.
     // If you have 1 ID and you are not in Linux, allocating extra is fine
-    void *id_mem = malloc(2*default_id_length);
-    if (!id_mem)
-        return cmd_ret;
+    std::vector<uint8_t> id_mem{};
+    id_mem.resize(2*default_id_length);
 
-    cmd_ret = m_sev_device->get_id(reinterpret_cast<uint8_t *>(&data), id_mem, 2*default_id_length);
+    cmd_ret = m_sev_device->get_id(reinterpret_cast<uint8_t *>(&data), id_mem.data(), id_mem.size());
 
     if (cmd_ret == STATUS_SUCCESS) {
         std::string id0_buf{};
@@ -348,9 +346,6 @@ int Command::get_id()
             sev::write_file(id1_path, id1_buf.data(), id1_buf.size());
         }
     }
-
-    // Free memory
-    free(id_mem);
 
     return (int)cmd_ret;
 }
@@ -1158,7 +1153,7 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
                   const uint8_t *label,   size_t label_length,
                   const uint8_t *context, size_t context_length)
 {
-    if (!key_out || !key_in || !label || (key_out_length == 0) ||
+    if ((key_out == nullptr) || (key_in == nullptr) || (label == nullptr) || (key_out_length == 0) ||
        (key_in_length == 0) || (label_length == 0))
         return false;
 
@@ -1195,7 +1190,7 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
             break;
         if (HMAC_Update(ctx.get(), &null_byte, sizeof(null_byte)) != 1)
             break;
-        if ((context) && (context_length != 0)) {
+        if ((context != nullptr) && (context_length != 0)) {
             if (HMAC_Update(ctx.get(), (unsigned char const*)context, context_length) != 1)
                 break;
         }
@@ -1254,7 +1249,7 @@ uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_ke
 
         // Need to free shared_key using OPENSSL_FREE() in the calling function
         shared_key = reinterpret_cast<unsigned char*>(OPENSSL_malloc(shared_key_len_out));
-        if (!shared_key)
+        if (shared_key != nullptr)
             break;      // malloc failure
 
         // Compute the shared secret with the ECDH key material.
@@ -1304,7 +1299,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
         // This function is allocating memory for this uint8_t[],
         //  must free it at the end of this function
         uint8_t *shared_key = calculate_shared_secret(godh_priv_key, platform_public_key.get(), shared_key_len);
-        if (!shared_key)
+        if (shared_key != nullptr)
             break;
 
         // Derive the master secret from the intermediate secret
@@ -1338,7 +1333,7 @@ bool Command::derive_kik(hmac_key_128 kik, const aes_128_key master_secret)
 
 bool Command::gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len)
 {
-    if (!out || !msg)
+    if ((out == nullptr) || (msg == nullptr))
         return false;
 
     unsigned int out_len = 0;
@@ -1354,7 +1349,7 @@ bool Command::gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t
 bool Command::encrypt(uint8_t *out, const uint8_t *in, size_t length,
                       const aes_128_key Key, const iv_128 IV)
 {
-    if (!out || !in)
+    if ((out == nullptr) || (in == nullptr))
         return false;
 
     int len = 0;

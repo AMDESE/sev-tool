@@ -95,7 +95,7 @@ bool x509_validate_signature(X509 *child_cert, X509 *intermediate_cert, X509 *pa
         }
 
         // Add the intermediate cert to the store
-        if (intermediate_cert) {
+        if (intermediate_cert != nullptr) {
             if (X509_STORE_add_cert(store.get(), intermediate_cert) != 1) {
                 printf("Error adding intermediate_cert to x509_store\n");
                 break;
