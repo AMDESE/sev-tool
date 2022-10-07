@@ -1233,22 +1233,23 @@ uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_ke
         return nullptr;
 
     bool success = false;
-    EVP_PKEY_CTX *ctx = nullptr;
     uint8_t *shared_key = nullptr;
 
     do {
         // Create the context using your private key
-        if (!(ctx = EVP_PKEY_CTX_new(priv_key, nullptr)))
+        std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> ctx{nullptr, &EVP_PKEY_CTX_free};
+        ctx.reset(EVP_PKEY_CTX_new(priv_key, nullptr));
+        if (!ctx)
             break;
 
         // Calculate the intermediate secret
-        if (EVP_PKEY_derive_init(ctx) <= 0)
+        if (EVP_PKEY_derive_init(ctx.get()) <= 0)
             break;
-        if (EVP_PKEY_derive_set_peer(ctx, peer_key) <= 0)
+        if (EVP_PKEY_derive_set_peer(ctx.get(), peer_key) <= 0)
             break;
 
         // Determine buffer length
-        if (EVP_PKEY_derive(ctx, nullptr, &shared_key_len_out) <= 0)
+        if (EVP_PKEY_derive(ctx.get(), nullptr, &shared_key_len_out) <= 0)
             break;
 
         // Need to free shared_key using OPENSSL_FREE() in the calling function
@@ -1257,13 +1258,11 @@ uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_ke
             break;      // malloc failure
 
         // Compute the shared secret with the ECDH key material.
-        if (EVP_PKEY_derive(ctx, shared_key, &shared_key_len_out) <= 0)
+        if (EVP_PKEY_derive(ctx.get(), shared_key, &shared_key_len_out) <= 0)
             break;
 
         success = true;
     } while (false);
-
-    EVP_PKEY_CTX_free(ctx);
 
     return success ? shared_key : nullptr;
 }
@@ -1358,34 +1357,32 @@ bool Command::encrypt(uint8_t *out, const uint8_t *in, size_t length,
     if (!out || !in)
         return false;
 
-    EVP_CIPHER_CTX *ctx;
     int len = 0;
     bool cmd_ret = false;
 
     do {
         // Create and initialize the context
-        if (!(ctx = EVP_CIPHER_CTX_new()))
+        std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> ctx{nullptr, &EVP_CIPHER_CTX_free};
+        ctx.reset(EVP_CIPHER_CTX_new());
+        if (!ctx)
             break;
 
         // Initialize the encryption operation. IMPORTANT - ensure you
         // use a key and IV size appropriate for your cipher
-        if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), nullptr, Key, IV) != 1)
+        if (EVP_EncryptInit_ex(ctx.get(), EVP_aes_128_ctr(), nullptr, Key, IV) != 1)
             break;
 
         // Provide the message to be encrypted, and obtain the encrypted output
-        if (EVP_EncryptUpdate(ctx, out, &len, in, (int)length) != 1)
+        if (EVP_EncryptUpdate(ctx.get(), out, &len, in, (int)length) != 1)
             break;
 
         // Finalize the encryption. Further out bytes may be written at
         // this stage
-        if (EVP_EncryptFinal_ex(ctx, out + len, &len) != 1)
+        if (EVP_EncryptFinal_ex(ctx.get(), out + len, &len) != 1)
             break;
 
         cmd_ret = true;
     } while (false);
-
-    // Clean up
-    EVP_CIPHER_CTX_free(ctx);
 
     return cmd_ret;
 }
