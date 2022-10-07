@@ -152,32 +152,6 @@ void print_cert_chain_buf_hex(const sev_cert_chain_buf *p)
 }
 
 /**
- * Description:   Reads in a private key pem file and write it to a RSA key
- * Notes:         This function allocates a new RSA key which must be
- *                freed by the calling function
- * Parameters:    [file_name] The name of the pem file being read from
- *                [rsa_priv_key] RSA key where the private key gets stored
- */
-void read_priv_key_pem_into_rsakey(const std::string file_name, RSA **rsa_priv_key)
-{
-    do {
-        // New up the EC_KEY with the EC_GROUP
-        if (!(*rsa_priv_key = RSA_new()))
-            break;
-
-        // Read in the private key file into RSA
-        std::unique_ptr<FILE, decltype(&fclose)> pFile{nullptr, &fclose};
-        pFile.reset(fopen(file_name.c_str(), "r"));
-        if (!pFile)
-            break;
-        *rsa_priv_key = PEM_read_RSAPrivateKey(pFile.get(), nullptr, nullptr, nullptr);
-
-        if (!rsa_priv_key)   // TODO find a better check
-            break;
-    } while (false);
-}
-
-/**
  * Description:   Reads in a private key pem file and write it to a EC_KEY
  * Notes:         This function allocates a new EC PrivateKey which must be
  *                freed by the calling function
