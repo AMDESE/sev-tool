@@ -1276,7 +1276,7 @@ bool Command::derive_master_secret(aes_128_key master_secret,
                                    const sev_cert *pdh_public,
                                    const nonce_128 nonce)
 {
-    if (!godh_priv_key || !pdh_public)
+    if ((godh_priv_key == nullptr) || (pdh_public == nullptr))
         return false;
 
     sev_cert dummy;

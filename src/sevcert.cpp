@@ -460,7 +460,7 @@ SEV_ERROR_CODE SEVCert::validate_usage(uint32_t usage)
  */
 SEV_ERROR_CODE SEVCert::validate_rsa_pub_key(const sev_cert *cert, const EVP_PKEY *PublicKey)
 {
-    if (!cert || !PublicKey)
+    if ((cert == nullptr) || (PublicKey == nullptr))
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
@@ -480,7 +480,7 @@ SEV_ERROR_CODE SEVCert::validate_rsa_pub_key(const sev_cert *cert, const EVP_PKE
  */
 SEV_ERROR_CODE SEVCert::validate_public_key(const sev_cert *cert, const EVP_PKEY *PublicKey)
 {
-    if (!cert || !PublicKey)
+    if ((cert == nullptr) || (PublicKey == nullptr))
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
@@ -523,7 +523,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
                                            const sev_cert *parent_cert,
                                            EVP_PKEY *parent_signing_key)    // Probably PubKey
 {
-    if (!child_cert || !parent_cert || !parent_signing_key)
+    if ((child_cert == nullptr) || (parent_cert == nullptr) || (parent_signing_key == nullptr))
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
@@ -666,7 +666,7 @@ SEV_ERROR_CODE SEVCert::validate_signature(const sev_cert *child_cert,
  */
 SEV_ERROR_CODE SEVCert::validate_body(const sev_cert *cert)
 {
-    if (!cert)
+    if (cert == nullptr)
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
@@ -694,7 +694,7 @@ SEV_ERROR_CODE SEVCert::validate_body(const sev_cert *cert)
  */
 SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert, EVP_PKEY *evp_pub_key)
 {
-    if (!cert)
+    if (cert == nullptr)
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
@@ -790,7 +790,7 @@ SEV_ERROR_CODE SEVCert::compile_public_key_from_certificate(const sev_cert *cert
  */
 SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EVP_PKEY *evp_pubkey)
 {
-    if (!cert)
+    if (cert == nullptr)
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
@@ -859,7 +859,7 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
                 break;
         }
 
-        if (!evp_pubkey)
+        if (evp_pubkey == nullptr)
             break;
 
         cmd_ret = STATUS_SUCCESS;
@@ -879,7 +879,7 @@ SEV_ERROR_CODE SEVCert::decompile_public_key_into_certificate(sev_cert *cert, EV
  */
 SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_cert *parent_cert2)
 {
-    if (!parent_cert1)
+    if (parent_cert1 == nullptr)
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
@@ -888,7 +888,7 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
 
     do {
         // Get the public key from parent certs
-        int numSigs = (parent_cert1 && parent_cert2) ? 2 : 1;   // Run the loop for 1 or 2 signatures
+        int numSigs = ((parent_cert1 != nullptr) && (parent_cert2 != nullptr)) ? 2 : 1;   // Run the loop for 1 or 2 signatures
         int i = 0;
         for (i = 0; i < numSigs; i++) {
             // New up the EVP_PKEY

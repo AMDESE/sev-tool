@@ -37,7 +37,7 @@ bool sev::execute_system_command(const std::string cmd, std::string *log)
         std::array<char, 4096> output{};
         size_t count;
         if ((count = fread(output.data(), 1, output.size(), pipe.get())) > 0) {
-            if (log) {
+            if (log != nullptr) {
                 log->append(output.data(), count);
             }
         }
@@ -184,7 +184,7 @@ bool sev::reverse_bytes(uint8_t *bytes, size_t size)
     uint8_t *start = bytes;
     uint8_t *end = bytes + size - 1;
 
-    if (!bytes)
+    if (bytes == nullptr)
         return false;
 
     while (start < end) {

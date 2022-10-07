@@ -107,7 +107,8 @@ void print_amd_cert_hex(const amd_cert *cert, std::string &out_str)
 ePSP_DEVICE_TYPE AMDCert::get_device_type(const amd_cert *ark)
 {
     ePSP_DEVICE_TYPE ret = PSP_DEVICE_TYPE_INVALID;
-    if(!ark) return ret;
+    if(ark == nullptr)
+        return ret;
     if(memcmp(&ark->key_id_0, amd_root_key_id_rome, sizeof(ark->key_id_0 + ark->key_id_1)) == 0) {
         return PSP_DEVICE_TYPE_ROME;
     }
@@ -151,7 +152,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_sig(const amd_cert *cert,
     uint32_t fixed_offset = offsetof(amd_cert, pub_exp);    // 64 bytes
 
     do {
-        if (!cert || !parent) {
+        if ((cert == nullptr) || (parent == nullptr)) {
             cmd_ret = ERROR_INVALID_PARAM;
             break;
         }
@@ -220,7 +221,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_common(const amd_cert *cert)
     SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;
 
     do {
-        if (!cert) {
+        if (cert == nullptr) {
             cmd_ret = ERROR_INVALID_PARAM;
             break;
         }
@@ -250,13 +251,13 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate(const amd_cert *cert,
     const uint8_t *key_id = nullptr;
 
     do {
-        if (!cert || !usage_is_valid(expected_usage)) {
+        if ((cert == nullptr) || !usage_is_valid(expected_usage)) {
             cmd_ret = ERROR_INVALID_PARAM;
             break;
         }
 
         // Validate the signature before using any certificate fields
-        if (parent) {
+        if (parent != nullptr) {
             cmd_ret = amd_cert_validate_sig(cert, parent, device_type);
             if (cmd_ret != STATUS_SUCCESS)
                 break;
@@ -268,7 +269,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate(const amd_cert *cert,
             break;
 
         // If there is no parent, then the certificate must be self-certified
-        key_id = parent ? reinterpret_cast<uint8_t const *>(&parent->key_id_0) : reinterpret_cast<uint8_t const *>(&cert->key_id_0);
+        key_id = (parent != nullptr) ? reinterpret_cast<uint8_t const *>(&parent->key_id_0) : reinterpret_cast<uint8_t const *>(&cert->key_id_0);
 
         if (cert->key_usage != expected_usage ||
             memcmp(&cert->certifying_id_0, key_id, sizeof(cert->certifying_id_0 + cert->certifying_id_1)) != 0)
@@ -290,7 +291,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_public_key_hash(const amd_cert *cert,
     uint32_t fixed_offset = offsetof(amd_cert, pub_exp);    // 64 bytes
 
     do {
-        if (!cert || !hash) {
+        if ((cert == nullptr) || (hash == nullptr)) {
             cmd_ret = ERROR_INVALID_PARAM;
             break;
         }
@@ -331,7 +332,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_validate_ark(const amd_cert *ark)
     ePSP_DEVICE_TYPE device_type = get_device_type(ark);
 
     do {
-        if (!ark) {
+        if (ark == nullptr) {
             cmd_ret = ERROR_INVALID_PARAM;
             break;
         }
@@ -382,7 +383,7 @@ size_t AMDCert::amd_cert_get_size(const amd_cert *cert)
     size_t size = 0;
     uint32_t fixed_offset = offsetof(amd_cert, pub_exp);    // 64 bytes
 
-    if (cert) {
+    if (cert != nullptr) {
         size = fixed_offset + (cert->pub_exp_size + 2*cert->modulus_size)/8;
     }
     return size;
@@ -399,7 +400,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_export_pub_key(const amd_cert *cert,
     SEV_ERROR_CODE cmd_ret = STATUS_SUCCESS;
 
     do {
-        if (!cert || !pub_key_cert) {
+        if ((cert == nullptr) || (pub_key_cert == nullptr)) {
             cmd_ret = ERROR_INVALID_PARAM;
             break;
         }
@@ -441,7 +442,7 @@ SEV_ERROR_CODE AMDCert::amd_cert_init(amd_cert *cert, const uint8_t *buffer)
     uint32_t sig_offset = 0;                                // 2k or 4k bits
 
     do {
-        if (!cert || !buffer) {
+        if ((cert == nullptr) || (buffer == nullptr)) {
             cmd_ret = ERROR_INVALID_PARAM;
             break;
         }
