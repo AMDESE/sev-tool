@@ -883,7 +883,10 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
         return ERROR_INVALID_CERTIFICATE;
 
     SEV_ERROR_CODE cmd_ret = ERROR_INVALID_CERTIFICATE;
-    std::array<EVP_PKEY *, SEV_CERT_MAX_SIGNATURES> parent_pub_key{};
+    std::array<std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)>, SEV_CERT_MAX_SIGNATURES> parent_pub_key{
+        std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)>{nullptr, &EVP_PKEY_free},
+        std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)>{nullptr, &EVP_PKEY_free}
+    };
     const std::array<const sev_cert *, SEV_CERT_MAX_SIGNATURES> parent_cert{parent_cert1, parent_cert2};   // A cert has max of x parents/sigs
 
     do {
@@ -892,22 +895,23 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
         int i = 0;
         for (i = 0; i < numSigs; i++) {
             // New up the EVP_PKEY
-            if (!(parent_pub_key[i] = EVP_PKEY_new()))
+            parent_pub_key[i].reset(EVP_PKEY_new());
+            if (!parent_pub_key[i])
                 break;
 
             // This function allocates memory and attaches an EC_Key
             //  to your EVP_PKEY so, to prevent mem leaks, make sure
             //  the EVP_PKEY is freed at the end of this function
-            if (compile_public_key_from_certificate(parent_cert[i], parent_pub_key[i]) != STATUS_SUCCESS)
+            if (compile_public_key_from_certificate(parent_cert[i], parent_pub_key[i].get()) != STATUS_SUCCESS)
                 break;
 
             // Now, we have Parent's PublicKey(s), validate them
-            if (validate_public_key(m_child_cert, parent_pub_key[i]) != STATUS_SUCCESS)
+            if (validate_public_key(m_child_cert, parent_pub_key[i].get()) != STATUS_SUCCESS)
                 break;
 
             // Validate the signature before we do any other checking
             // Sub-function will need a separate loop to find which of the 2 signatures this one matches to
-            if (validate_signature(m_child_cert, parent_cert[i], parent_pub_key[i]) != STATUS_SUCCESS)
+            if (validate_signature(m_child_cert, parent_cert[i], parent_pub_key[i].get()) != STATUS_SUCCESS)
                 break;
         }
         if (i != numSigs)
@@ -955,11 +959,6 @@ SEV_ERROR_CODE SEVCert::verify_sev_cert(const sev_cert *parent_cert1, const sev_
 
         cmd_ret = STATUS_SUCCESS;
     } while (false);
-
-    // Free memory
-    for (int i = 0; i < SEV_CERT_MAX_SIGNATURES; i++) {
-        EVP_PKEY_free(parent_pub_key[i]);
-    }
 
     return cmd_ret;
 }
