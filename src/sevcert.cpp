@@ -166,11 +166,11 @@ void read_priv_key_pem_into_rsakey(const std::string file_name, RSA **rsa_priv_k
             break;
 
         // Read in the private key file into RSA
-        FILE *pFile = fopen(file_name.c_str(), "r");
+        std::unique_ptr<FILE, decltype(&fclose)> pFile{nullptr, &fclose};
+        pFile.reset(fopen(file_name.c_str(), "r"));
         if (!pFile)
             break;
-        *rsa_priv_key = PEM_read_RSAPrivateKey(pFile, nullptr, nullptr, nullptr);
-        fclose(pFile);
+        *rsa_priv_key = PEM_read_RSAPrivateKey(pFile.get(), nullptr, nullptr, nullptr);
 
         if (!rsa_priv_key)   // TODO find a better check
             break;
@@ -195,11 +195,11 @@ bool read_priv_key_pem_into_eckey(const std::string file_name, EC_KEY **ec_priv_
         *ec_priv_key = EC_KEY_new_by_curve_name(nid);
 
         // Read in the private key file into EVP_PKEY
-        FILE *pFile = fopen(file_name.c_str(), "r");
+        std::unique_ptr<FILE, decltype(&fclose)> pFile{nullptr, &fclose};
+        pFile.reset(fopen(file_name.c_str(), "r"));
         if (!pFile)
             break;
-        *ec_priv_key = PEM_read_ECPrivateKey(pFile, nullptr, nullptr, nullptr);
-        fclose(pFile);
+        *ec_priv_key = PEM_read_ECPrivateKey(pFile.get(), nullptr, nullptr, nullptr);
 
         // Make sure the key is good
         if (EC_KEY_check_key(*ec_priv_key) != 1)
@@ -255,18 +255,17 @@ std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> read_priv_key_pem_into_evpke
  */
 bool write_pub_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
 {
-    FILE *pFile = nullptr;
-    pFile = fopen(file_name.c_str(), "wt");
+    std::unique_ptr<FILE, decltype(&fclose)> pFile{nullptr, &fclose};
+    pFile.reset(fopen(file_name.c_str(), "wt"));
     if (!pFile)
         return false;
 
     // printf("Writing to file: %s\n", file_name.c_str());
-    if (PEM_write_PUBKEY(pFile, evp_key_pair) != 1) {
+    if (PEM_write_PUBKEY(pFile.get(), evp_key_pair) != 1) {
         printf("Error writing pubkey to file: %s\n", file_name.c_str());
-        fclose(pFile);
         return false;
     }
-    fclose(pFile);
+
     return true;
 }
 
@@ -278,18 +277,17 @@ bool write_pub_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
  */
 bool write_priv_key_pem(const std::string file_name, EVP_PKEY *evp_key_pair)
 {
-    FILE *pFile = nullptr;
-    pFile = fopen(file_name.c_str(), "wt");
+    std::unique_ptr<FILE, decltype(&fclose)> pFile{nullptr, &fclose};
+    pFile.reset(fopen(file_name.c_str(), "wt"));
     if (!pFile)
         return false;
 
     // printf("Writing to file: %s\n", file_name.c_str());
-    if (PEM_write_PrivateKey(pFile, evp_key_pair, nullptr, nullptr, 0, nullptr, nullptr) != 1) {
+    if (PEM_write_PrivateKey(pFile.get(), evp_key_pair, nullptr, nullptr, 0, nullptr, nullptr) != 1) {
         printf("Error writing privkey to file: %s\n", file_name.c_str());
-        fclose(pFile);
         return false;
     }
-    fclose(pFile);
+
     return true;
 }
 
