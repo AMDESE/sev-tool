@@ -1039,7 +1039,6 @@ int Command::validate_guest_report()
     std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;
     bool success = false;
     EVP_PKEY *vcek_pub_key = nullptr;
-    X509 *x509_vcek = nullptr;
 
     do {
         // Get the size of the report, so we can allocate that much memory
@@ -1056,11 +1055,12 @@ int Command::validate_guest_report()
             break;
 
         // Read in the VCEK
-        if (!read_pem_into_x509(vcek_file, &x509_vcek))
+        auto x509_vcek = read_pem_into_x509(vcek_file);
+        if (!x509_vcek)
             break;
         // X509_print_fp(stdout, x509_vcek);
 
-        vcek_pub_key = X509_get_pubkey(x509_vcek);
+        vcek_pub_key = X509_get_pubkey(x509_vcek.get());
         if (!vcek_pub_key)
             break;
 
@@ -1087,7 +1087,6 @@ int Command::validate_guest_report()
 
     // Free memory
     EVP_PKEY_free(vcek_pub_key);
-    X509_free(x509_vcek);
 
     return (int)cmd_ret;
 }
@@ -1098,38 +1097,38 @@ int Command::validate_cert_chain_vcek()
     std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;
     std::string ask_file = m_output_folder + VCEK_ASK_PEM_FILENAME;
     std::string ark_file = m_output_folder + VCEK_ARK_PEM_FILENAME;
-    X509 *x509_vcek = nullptr;
-    X509 *x509_ask = nullptr;
-    X509 *x509_ark = nullptr;
     EVP_PKEY *vcek_pub_key = nullptr;
 
     do {
         // Read in the ARK, ASK, and VCEK pem files
-        if (!read_pem_into_x509(ark_file, &x509_ark))
+        auto x509_ark = read_pem_into_x509(ark_file);
+        if (!x509_ark)
             break;
-        if (!read_pem_into_x509(ask_file, &x509_ask))
+        auto x509_ask = read_pem_into_x509(ask_file);
+        if (!x509_ask)
             break;
-        if (!read_pem_into_x509(vcek_file, &x509_vcek))
+        auto x509_vcek = read_pem_into_x509(vcek_file);
+        if (!x509_vcek)
             break;
         // X509_print_fp(stdout, x509_vcek);
 
         // Extract the vcek public key
-        vcek_pub_key = X509_get_pubkey(x509_vcek);
+        vcek_pub_key = X509_get_pubkey(x509_vcek.get());
         if (!vcek_pub_key)
             break;
 
         // Verify the signatures of the certs
-        if (!x509_validate_signature(x509_ark, nullptr, x509_ark)) {   // Verify the ARK self-signed the ARK
+        if (!x509_validate_signature(x509_ark.get(), nullptr, x509_ark.get())) {   // Verify the ARK self-signed the ARK
             printf("Error validating signature of x509_ark certs\n");
             break;
         }
 
-        if (!x509_validate_signature(x509_ask, nullptr, x509_ark)) {   // Verify the ARK signed the ASK
+        if (!x509_validate_signature(x509_ask.get(), nullptr, x509_ark.get())) {   // Verify the ARK signed the ASK
             printf("Error validating signature of x509_ask certs\n");
             break;
         }
 
-        if (!x509_validate_signature(x509_vcek, x509_ask, x509_ark)) {  // Verify the ASK signed the VCEK
+        if (!x509_validate_signature(x509_vcek.get(), x509_ask.get(), x509_ark.get())) {  // Verify the ASK signed the VCEK
             printf("Error validating signature of x509_vcek certs\n");
             break;
         }
@@ -1140,9 +1139,6 @@ int Command::validate_cert_chain_vcek()
 
     // Free memory
     EVP_PKEY_free(vcek_pub_key);
-    X509_free(x509_vcek);
-    X509_free(x509_ask);
-    X509_free(x509_ark);
 
     return (int)cmd_ret;
 }

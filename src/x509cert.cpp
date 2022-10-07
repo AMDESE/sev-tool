@@ -46,20 +46,20 @@ void convert_der_to_pem(const std::string in_file_name, const std::string out_fi
     sev::execute_system_command(cmd, &output);
 }
 
-bool read_pem_into_x509(const std::string file_name, X509 **x509_cert)
+std::unique_ptr<X509, decltype(&X509_free)> read_pem_into_x509(const std::string file_name)
 {
+    std::unique_ptr<X509, decltype(&X509_free)> result{nullptr, &X509_free};
     std::unique_ptr<FILE, decltype(&fclose)> pFile{nullptr, &fclose};
     pFile.reset(fopen(file_name.c_str(), "re"));
     if (!pFile)
-        return false;
+        return result;
 
     // printf("Reading from file: %s\n", file_name.c_str());
-    *x509_cert = PEM_read_X509(pFile.get(), nullptr, nullptr, nullptr);
-    if (!x509_cert) {
+    result.reset(PEM_read_X509(pFile.get(), nullptr, nullptr, nullptr));
+    if (!result) {
         printf("Error reading x509 from file: %s\n", file_name.c_str());
-        return false;
     }
-    return true;
+    return result;
 }
 
 bool write_x509_pem(const std::string file_name, X509 *x509_cert)
