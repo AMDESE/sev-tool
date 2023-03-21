@@ -791,7 +791,7 @@ void SEVDevice::request_tcb_data(snp_tcb_version &tcb_data) {
             std::strerror(ioctl_return)
         );
     } else {
-        tcb_data.val = plat_status.tcb_version;
+        tcb_data.val = plat_status.reported_tcb;
     }
 }
 
