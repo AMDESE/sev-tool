@@ -37,9 +37,9 @@ void sev::get_family_model(uint32_t *family, uint32_t *model)
     std::string fam_str = "";
     std::string model_str = "";
 
-    cmd = "lscpu | grep -E \"^CPU family:\" | awk {'print $3'}";
+    cmd = "LANG=C lscpu | grep -E \"^CPU family:\" | awk {'print $3'}";
     sev::execute_system_command(cmd, &fam_str);
-    cmd = "lscpu | grep -E \"^Model:\" | awk {'print $2'}";
+    cmd = "LANG=C lscpu | grep -E \"^Model:\" | awk {'print $2'}";
     sev::execute_system_command(cmd, &model_str);
 
     *family = std::stoi(fam_str, NULL, 10);
@@ -527,7 +527,7 @@ int SEVDevice::sys_info()
     sev::execute_system_command(cmd, &output);
     cmd = "echo -n 'BIOS Release Date: '; dmidecode -s bios-release-date";
     sev::execute_system_command(cmd, &output);
-    cmd = "echo -n 'SMT/Multi-Threading Status Per Socket: \n'; lscpu | grep -E \"^CPU\\(s\\):|Thread\\(s\\) per core|Core\\(s\\) per socket|Socket\\(s\\)\"";
+    cmd = "echo -n 'SMT/Multi-Threading Status Per Socket: \n'; LANG=C lscpu | grep -E \"^CPU\\(s\\):|Thread\\(s\\) per core|Core\\(s\\) per socket|Socket\\(s\\)\"";
     sev::execute_system_command(cmd, &output);
     cmd = "echo -n 'Processor Frequency (all sockets): \n'; dmidecode -s processor-frequency";
     sev::execute_system_command(cmd, &output);
