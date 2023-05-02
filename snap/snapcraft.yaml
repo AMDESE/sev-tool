@@ -1,0 +1,25 @@
+name: sev-tool
+version: git
+summary: AMD SEV Tool
+description: |
+  AMD SEV Tool
+base: core22
+confinement: classic
+source-code: https://github.com/AMDESE/sev-tool
+license: Apache-2.0
+
+parts:
+  sevtool:
+    plugin: autotools
+    source: .
+    build-packages:
+      - autoconf
+      - binutils
+      - gcc
+      - g++
+      - libssl-dev
+      - uuid-dev
+apps:
+  sevtool:
+    command: usr/local/bin/sevtool
+
