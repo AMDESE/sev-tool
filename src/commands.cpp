@@ -24,29 +24,27 @@
 #include <openssl/hmac.h>   // for calc_measurement
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
-#include <stdio.h>          // printf
-#include <stdlib.h>         // malloc
+#include <cstdio>          // printf
+#include <memory>
+#include <utility>
 
-Command::Command(void)
+Command::Command()
        : m_sev_device(&SEVDevice::get_sev_device())
 {
     // Intentionally Empty
 }
 
 Command::Command(std::string output_folder, int verbose_flag, ccp_required_t ccp)
-       : m_sev_device((ccp == CCP_REQ) ? &SEVDevice::get_sev_device() : NULL),
-         m_output_folder(output_folder),
+       : m_sev_device((ccp == CCP_REQ) ? &SEVDevice::get_sev_device() : nullptr),
+         m_output_folder(std::move(output_folder)),
          m_verbose_flag(verbose_flag)
 {
     // Intentionally Empty
 }
 
-Command::~Command(void)
-{
-    //delete m_sev_device;
-}
+Command::~Command() = default;
 
-int Command::factory_reset(void)
+int Command::factory_reset()
 {
     int cmd_ret = -1;
 
@@ -55,36 +53,35 @@ int Command::factory_reset(void)
     return (int)cmd_ret;
 }
 
-int Command::platform_status(void)
+int Command::platform_status()
 {
-    uint8_t data[sizeof(sev_platform_status_cmd_buf)];
-    sev_platform_status_cmd_buf *data_buf = (sev_platform_status_cmd_buf *)&data;
+    sev_platform_status_cmd_buf data;
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device->platform_status(data);
+    cmd_ret = m_sev_device->platform_status(reinterpret_cast<uint8_t *>(&data));
 
     if (cmd_ret == STATUS_SUCCESS) {
         // Print ID arrays
-        printf("api_major:\t%d\n", data_buf->api_major);
-        printf("api_minor:\t%d\n", data_buf->api_minor);
-        printf("platform_state:\t%d\n", data_buf->current_platform_state);
-        if (sev::min_api_version(data_buf->api_major, data_buf->api_minor, 0, 17)) {
-            printf("owner:\t\t%d\n", data_buf->owner);
-            printf("config:\t\t%d\n", data_buf->config);
+        printf("api_major:\t%d\n", data.api_major);
+        printf("api_minor:\t%d\n", data.api_minor);
+        printf("platform_state:\t%d\n", data.current_platform_state);
+        if (sev::min_api_version(data.api_major, data.api_minor, 0, 17)) {
+            printf("owner:\t\t%d\n", data.owner);
+            printf("config:\t\t%d\n", data.config);
         }
         else {
             printf("flags:\t\t%d\n",
-                    ((data_buf->owner & PLAT_STAT_OWNER_MASK) << PLAT_STAT_OWNER_MASK) +
-                    ((data_buf->config & PLAT_STAT_ES_MASK) << PLAT_STAT_CONFIGES_OFFSET));
+                    ((data.owner & PLAT_STAT_OWNER_MASK) << PLAT_STAT_OWNER_MASK) +
+                    ((data.config & PLAT_STAT_ES_MASK) << PLAT_STAT_CONFIGES_OFFSET));
         }
-        printf("build:\t\t%d\n", data_buf->build_id);
-        printf("guest_count:\t%d\n", data_buf->guest_count);
+        printf("build:\t\t%d\n", data.build_id);
+        printf("guest_count:\t%d\n", data.guest_count);
     }
 
     return (int)cmd_ret;
 }
 
-int Command::pek_gen(void)
+int Command::pek_gen()
 {
     int cmd_ret = -1;
 
@@ -93,39 +90,40 @@ int Command::pek_gen(void)
     return (int)cmd_ret;
 }
 
-int Command::pek_csr(void)
+int Command::pek_csr()
 {
     sev_platform_status_cmd_buf data_buf;
-    uint8_t data[sizeof(sev_pek_csr_cmd_buf)];
+    std::array<uint8_t, sizeof(sev_pek_csr_cmd_buf)> data{};
     int cmd_ret = -1;
     std::string pek_csr_readable_path = m_output_folder + PEK_CSR_READABLE_FILENAME;
     std::string pek_csr_hex_path = m_output_folder + PEK_CSR_HEX_FILENAME;
 
     // Populate PEKCSR buffer with CSRLength = 0
-    sev_cert *pek_mem = new sev_cert_t;
+    auto pek_mem = std::make_unique<sev_cert_t>();
     sev_cert pek_csr;
 
     if (!pek_mem)
         return -1;
 
-    cmd_ret = m_sev_device->platform_status((uint8_t *) &data_buf);
+    cmd_ret = m_sev_device->platform_status(reinterpret_cast<uint8_t *>(&data_buf));
 
-    if (cmd_ret != STATUS_SUCCESS)
+    if (cmd_ret != STATUS_SUCCESS) {
             return cmd_ret;
+    }
     if (data_buf.owner != PLATFORM_STATUS_OWNER_SELF) {
             printf("Error: Platform must be self-owned first for the obtaining ownership procedure to work.");
             return -1;
     }
 
-    cmd_ret = m_sev_device->pek_csr(data, pek_mem, &pek_csr);
+    cmd_ret = m_sev_device->pek_csr(data.data(), pek_mem.get(), &pek_csr);
 
     if (cmd_ret == STATUS_SUCCESS) {
         if (m_verbose_flag) {            // Print off the cert to stdout
             // print_sev_cert_hex(&pek_csr);
             print_sev_cert_readable(&pek_csr);
         }
-        if (m_output_folder != "") {     // Print off the cert to a text file
-            std::string pek_csr_readable = "";
+        if (!m_output_folder.empty()) {     // Print off the cert to a text file
+            std::string pek_csr_readable;
 
             print_sev_cert_readable(&pek_csr, pek_csr_readable);
             sev::write_file(pek_csr_readable_path, (void *)pek_csr_readable.c_str(), pek_csr_readable.size());
@@ -133,13 +131,10 @@ int Command::pek_csr(void)
         }
     }
 
-    // Free memory
-    delete pek_mem;
-
     return (int)cmd_ret;
 }
 
-int Command::pdh_gen(void)
+int Command::pdh_gen()
 {
     int cmd_ret = -1;
 
@@ -148,45 +143,41 @@ int Command::pdh_gen(void)
     return (int)cmd_ret;
 }
 
-int Command::pdh_cert_export(void)
+int Command::pdh_cert_export()
 {
-    uint8_t data[sizeof(sev_pdh_cert_export_cmd_buf)];
+    sev_pdh_cert_export_cmd_buf data;
     int cmd_ret = -1;
     std::string PDH_readable_path = m_output_folder + PDH_READABLE_FILENAME;
     std::string PDH_path          = m_output_folder + PDH_FILENAME;
     std::string cc_readable_path  = m_output_folder + CERT_CHAIN_READABLE_FILENAME;
     std::string cc_path           = m_output_folder + CERT_CHAIN_HEX_FILENAME;
 
-    sev_cert *pdh_cert_mem = new sev_cert_t;
-    sev_cert_chain_buf_t *cert_chain_mem = new sev_cert_chain_buf_t();
+    auto pdh_cert_mem = std::make_unique<sev_cert_t>();
+    auto cert_chain_mem = std::make_unique<sev_cert_chain_buf_t>();
 
     if (!pdh_cert_mem || !cert_chain_mem)
         return -1;
 
-    cmd_ret = m_sev_device->pdh_cert_export(data, pdh_cert_mem, cert_chain_mem);
+    cmd_ret = m_sev_device->pdh_cert_export(reinterpret_cast<uint8_t *>(&data), pdh_cert_mem.get(), cert_chain_mem.get());
 
     if (cmd_ret == STATUS_SUCCESS) {
         if (m_verbose_flag) {            // Print off the cert to stdout
             // print_sev_cert_readable((sev_cert *)pdh_cert_mem); printf("\n");
-            print_sev_cert_hex((sev_cert *)pdh_cert_mem); printf("\n");
-            print_cert_chain_buf_readable((sev_cert_chain_buf *)cert_chain_mem);
+            print_sev_cert_hex(pdh_cert_mem.get()); printf("\n");
+            print_cert_chain_buf_readable(cert_chain_mem.get());
         }
-        if (m_output_folder != "") {     // Print off the cert to a text file
-            std::string PDH_readable = "";
-            std::string cc_readable = "";
+        if (!m_output_folder.empty()) {     // Print off the cert to a text file
+            std::string PDH_readable;
+            std::string cc_readable;
 
-            print_sev_cert_readable((sev_cert *)pdh_cert_mem, PDH_readable);
-            print_cert_chain_buf_readable((sev_cert_chain_buf *)cert_chain_mem, cc_readable);
+            print_sev_cert_readable(pdh_cert_mem.get(), PDH_readable);
+            print_cert_chain_buf_readable(cert_chain_mem.get(), cc_readable);
             sev::write_file(PDH_readable_path, (void *)PDH_readable.c_str(), PDH_readable.size());
-            sev::write_file(PDH_path, pdh_cert_mem, sizeof(sev_cert));
+            sev::write_file(PDH_path, pdh_cert_mem.get(), sizeof(sev_cert));
             sev::write_file(cc_readable_path, (void *)cc_readable.c_str(), cc_readable.size());
-            sev::write_file(cc_path, cert_chain_mem, sizeof(sev_cert_chain_buf));
+            sev::write_file(cc_path, cert_chain_mem.get(), sizeof(sev_cert_chain_buf));
         }
     }
-
-    // Free memory
-    delete pdh_cert_mem;
-    delete cert_chain_mem;
 
     return (int)cmd_ret;
 }
@@ -197,22 +188,22 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
 
     // Initial PDH cert chain export, so we can confirm that it
     // changed after running the pek_cert_import
-    uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
-    sev_cert *pdh_cert_mem = new sev_cert_t;
-    sev_cert_chain_buf *cert_chain_mem = new sev_cert_chain_buf_t;
+    sev_pdh_cert_export_cmd_buf pdh_cert_export_data;  // pdh_cert_export
+    auto pdh_cert_mem = std::make_unique<sev_cert_t>();
+    auto cert_chain_mem = std::make_unique<sev_cert_chain_buf_t>();
 
     // The signed CSR
     sev_cert signed_pek_csr;
     sev_cert oca_cert;
 
     // The actual pek_cert_import command
-    uint8_t pek_cert_import_data[sizeof(sev_pek_cert_import_cmd_buf)];  // pek_cert_import
+    sev_pek_cert_import_cmd_buf pek_cert_import_data{};  // pek_cert_import
 
     // Afterwards PDH cert chain export, to verify that the certs
     // have changed after running pek_cert_import
-    uint8_t pdh_cert_export_data2[sizeof(sev_pdh_cert_export_cmd_buf)]; // pdh_cert_export
-    sev_cert *pdh_cert_mem2 = new sev_cert_t;
-    sev_cert_chain_buf *cert_chain_mem2 = new sev_cert_chain_buf_t;
+    sev_pdh_cert_export_cmd_buf pdh_cert_export_data2{}; // pdh_cert_export
+    auto pdh_cert_mem2 = std::make_unique<sev_cert_t>();
+    auto cert_chain_mem2 = std::make_unique<sev_cert_chain_buf_t>();
 
     do {
         if (!pdh_cert_mem || !cert_chain_mem || !pdh_cert_mem2 || !cert_chain_mem2) {
@@ -233,33 +224,27 @@ int Command::pek_cert_import(std::string signed_pek_csr_file, std::string oca_ce
         }
 
         // Just used to confirm afterwards that the cert chain has changed
-        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh_cert_mem, cert_chain_mem);
+        cmd_ret = m_sev_device->pdh_cert_export(reinterpret_cast<uint8_t *>(&pdh_cert_export_data), pdh_cert_mem.get(), cert_chain_mem.get());
         if (cmd_ret != 0)
             break;
 
         // Run the pek_cert_import command
-        cmd_ret = m_sev_device->pek_cert_import(pek_cert_import_data, &signed_pek_csr, &oca_cert);
+        cmd_ret = m_sev_device->pek_cert_import(reinterpret_cast<uint8_t *>(&pek_cert_import_data), &signed_pek_csr, &oca_cert);
         if (cmd_ret != 0)
             break;
 
         // Export the cert chain again, so we can compare that it has changed
         // after running the pek_cert_import
-        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data2, pdh_cert_mem2, cert_chain_mem2);
+        cmd_ret = m_sev_device->pdh_cert_export(reinterpret_cast<uint8_t *>(&pdh_cert_export_data2), pdh_cert_mem2.get(), cert_chain_mem2.get());
         if (cmd_ret != 0)
             break;
 
         // Make sure the cert chain changed after running the pek_cert_import
-        if (0 != memcmp(pdh_cert_export_data2, pdh_cert_export_data, sizeof(sev_pdh_cert_export_cmd_buf)))
+        if (0 != memcmp(&pdh_cert_export_data2, &pdh_cert_export_data, sizeof(pdh_cert_export_data)))
             break;
 
         printf("PEK Cert Import SUCCESS.\n");
-    } while (0);
-
-    // Free memory
-    delete pdh_cert_mem;
-    delete cert_chain_mem;
-    delete pdh_cert_mem2;
-    delete cert_chain_mem2;
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -268,7 +253,6 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
 {
     int cmd_ret = ERROR_UNSUPPORTED;
 
-    EVP_PKEY *oca_priv_key = NULL;
     sev_cert oca_cert;
     SEVCert cert_obj(&oca_cert);
     sev_cert pek_csr;
@@ -289,12 +273,13 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
         }
 
         // Import the OCA pem file and turn it into an sev_cert
-        if (!read_priv_key_pem_into_evpkey(oca_priv_key_file, &oca_priv_key)) {
+        auto oca_priv_key = read_priv_key_pem_into_evpkey(oca_priv_key_file);
+        if (!oca_priv_key) {
             printf("Error importing OCA Priv Key\n");
             cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
         }
-        if (!cert_obj.create_oca_cert(&oca_priv_key, SEV_SIG_ALGO_ECDSA_SHA256)) {
+        if (!cert_obj.create_oca_cert(oca_priv_key.get(), SEV_SIG_ALGO_ECDSA_SHA256)) {
             printf("Error creating OCA cert\n");
             cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
@@ -302,7 +287,7 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
 
         // Sign CSR
         if (!csr_obj.sign_with_key(SEV_CERT_MAX_VERSION, SEV_USAGE_PEK, SEV_SIG_ALGO_ECDSA_SHA256,
-                              &oca_priv_key, SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256)) {
+                              oca_priv_key.get(), SEV_USAGE_OCA, SEV_SIG_ALGO_ECDSA_SHA256)) {
             printf("Error self-signing OCA cert.\n");
             cmd_ret = ERROR_INVALID_CERTIFICATE;
             break;
@@ -311,17 +296,16 @@ int Command::sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_fil
         sev::write_file(pek_oca_path, (void *)&oca_cert, sizeof(oca_cert));
         sev::write_file(pek_csr_signed_path, (void *)&pek_csr, sizeof(pek_csr));
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
-    EVP_PKEY_free(oca_priv_key);
+    } while (false);
+
     return cmd_ret;
 }
 
 // Must always pass in 128 bytes array, because of Linux /dev/sev ioctl
 // doesn't follow the API
-int Command::get_id(void)
+int Command::get_id()
 {
-    uint8_t data[sizeof(sev_get_id_cmd_buf)];
-    sev_get_id_cmd_buf *data_buf = (sev_get_id_cmd_buf *)&data;
+    sev_get_id_cmd_buf data{};
     int cmd_ret = -1;
     uint32_t default_id_length = 0;
     std::string id0_path = m_output_folder + GET_ID_S0_FILENAME;
@@ -330,40 +314,38 @@ int Command::get_id(void)
     // Send the first command with a length of 0, then use the returned length
     // as the input parameter for the 'real' command which will succeed
     sev_get_id_cmd_buf data_buf_temp;
-    cmd_ret = m_sev_device->get_id((uint8_t *)&data_buf_temp, NULL); // Sets IDLength
+    cmd_ret = m_sev_device->get_id(reinterpret_cast<uint8_t *>(&data_buf_temp), nullptr); // Sets IDLength
     if (cmd_ret != ERROR_INVALID_LENGTH)     // What we expect to happen
         return cmd_ret;
     default_id_length = data_buf_temp.id_length;
 
     // Always allocate 2 ID's worth because Linux will always write 2 ID's worth.
     // If you have 1 ID and you are not in Linux, allocating extra is fine
-    void *id_mem = malloc(2*default_id_length);
-    if (!id_mem)
-        return cmd_ret;
+    std::vector<uint8_t> id_mem{};
+    id_mem.resize(2*default_id_length);
 
-    cmd_ret = m_sev_device->get_id(data, id_mem, 2*default_id_length);
+    cmd_ret = m_sev_device->get_id(reinterpret_cast<uint8_t *>(&data), id_mem.data(), id_mem.size());
 
     if (cmd_ret == STATUS_SUCCESS) {
-        char id0_buf[default_id_length*2+1] = {0};  // 2 chars per byte +1 for null term
-        char id1_buf[default_id_length*2+1] = {0};
+        std::string id0_buf{};
+        id0_buf.resize(default_id_length*2);// 2 chars per byte
+        std::string id1_buf{};
+        id1_buf.resize(default_id_length*2);
         for (uint8_t i = 0; i < default_id_length; i++) {
-            sprintf(id0_buf+strlen(id0_buf), "%02x", ((uint8_t *)(data_buf->id_p_addr))[i]);
-            sprintf(id1_buf+strlen(id1_buf), "%02x", ((uint8_t *)(data_buf->id_p_addr))[i+default_id_length]);
+            sprintf(id0_buf.data()+2*i, "%02x", reinterpret_cast<uint8_t *>(data.id_p_addr)[i]);
+            sprintf(id1_buf.data()+2*i, "%02x", reinterpret_cast<uint8_t *>(data.id_p_addr)[i+default_id_length]);
         }
 
         if (m_verbose_flag) {            // Print ID arrays
-            printf("* GetID Socket0:\n%s", id0_buf);
-            printf("\n* GetID Socket1:\n%s", id1_buf);
+            printf("* GetID Socket0:\n%s", id0_buf.data());
+            printf("\n* GetID Socket1:\n%s", id1_buf.data());
             printf("\n");
         }
-        if (m_output_folder != "") {     // Print the IDs to a text file
-            sev::write_file(id0_path, (void *)id0_buf, sizeof(id0_buf)-1);  // Don't write null term
-            sev::write_file(id1_path, (void *)id1_buf, sizeof(id1_buf)-1);
+        if (!m_output_folder.empty()) {     // Print the IDs to a text file
+            sev::write_file(id0_path, id0_buf.data(), id0_buf.size());  // Don't write null term
+            sev::write_file(id1_path, id1_buf.data(), id1_buf.size());
         }
     }
-
-    // Free memory
-    free(id_mem);
 
     return (int)cmd_ret;
 }
@@ -371,40 +353,40 @@ int Command::get_id(void)
 // ------------------------------------- //
 // ---- Non-ioctl (Custom) commands ---- //
 // ------------------------------------- //
-int Command::sys_info(void)
+int Command::sys_info()
 {
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device->sys_info();
+    cmd_ret = SEVDevice::sys_info();
 
     return (int)cmd_ret;
 }
 
-int Command::get_platform_owner(void)
+int Command::get_platform_owner()
 {
-    uint8_t data[sizeof(sev_platform_status_cmd_buf)];
+    sev_platform_status_cmd_buf data{};
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device->platform_status(data);
+    cmd_ret = m_sev_device->platform_status(reinterpret_cast<uint8_t *>(&data));
     if (cmd_ret != STATUS_SUCCESS)
         return -1;
 
-    return m_sev_device->get_platform_owner(data);
+    return SEVDevice::get_platform_owner(reinterpret_cast<uint8_t *>(&data));
 }
 
-int Command::get_platform_es(void)
+int Command::get_platform_es()
 {
-    uint8_t data[sizeof(sev_platform_status_cmd_buf)];
+    sev_platform_status_cmd_buf data{};
     int cmd_ret = -1;
 
-    cmd_ret = m_sev_device->platform_status(data);
+    cmd_ret = m_sev_device->platform_status(reinterpret_cast<uint8_t *>(&data));
     if (cmd_ret != STATUS_SUCCESS)
         return -1;
 
-    return m_sev_device->get_platform_es(data);
+    return SEVDevice::get_platform_es(reinterpret_cast<uint8_t *>(&data));
 }
 
-int Command::set_self_owned(void)
+int Command::set_self_owned()
 {
     int cmd_ret = -1;
 
@@ -441,7 +423,7 @@ int Command::set_externally_owned(std::string oca_priv_key_file)
     return cmd_ret;
 }
 
-int Command::generate_cek_ask(void)
+int Command::generate_cek_ask()
 {
     int cmd_ret = -1;
 
@@ -452,7 +434,7 @@ int Command::generate_cek_ask(void)
     return (int)cmd_ret;
 }
 
-int Command::get_ask_ark(void)
+int Command::get_ask_ark()
 {
     int cmd_ret = -1;
 
@@ -463,12 +445,12 @@ int Command::get_ask_ark(void)
     return (int)cmd_ret;
 }
 
-int Command::generate_all_certs(void)
+int Command::generate_all_certs()
 {
     int cmd_ret = -1;
-    uint8_t pdh_cert_export_data[sizeof(sev_pdh_cert_export_cmd_buf)];  // pdh_cert_export
-    sev_cert_t *pdh = new sev_cert_t;
-    sev_cert_chain_buf *cert_chain = new sev_cert_chain_buf_t; // PEK, OCA, CEK
+    sev_pdh_cert_export_cmd_buf pdh_cert_export_data{};  // pdh_cert_export
+    auto pdh = std::make_unique<sev_cert_t>();
+    auto cert_chain = std::make_unique<sev_cert_chain_buf_t>(); // PEK, OCA, CEK
     amd_cert ask;
     amd_cert ark;
 
@@ -481,13 +463,12 @@ int Command::generate_all_certs(void)
     std::string cek_full = m_output_folder + CEK_FILENAME;
     std::string ask_full = m_output_folder + ASK_FILENAME;
     std::string ark_full = m_output_folder + ARK_FILENAME;
-    AMDCert tmp_amd;
-    std::string ask_string = ""; // For printing. AMD certs can't just print straight
-    std::string ark_string = ""; // bytes because they're unions based on key sizes
+    std::string ask_string; // For printing. AMD certs can't just print straight
+    std::string ark_string; // bytes because they're unions based on key sizes
 
     do {
         // Get the pdh Cert Chain (pdh and pek, oca, cek)
-        cmd_ret = m_sev_device->pdh_cert_export(pdh_cert_export_data, pdh, cert_chain);
+        cmd_ret = m_sev_device->pdh_cert_export(reinterpret_cast<uint8_t *>(&pdh_cert_export_data), pdh.get(), cert_chain.get());
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -502,19 +483,19 @@ int Command::generate_all_certs(void)
             break;
 
         // Read in the ask_ark so we can split it into 2 separate cert files
-        uint8_t ask_ark_buf[sizeof(amd_cert)*2] = {0};
-        if (sev::read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0)
+        std::array<uint8_t, sizeof(amd_cert)*2> ask_ark_buf{};
+        if (sev::read_file(ask_ark_full, ask_ark_buf.data(), sizeof(ask_ark_buf)) == 0)
             break;
 
         // Initialize the ask
-        cmd_ret = tmp_amd.amd_cert_init(&ask, ask_ark_buf);
+        cmd_ret = AMDCert::amd_cert_init(&ask, ask_ark_buf.data());
         if (cmd_ret != STATUS_SUCCESS)
             break;
         // print_amd_cert_readable(&ask);
 
         // Initialize the ark
-        size_t ask_size = tmp_amd.amd_cert_get_size(&ask);
-        cmd_ret = tmp_amd.amd_cert_init(&ark, (uint8_t *)(ask_ark_buf + ask_size));
+        size_t ask_size = AMDCert::amd_cert_get_size(&ask);
+        cmd_ret = AMDCert::amd_cert_init(&ark, (uint8_t *)(ask_ark_buf.data() + ask_size));
         if (cmd_ret != STATUS_SUCCESS)
             break;
         // print_amd_cert_readable(&ark);
@@ -523,35 +504,29 @@ int Command::generate_all_certs(void)
         // Note that the CEK in the cert chain is unsigned, so we want to use
         //   the one 'cached by the hypervisor' that's signed by the ask
         //   (the one from the AMD dev site)
-        size_t ark_size = tmp_amd.amd_cert_get_size(&ark);
-        if (sev::write_file(pdh_full, pdh, sizeof(sev_cert)) != sizeof(sev_cert))
+        size_t ark_size = AMDCert::amd_cert_get_size(&ark);
+        if (sev::write_file(pdh_full, pdh.get(), sizeof(sev_cert)) != sizeof(sev_cert))
             break;
-        if (sev::write_file(pek_full, PEK_IN_CERT_CHAIN(cert_chain), sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::write_file(pek_full, PEK_IN_CERT_CHAIN(cert_chain.get()), sizeof(sev_cert)) != sizeof(sev_cert))
             break;
-        if (sev::write_file(oca_full, OCA_IN_CERT_CHAIN(cert_chain), sizeof(sev_cert)) != sizeof(sev_cert))
+        if (sev::write_file(oca_full, OCA_IN_CERT_CHAIN(cert_chain.get()), sizeof(sev_cert)) != sizeof(sev_cert))
             break;
         print_amd_cert_hex(&ask, ask_string);       // TODO refactor this
         print_amd_cert_hex(&ark, ark_string);
-        uint8_t ask_binary[ask_size*2];
-        uint8_t ark_binary[ark_size*2];
-        sev::ascii_hex_bytes_to_binary(ask_binary, ask_string.c_str(), ask_size);
-        sev::ascii_hex_bytes_to_binary(ark_binary, ark_string.c_str(), ark_size);
-        if (sev::write_file(ask_full, ask_binary, ask_size) != ask_size)
+        auto ask_binary = sev::ascii_hex_bytes_to_binary(ask_string.c_str(), ask_size);
+        auto ark_binary = sev::ascii_hex_bytes_to_binary(ark_string.c_str(), ark_size);
+        if (sev::write_file(ask_full, ask_binary.data(), ask_size) != ask_size)
             break;
-        if (sev::write_file(ark_full, ark_binary, ark_size) != ark_size)
+        if (sev::write_file(ark_full, ark_binary.data(), ark_size) != ark_size)
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
-
-    // Free memory
-    delete pdh;
-    delete cert_chain;
+    } while (false);
 
     return (int)cmd_ret;
 }
 
-int Command::export_cert_chain(void)
+int Command::export_cert_chain()
 {
     int cmd_ret = -1;
     std::string zip_name = CERTS_ZIP_FILENAME;
@@ -569,11 +544,11 @@ int Command::export_cert_chain(void)
             break;
 
         cmd_ret = sev::zip_certs(m_output_folder, zip_name, cert_names);
-    } while (0);
+    } while (false);
     return (int)cmd_ret;
 }
 
-int Command::generate_all_certs_vcek(void)
+int Command::generate_all_certs_vcek()
 {
     int cmd_ret = -1;
 
@@ -597,12 +572,12 @@ int Command::generate_all_certs_vcek(void)
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
 
-int Command::export_cert_chain_vcek(void)
+int Command::export_cert_chain_vcek()
 {
     int cmd_ret = -1;
     std::string zip_name = CERTS_VCEK_ZIP_FILENAME;
@@ -625,8 +600,15 @@ int Command::export_cert_chain_vcek(void)
             break;
 
         cmd_ret = sev::zip_certs(m_output_folder, zip_name, cert_names);
-    } while (0);
+    } while (false);
     return (int)cmd_ret;
+}
+
+auto create_HMAC_CTX()
+{
+    std::unique_ptr<HMAC_CTX, decltype(&HMAC_CTX_free)> result{nullptr, &HMAC_CTX_free};
+    result.reset(HMAC_CTX_new());
+    return result;
 }
 
 // We cannot call LaunchMeasure to get the MNonce because that command doesn't
@@ -638,37 +620,36 @@ int Command::calculate_measurement(measurement_t *user_data, hmac_sha_256 *final
     uint32_t measurement_length = sizeof(final_meas);
 
     // Create and initialize the context
-    HMAC_CTX *ctx;
-    if (!(ctx = HMAC_CTX_new()))
+    auto ctx = create_HMAC_CTX();
+    if (!ctx)
         return ERROR_BAD_MEASUREMENT;
 
     do {
-        if (HMAC_Init_ex(ctx, user_data->tik, sizeof(user_data->tik), EVP_sha256(), NULL) != 1)
+        if (HMAC_Init_ex(ctx.get(), user_data->tik, sizeof(user_data->tik), EVP_sha256(), nullptr) != 1)
             break;
         if (sev::min_api_version(user_data->api_major, user_data->api_minor, 0, 17)) {
-            if (HMAC_Update(ctx, &user_data->meas_ctx, sizeof(user_data->meas_ctx)) != 1)
+            if (HMAC_Update(ctx.get(), &user_data->meas_ctx, sizeof(user_data->meas_ctx)) != 1)
                 break;
-            if (HMAC_Update(ctx, &user_data->api_major, sizeof(user_data->api_major)) != 1)
+            if (HMAC_Update(ctx.get(), &user_data->api_major, sizeof(user_data->api_major)) != 1)
                 break;
-            if (HMAC_Update(ctx, &user_data->api_minor, sizeof(user_data->api_minor)) != 1)
+            if (HMAC_Update(ctx.get(), &user_data->api_minor, sizeof(user_data->api_minor)) != 1)
                 break;
-            if (HMAC_Update(ctx, &user_data->build_id, sizeof(user_data->build_id)) != 1)
+            if (HMAC_Update(ctx.get(), &user_data->build_id, sizeof(user_data->build_id)) != 1)
                 break;
         }
-        if (HMAC_Update(ctx, (uint8_t *)&user_data->policy, sizeof(user_data->policy)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t *>(&user_data->policy), sizeof(user_data->policy)) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&user_data->digest, sizeof(user_data->digest)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t *>(&user_data->digest), sizeof(user_data->digest)) != 1)
             break;
         // Use the same random MNonce as the FW in our validation calculations
-        if (HMAC_Update(ctx, (uint8_t *)&user_data->mnonce, sizeof(user_data->mnonce)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t *>(&user_data->mnonce), sizeof(user_data->mnonce)) != 1)
             break;
-        if (HMAC_Final(ctx, (uint8_t *)final_meas, &measurement_length) != 1)  // size = 32
+        if (HMAC_Final(ctx.get(), reinterpret_cast<uint8_t *>(final_meas), &measurement_length) != 1)  // size = 32
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
-    HMAC_CTX_free(ctx);
     return cmd_ret;
 }
 
@@ -682,11 +663,11 @@ int Command::calc_measurement(measurement_t *user_data)
     cmd_ret = calculate_measurement(user_data, &final_meas);
 
     if (cmd_ret == STATUS_SUCCESS) {
-        char meas_buf[sizeof(final_meas)*2+1] = {0}; // 2 chars per byte +1 for null term
+        std::string meas_str{};
+        meas_str.resize(sizeof(final_meas)*2);
         for (size_t i = 0; i < sizeof(final_meas); i++) {
-            sprintf(meas_buf+strlen(meas_buf), "%02x", final_meas[i]);
+            sprintf(meas_str.data()+2*i, "%02x", final_meas[i]);
         }
-        std::string meas_str = meas_buf;
 
         if (m_verbose_flag) {          // Print ID arrays
             // Print input args for user
@@ -697,21 +678,21 @@ int Command::calc_measurement(measurement_t *user_data)
             printf("   Build ID: %02x\n", user_data->build_id);
             printf("   Policy: %02x\n", user_data->policy);
             printf("   Digest: ");
-            for (size_t i = 0; i < sizeof(user_data->digest); i++) {
-                printf("%02x", user_data->digest[i]);
+            for (auto i: user_data->digest) {
+                printf("%02x", i);
             }
             printf("\n   MNonce: ");
-            for (size_t i = 0; i < sizeof(user_data->mnonce); i++) {
-                printf("%02x", user_data->mnonce[i]);
+            for (auto i: user_data->mnonce) {
+                printf("%02x", i);
             }
             printf("\n   TIK: ");
-            for (size_t i = 0; i < sizeof(user_data->tik); i++) {
-                printf("%02x", user_data->tik[i]);
+            for (auto i: user_data->tik) {
+                printf("%02x", i);
             }
             // Print output
             printf("\n\n%s\n", meas_str.c_str());
         }
-        if (m_output_folder != "") {     // Print the IDs to a text file
+        if (!m_output_folder.empty()) {     // Print the IDs to a text file
             sev::write_file(meas_readable_path, (void *)meas_str.c_str(), meas_str.size());
             sev::write_file(meas_path, (void *)final_meas, sizeof(final_meas));
         }
@@ -724,7 +705,6 @@ int Command::import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
                               sev_cert *cek, amd_cert *ask, amd_cert *ark)
 {
     int cmd_ret = ERROR_INVALID_CERTIFICATE;
-    AMDCert tmp_amd;
     std::string ark_full = m_output_folder + ARK_FILENAME;
     std::string ask_full = m_output_folder + ASK_FILENAME;
     std::string cek_full = m_output_folder + CEK_FILENAME;
@@ -734,22 +714,22 @@ int Command::import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
 
     do {
         // Read in the ark
-        uint8_t ark_buf[sizeof(amd_cert)] = {0};
-        if (sev::read_file(ark_full, ark_buf, sizeof(amd_cert)) == 0) // Variable size
+        amd_cert ark_buf{};
+        if (sev::read_file(ark_full, &ark_buf, sizeof(amd_cert)) == 0) // Variable size
             break;
 
         // Initialize the ark
-        cmd_ret = tmp_amd.amd_cert_init(ark, ark_buf);
+        cmd_ret = AMDCert::amd_cert_init(ark, reinterpret_cast<uint8_t *>(&ark_buf));
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
         // Read in the ark
-        uint8_t ask_buf[sizeof(amd_cert)] = {0};
-        if (sev::read_file(ask_full, ask_buf, sizeof(amd_cert)) == 0) // Variable size
+        amd_cert ask_buf{};
+        if (sev::read_file(ask_full, &ask_buf, sizeof(amd_cert)) == 0) // Variable size
             break;
 
         // Initialize the ark
-        cmd_ret = tmp_amd.amd_cert_init(ask, ask_buf);
+        cmd_ret = AMDCert::amd_cert_init(ask, reinterpret_cast<uint8_t *>(&ask_buf));
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -770,12 +750,12 @@ int Command::import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
             break;
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
 
-int Command::validate_cert_chain(void)
+int Command::validate_cert_chain()
 {
     int cmd_ret = -1;
     sev_cert pdh;
@@ -796,15 +776,14 @@ int Command::validate_cert_chain(void)
         SEVCert tmp_sev_cek(&cek);   // Pass in child cert in constructor
         SEVCert tmp_sev_pek(&pek);
         SEVCert tmp_sev_pdh(&pdh);
-        AMDCert tmp_amd;
 
         // Validate the ARK
-        cmd_ret = tmp_amd.amd_cert_validate_ark(&ark);
+        cmd_ret = AMDCert::amd_cert_validate_ark(&ark);
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
         // Validate the ASK
-        cmd_ret = tmp_amd.amd_cert_validate_ask(&ask, &ark);
+        cmd_ret = AMDCert::amd_cert_validate_ask(&ask, &ark);
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -812,7 +791,7 @@ int Command::validate_cert_chain(void)
         // The verify_sev_cert function takes in a parent of an sev_cert not
         //   an amd_cert, so need to pull the pubkey out of the amd_cert and
         //   place it into a tmp sev_cert to help validate the cek
-        cmd_ret = tmp_amd.amd_cert_export_pub_key(&ask, &ask_pubkey);
+        cmd_ret = AMDCert::amd_cert_export_pub_key(&ask, &ask_pubkey);
         if (cmd_ret != STATUS_SUCCESS)
             break;
 
@@ -830,7 +809,7 @@ int Command::validate_cert_chain(void)
         cmd_ret = tmp_sev_pdh.verify_sev_cert(&pek);
         if (cmd_ret != STATUS_SUCCESS)
             break;
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -844,7 +823,6 @@ int Command::generate_launch_blob(uint32_t policy)
     std::string tmp_tk_file = m_output_folder + GUEST_TK_FILENAME;
     std::string buf_file = m_output_folder + LAUNCH_BLOB_FILENAME;
     sev_cert pdh;
-    EVP_PKEY *godh_key_pair = NULL;      // Guest Owner Diffie-Hellman
     sev_cert godh_pubkey_cert;
 
     memset(&session_data_buf, 0, sizeof(sev_session_buf));
@@ -858,14 +836,15 @@ int Command::generate_launch_blob(uint32_t policy)
         SEVCert cert_obj(&godh_pubkey_cert);
 
         // Generate a new GODH Public/Private keypair
-        if (!generate_ecdh_key_pair(&godh_key_pair)) {
+        auto godh_key_pair = generate_ecdh_key_pair();
+        if (!godh_key_pair) {
             printf("Error generating new GODH ECDH keypair\n");
             break;
         }
 
         // This cert is really just a way to send over the godh public key,
         // so the api major/minor don't matter here
-        if (!cert_obj.create_godh_cert(&godh_key_pair, 0, 0)) {
+        if (!cert_obj.create_godh_cert(godh_key_pair.get(), 0, 0)) {
             printf("Error creating GODH certificate\n");
             break;
         }
@@ -875,33 +854,33 @@ int Command::generate_launch_blob(uint32_t policy)
         if (sev::write_file(godh_cert_file, &godh_pubkey_cert, sizeof(sev_cert)) != sizeof(sev_cert))
             break;
 
-        cmd_ret = build_session_buffer(&session_data_buf, policy, godh_key_pair, &pdh);
+        cmd_ret = build_session_buffer(&session_data_buf, policy, godh_key_pair.get(), &pdh);
         if (cmd_ret == STATUS_SUCCESS) {
             if (m_verbose_flag) {
                 printf("Guest Policy (input): %08x\n", policy);
                 printf("nonce:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.nonce); i++) {
-                    printf("%02x ", session_data_buf.nonce[i]);
+                for (auto i: session_data_buf.nonce) {
+                    printf("%02x ", i);
                 }
                 printf("\nWrapTK TEK:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.wrap_tk.tek); i++) {
-                    printf("%02x ", session_data_buf.wrap_tk.tek[i]);
+                for (auto i: session_data_buf.wrap_tk.tek) {
+                    printf("%02x ", i);
                 }
                 printf("\nWrapTK TIK:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.wrap_tk.tik); i++) {
-                    printf("%02x ", session_data_buf.wrap_tk.tik[i]);
+                for (auto i: session_data_buf.wrap_tk.tik) {
+                    printf("%02x ", i);
                 }
                 printf("\nWrapIV:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.wrap_iv); i++) {
-                    printf("%02x ", session_data_buf.wrap_iv[i]);
+                for (auto i: session_data_buf.wrap_iv) {
+                    printf("%02x ", i);
                 }
                 printf("\nWrapMAC:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.wrap_mac); i++) {
-                    printf("%02x ", session_data_buf.wrap_mac[i]);
+                for (auto i: session_data_buf.wrap_mac) {
+                    printf("%02x ", i);
                 }
                 printf("\nPolicyMAC:\n");
-                for (size_t i = 0; i < sizeof(session_data_buf.policy_mac); i++) {
-                    printf("%02x ", session_data_buf.policy_mac[i]);
+                for (auto i: session_data_buf.policy_mac) {
+                    printf("%02x ", i);
                 }
                 printf("\n");
             }
@@ -912,12 +891,12 @@ int Command::generate_launch_blob(uint32_t policy)
 
             sev::write_file(buf_file, (void *)&session_data_buf, sizeof(sev_session_buf));
         }
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
 
-int Command::package_secret(void)
+int Command::package_secret()
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     sev_hdr_buf packaged_secret_header;
@@ -940,12 +919,12 @@ int Command::package_secret(void)
             printf("Error: SEV requires a secret greater than 8 bytes\n");
             break;
         }
-        uint8_t secret_mem[secret_size];
-        uint8_t encrypted_mem[secret_size];
+        std::vector<uint8_t> secret_mem(secret_size);
+        std::vector<uint8_t> encrypted_mem(secret_size);
 
         // Read in the secret
         // printf("Attempting to read in Secrets file\n");
-        if (sev::read_file(secret_file, secret_mem, secret_size) != secret_size)
+        if (sev::read_file(secret_file, secret_mem.data(), secret_mem.size()) != secret_size)
             break;
 
         // Read in the PEK to obtain API major/minor version
@@ -960,12 +939,12 @@ int Command::package_secret(void)
         }
 
         // Encrypt the secret with the TEK
-        encrypt_with_tek(encrypted_mem, secret_mem, secret_size, iv);
+        encrypt_with_tek(encrypted_mem.data(), secret_mem.data(), secret_mem.size(), iv);
 
         if (m_verbose_flag) {
             printf("Random IV\n");
-            for (size_t i = 0; i < sizeof(iv); i++) {
-                printf("%02x ", iv[i]);
+            for (auto i: iv) {
+                printf("%02x ", i);
             }
             printf("\n");
         }
@@ -977,11 +956,11 @@ int Command::package_secret(void)
         }
 
         // Write the encrypted secret to a file
-        sev::write_file(packaged_secret_file, encrypted_mem, secret_size);
+        sev::write_file(packaged_secret_file, encrypted_mem.data(), encrypted_mem.size());
 
         // Set up the Launch_Secret packet header
-        if (!create_launch_secret_header(&packaged_secret_header, &iv, encrypted_mem,
-                                         sizeof(encrypted_mem), flags,
+        if (!create_launch_secret_header(&packaged_secret_header, &iv, encrypted_mem.data(),
+                                         encrypted_mem.size(), flags,
                                          pek.api_major, pek.api_minor)) {
             break;
         }
@@ -990,18 +969,24 @@ int Command::package_secret(void)
         sev::write_file(packaged_secret_header_file, &packaged_secret_header, sizeof(packaged_secret_header));
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
 
-int Command::validate_attestation(void)
+auto create_EVP_PKEY()
+{
+    std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> result{nullptr, &EVP_PKEY_free};
+    result.reset(EVP_PKEY_new());
+    return result;
+}
+
+int Command::validate_attestation()
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     std::string report_file = m_output_folder + ATTESTATION_REPORT_FILENAME;
     std::string pek_full = m_output_folder + PEK_FILENAME;
     bool success = false;
-    EVP_PKEY *pek_pub_key = NULL;
     sev_cert pek;
 
     do {
@@ -1011,12 +996,11 @@ int Command::validate_attestation(void)
             printf("Error: The size of the attestation report is %ld bytes\n", sizeof(attestation_report));
             break;
         }
-        uint8_t report_mem[report_size];
-        attestation_report *report = (attestation_report *)report_mem;
+        attestation_report report{};
 
         // Read in the report
         // printf("Attempting to read in Report file\n");
-        if (sev::read_file(report_file, report_mem, report_size) != report_size)
+        if (sev::read_file(report_file, &report, report_size) != report_size)
             break;
 
         // Read in the PEK (Platform Encryption Public Key)
@@ -1024,24 +1008,21 @@ int Command::validate_attestation(void)
             break;
 
         // Build up a pek_pub_key so we can verify the signature on the report
-        sev_cert dummy;
-        memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
-        SEVCert temp_obj(&dummy);               // TODO. Hack b/c just want to call function later
-
         // New up the pek_pub_key
-        if (!(pek_pub_key = EVP_PKEY_new()))
+        auto pek_pub_key = create_EVP_PKEY();
+        if (!pek_pub_key)
             break;
 
         // Get the friend's Public EVP_PKEY from the certificate
         // This function allocates memory and attaches an EC_Key
         //  to your EVP_PKEY so, to prevent mem leaks, make sure
         //  the EVP_PKEY is freed at the end of this function
-        if (temp_obj.compile_public_key_from_certificate(&pek, pek_pub_key) != STATUS_SUCCESS)
+        if (SEVCert::compile_public_key_from_certificate(&pek, pek_pub_key.get()) != STATUS_SUCCESS)
             break;
 
         // Validate the report
-        success = verify_message((sev_sig *)&report->sig1,
-                                  &pek_pub_key, report_mem,
+        success = verify_message(reinterpret_cast<sev_sig *>(&report.sig1), // FIXME: sig1 seems to be smaller than sev_sig
+                                  pek_pub_key.get(), reinterpret_cast<uint8_t *>(&report),
                                   offsetof(attestation_report, sig_usage),
                                   SEV_SIG_ALGO_ECDSA_SHA256);
         if (!success) {
@@ -1051,22 +1032,24 @@ int Command::validate_attestation(void)
 
         printf("Attestation report validated successfully!\n");
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
-
-    // Free memory
-    EVP_PKEY_free(pek_pub_key);
+    } while (false);
 
     return (int)cmd_ret;
 }
 
-int Command::validate_guest_report(void)
+auto EVP_PKEY_from_X509(X509 *x509)
+{
+    std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> result{nullptr, &EVP_PKEY_free};
+    result.reset(X509_get_pubkey(x509));
+    return result;
+}
+
+int Command::validate_guest_report()
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     std::string report_file = m_output_folder + GUEST_REPORT_FILENAME;
     std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;
     bool success = false;
-    EVP_PKEY *vcek_pub_key = NULL;
-    X509 *x509_vcek = NULL;
 
     do {
         // Get the size of the report, so we can allocate that much memory
@@ -1075,20 +1058,20 @@ int Command::validate_guest_report(void)
             printf("Error: The size of the attestation report is %ld bytes\n", sizeof(snp_attestation_report_t));
             break;
         }
-        uint8_t report_mem[report_size];
-        snp_attestation_report_t *report = (snp_attestation_report_t *)report_mem;
+        snp_attestation_report_t report{};
 
         // Read in the report
         // printf("Attempting to read in Report file\n");
-        if (sev::read_file(report_file, report_mem, report_size) != report_size)
+        if (sev::read_file(report_file, &report, report_size) != report_size)
             break;
 
         // Read in the VCEK
-        if (!read_pem_into_x509(vcek_file, &x509_vcek))
+        auto x509_vcek = read_pem_into_x509(vcek_file);
+        if (!x509_vcek)
             break;
         // X509_print_fp(stdout, x509_vcek);
 
-        vcek_pub_key = X509_get_pubkey(x509_vcek);
+        auto vcek_pub_key = EVP_PKEY_from_X509(x509_vcek.get());
         if (!vcek_pub_key)
             break;
 
@@ -1100,8 +1083,8 @@ int Command::validate_guest_report(void)
         // BIO_free(out2);
 
         // Validate the report
-        success = verify_message((sev_sig *)&report->signature,
-                                  &vcek_pub_key, report_mem,
+        success = verify_message(reinterpret_cast<sev_sig *>(&report.signature),
+                                  vcek_pub_key.get(), reinterpret_cast<uint8_t *>(&report),
                                   offsetof(snp_attestation_report_t, signature),
                                   SEV_SIG_ALGO_ECDSA_SHA384);
         if (!success) {
@@ -1111,66 +1094,50 @@ int Command::validate_guest_report(void)
 
         printf("Guest report validated successfully!\n");
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
-
-    // Free memory
-    EVP_PKEY_free(vcek_pub_key);
-    X509_free(x509_vcek);
+    } while (false);
 
     return (int)cmd_ret;
 }
 
-int Command::validate_cert_chain_vcek(void)
+int Command::validate_cert_chain_vcek()
 {
     int cmd_ret = ERROR_UNSUPPORTED;
     std::string vcek_file = m_output_folder + VCEK_PEM_FILENAME;
     std::string ask_file = m_output_folder + VCEK_ASK_PEM_FILENAME;
     std::string ark_file = m_output_folder + VCEK_ARK_PEM_FILENAME;
-    X509 *x509_vcek = NULL;
-    X509 *x509_ask = NULL;
-    X509 *x509_ark = NULL;
-    EVP_PKEY *vcek_pub_key = NULL;
 
     do {
         // Read in the ARK, ASK, and VCEK pem files
-        if (!read_pem_into_x509(ark_file, &x509_ark))
+        auto x509_ark = read_pem_into_x509(ark_file);
+        if (!x509_ark)
             break;
-        if (!read_pem_into_x509(ask_file, &x509_ask))
+        auto x509_ask = read_pem_into_x509(ask_file);
+        if (!x509_ask)
             break;
-        if (!read_pem_into_x509(vcek_file, &x509_vcek))
+        auto x509_vcek = read_pem_into_x509(vcek_file);
+        if (!x509_vcek)
             break;
         // X509_print_fp(stdout, x509_vcek);
 
-        // Extract the vcek public key
-        vcek_pub_key = X509_get_pubkey(x509_vcek);
-        if (!vcek_pub_key)
-            break;
-
         // Verify the signatures of the certs
-        if (!x509_validate_signature(x509_ark, NULL, x509_ark)) {   // Verify the ARK self-signed the ARK
+        if (!x509_validate_signature(x509_ark.get(), nullptr, x509_ark.get())) {   // Verify the ARK self-signed the ARK
             printf("Error validating signature of x509_ark certs\n");
             break;
         }
 
-        if (!x509_validate_signature(x509_ask, NULL, x509_ark)) {   // Verify the ARK signed the ASK
+        if (!x509_validate_signature(x509_ask.get(), nullptr, x509_ark.get())) {   // Verify the ARK signed the ASK
             printf("Error validating signature of x509_ask certs\n");
             break;
         }
 
-        if (!x509_validate_signature(x509_vcek, x509_ask, x509_ark)) {  // Verify the ASK signed the VCEK
+        if (!x509_validate_signature(x509_vcek.get(), x509_ask.get(), x509_ark.get())) {  // Verify the ASK signed the VCEK
             printf("Error validating signature of x509_vcek certs\n");
             break;
         }
 
         printf("VCEK cert chain validated successfully!\n");
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
-
-    // Free memory
-    EVP_PKEY_free(vcek_pub_key);
-    X509_free(x509_vcek);
-    X509_free(x509_ask);
-    X509_free(x509_ark);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -1186,17 +1153,17 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
                   const uint8_t *label,   size_t label_length,
                   const uint8_t *context, size_t context_length)
 {
-    if (!key_out || !key_in || !label || (key_out_length == 0) ||
+    if ((key_out == nullptr) || (key_in == nullptr) || (label == nullptr) || (key_out_length == 0) ||
        (key_in_length == 0) || (label_length == 0))
         return false;
 
     bool cmd_ret = false;
     uint8_t null_byte = '\0';
     unsigned int out_len = 0;
-    uint8_t prf_out[NIST_KDF_H_BYTES];      // Buffer to collect PRF output
+    std::array<uint8_t, NIST_KDF_H_BYTES> prf_out{};      // Buffer to collect PRF output
 
     // length in bits of derived key
-    uint32_t l = (uint32_t)(key_out_length * BITS_PER_BYTE);
+    auto l = (uint32_t)(key_out_length * BITS_PER_BYTE);
 
     // number of iterations to produce enough derived key bits
     uint32_t n = ((l - 1) / NIST_KDF_H) + 1;
@@ -1205,48 +1172,47 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
     uint32_t offset = 0;
 
     // Create and initialize the context
-    HMAC_CTX *ctx;
-    if (!(ctx = HMAC_CTX_new()))
+    auto ctx = create_HMAC_CTX();
+    if (!ctx)
         return cmd_ret;
 
     for (unsigned int i = 1; i <= n; i++)
     {
-        if (HMAC_CTX_reset(ctx) != 1)
+        if (HMAC_CTX_reset(ctx.get()) != 1)
             break;
 
         // calculate a chunk of random data from the PRF
-        if (HMAC_Init_ex(ctx, key_in, (int)key_in_length, EVP_sha256(), NULL) != 1)
+        if (HMAC_Init_ex(ctx.get(), key_in, (int)key_in_length, EVP_sha256(), nullptr) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&i, sizeof(i)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&i), sizeof(i)) != 1)
             break;
-        if (HMAC_Update(ctx, (unsigned char*)label, label_length) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<unsigned char const *>(label), label_length) != 1)
             break;
-        if (HMAC_Update(ctx, &null_byte, sizeof(null_byte)) != 1)
+        if (HMAC_Update(ctx.get(), &null_byte, sizeof(null_byte)) != 1)
             break;
-        if ((context) && (context_length != 0)) {
-            if (HMAC_Update(ctx, (unsigned char*)context, context_length) != 1)
+        if ((context != nullptr) && (context_length != 0)) {
+            if (HMAC_Update(ctx.get(), (unsigned char const*)context, context_length) != 1)
                 break;
         }
-        if (HMAC_Update(ctx, (uint8_t *)&l, sizeof(l)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&l), sizeof(l)) != 1)
             break;
-        if (HMAC_Final(ctx, prf_out, &out_len) != 1)
+        if (HMAC_Final(ctx.get(), prf_out.data(), &out_len) != 1)
             break;
 
         // Write out the key bytes
-        if (bytes_left <= NIST_KDF_H_BYTES) {
-            memcpy(key_out + offset, prf_out, bytes_left);
+        if (bytes_left <= prf_out.size()) {
+            memcpy(key_out + offset, prf_out.data(), bytes_left);
         }
         else {
-            memcpy(key_out + offset, prf_out, NIST_KDF_H_BYTES);
-            offset     += NIST_KDF_H_BYTES;
-            bytes_left -= NIST_KDF_H_BYTES;
+            memcpy(key_out + offset, prf_out.data(), prf_out.size());
+            offset     += prf_out.size();
+            bytes_left -= prf_out.size();
         }
 
         if (i == n)          // If successfully finished all iterations
             cmd_ret = true;
     }
 
-    HMAC_CTX_free(ctx);
     return cmd_ret;
 }
 
@@ -1258,43 +1224,42 @@ bool Command::kdf(uint8_t *key_out,       size_t key_out_length,
 uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
                                            size_t& shared_key_len_out)
 {
-    if (!priv_key || !peer_key)
-        return NULL;
+    if ((priv_key == nullptr) || (peer_key == nullptr))
+        return nullptr;
 
     bool success = false;
-    EVP_PKEY_CTX *ctx = NULL;
-    uint8_t *shared_key = NULL;
+    uint8_t *shared_key = nullptr;
 
     do {
         // Create the context using your private key
-        if (!(ctx = EVP_PKEY_CTX_new(priv_key, NULL)))
+        std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> ctx{nullptr, &EVP_PKEY_CTX_free};
+        ctx.reset(EVP_PKEY_CTX_new(priv_key, nullptr));
+        if (!ctx)
             break;
 
         // Calculate the intermediate secret
-        if (EVP_PKEY_derive_init(ctx) <= 0)
+        if (EVP_PKEY_derive_init(ctx.get()) <= 0)
             break;
-        if (EVP_PKEY_derive_set_peer(ctx, peer_key) <= 0)
+        if (EVP_PKEY_derive_set_peer(ctx.get(), peer_key) <= 0)
             break;
 
         // Determine buffer length
-        if (EVP_PKEY_derive(ctx, NULL, &shared_key_len_out) <= 0)
+        if (EVP_PKEY_derive(ctx.get(), nullptr, &shared_key_len_out) <= 0)
             break;
 
         // Need to free shared_key using OPENSSL_FREE() in the calling function
-        shared_key = (unsigned char*)OPENSSL_malloc(shared_key_len_out);
-        if (!shared_key)
+        shared_key = reinterpret_cast<unsigned char*>(OPENSSL_malloc(shared_key_len_out));
+        if (shared_key != nullptr)
             break;      // malloc failure
 
         // Compute the shared secret with the ECDH key material.
-        if (EVP_PKEY_derive(ctx, shared_key, &shared_key_len_out) <= 0)
+        if (EVP_PKEY_derive(ctx.get(), shared_key, &shared_key_len_out) <= 0)
             break;
 
         success = true;
-    } while (0);
+    } while (false);
 
-    EVP_PKEY_CTX_free(ctx);
-
-    return success ? shared_key : NULL;
+    return success ? shared_key : nullptr;
 }
 
 /*
@@ -1306,51 +1271,48 @@ uint8_t * Command::calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_ke
 bool Command::derive_master_secret(aes_128_key master_secret,
                                    EVP_PKEY *godh_priv_key,
                                    const sev_cert *pdh_public,
-                                   const uint8_t nonce[sizeof(nonce_128)])
+                                   const nonce_128 nonce)
 {
-    if (!godh_priv_key || !pdh_public)
+    if ((godh_priv_key == nullptr) || (pdh_public == nullptr))
         return false;
 
     sev_cert dummy;
     memset(&dummy, 0, sizeof(sev_cert));    // To remove compile warnings
     SEVCert temp_obj(&dummy);                // TODO. Hack b/c just want to call function later
     bool ret = false;
-    EVP_PKEY *plat_pub_key = NULL;    // Platform public key
     size_t shared_key_len = 0;
 
     do {
         // New up the Platform's public EVP_PKEY
-        if (!(plat_pub_key = EVP_PKEY_new()))
+        auto platform_public_key = create_EVP_PKEY();
+        if (!platform_public_key)
             break;
 
         // Get the friend's Public EVP_PKEY from the certificate
         // This function allocates memory and attaches an EC_Key
         //  to your EVP_PKEY so, to prevent mem leaks, make sure
         //  the EVP_PKEY is freed at the end of this function
-        if (temp_obj.compile_public_key_from_certificate(pdh_public, plat_pub_key) != STATUS_SUCCESS)
+        if (SEVCert::compile_public_key_from_certificate(pdh_public, platform_public_key.get()) != STATUS_SUCCESS)
             break;
 
         // Calculate the shared secret
         // This function is allocating memory for this uint8_t[],
         //  must free it at the end of this function
-        uint8_t *shared_key = calculate_shared_secret(godh_priv_key, plat_pub_key, shared_key_len);
-        if (!shared_key)
+        uint8_t *shared_key = calculate_shared_secret(godh_priv_key, platform_public_key.get(), shared_key_len);
+        if (shared_key != nullptr)
             break;
 
         // Derive the master secret from the intermediate secret
         if (!kdf((unsigned char*)master_secret, sizeof(aes_128_key), shared_key,
-            shared_key_len, (uint8_t *)SEV_MASTER_SECRET_LABEL,
-            sizeof(SEV_MASTER_SECRET_LABEL)-1, nonce, sizeof(nonce_128))) // sizeof(nonce), bad?
+            shared_key_len, reinterpret_cast<uint8_t const *>(SEV_MASTER_SECRET_LABEL),
+            sizeof(SEV_MASTER_SECRET_LABEL)-1, reinterpret_cast<uint8_t *>(&nonce), sizeof(nonce_128))) // sizeof(nonce), bad?
             break;
 
         // Free memory allocated in calculate_shared_secret
         OPENSSL_free(shared_key);    // Local variable
 
         ret = true;
-    } while (0);
-
-    // Free memory
-    EVP_PKEY_free(plat_pub_key);
+    } while (false);
 
     return ret;
 }
@@ -1358,30 +1320,27 @@ bool Command::derive_master_secret(aes_128_key master_secret,
 bool Command::derive_kek(aes_128_key kek, const aes_128_key master_secret)
 {
     bool ret = kdf((unsigned char*)kek, sizeof(aes_128_key), master_secret, sizeof(aes_128_key),
-                   (uint8_t *)SEV_KEK_LABEL, sizeof(SEV_KEK_LABEL)-1, NULL, 0);
+                   reinterpret_cast<uint8_t const *>(SEV_KEK_LABEL), sizeof(SEV_KEK_LABEL)-1, nullptr, 0);
     return ret;
 }
 
 bool Command::derive_kik(hmac_key_128 kik, const aes_128_key master_secret)
 {
     bool ret = kdf((unsigned char*)kik, sizeof(aes_128_key), master_secret, sizeof(aes_128_key),
-                   (uint8_t *)SEV_KIK_LABEL, sizeof(SEV_KIK_LABEL)-1, NULL, 0);
+                   reinterpret_cast<uint8_t const *>(SEV_KIK_LABEL), sizeof(SEV_KIK_LABEL)-1, nullptr, 0);
     return ret;
 }
 
 bool Command::gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len)
 {
-    if (!out || !msg)
+    if ((out == nullptr) || (msg == nullptr))
         return false;
 
     unsigned int out_len = 0;
     HMAC(EVP_sha256(), key, sizeof(hmac_key_128), msg,    // Returns NULL or value of out
-         msg_len, (uint8_t *)out, &out_len);
+         msg_len, reinterpret_cast<uint8_t *>(out), &out_len);
 
-    if ((out != NULL) && (out_len == sizeof(hmac_sha_256)))
-        return true;
-    else
-        return false;
+    return (out != nullptr) && (out_len == sizeof(hmac_sha_256));
 }
 
 /*
@@ -1390,37 +1349,35 @@ bool Command::gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t
 bool Command::encrypt(uint8_t *out, const uint8_t *in, size_t length,
                       const aes_128_key Key, const iv_128 IV)
 {
-    if (!out || !in)
+    if ((out == nullptr) || (in == nullptr))
         return false;
 
-    EVP_CIPHER_CTX *ctx;
     int len = 0;
     bool cmd_ret = false;
 
     do {
         // Create and initialize the context
-        if (!(ctx = EVP_CIPHER_CTX_new()))
+        std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> ctx{nullptr, &EVP_CIPHER_CTX_free};
+        ctx.reset(EVP_CIPHER_CTX_new());
+        if (!ctx)
             break;
 
         // Initialize the encryption operation. IMPORTANT - ensure you
         // use a key and IV size appropriate for your cipher
-        if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), NULL, Key, IV) != 1)
+        if (EVP_EncryptInit_ex(ctx.get(), EVP_aes_128_ctr(), nullptr, Key, IV) != 1)
             break;
 
         // Provide the message to be encrypted, and obtain the encrypted output
-        if (EVP_EncryptUpdate(ctx, out, &len, in, (int)length) != 1)
+        if (EVP_EncryptUpdate(ctx.get(), out, &len, in, (int)length) != 1)
             break;
 
         // Finalize the encryption. Further out bytes may be written at
         // this stage
-        if (EVP_EncryptFinal_ex(ctx, out + len, &len) != 1)
+        if (EVP_EncryptFinal_ex(ctx.get(), out + len, &len) != 1)
             break;
 
         cmd_ret = true;
-    } while (0);
-
-    // Clean up
-    EVP_CIPHER_CTX_free(ctx);
+    } while (false);
 
     return cmd_ret;
 }
@@ -1460,15 +1417,15 @@ int Command::build_session_buffer(sev_session_buf *buf, uint32_t guest_policy,
 
         // Create an IV and wrap the TK with KEK and IV
         sev::gen_random_bytes(iv, sizeof(iv_128));
-        if (!encrypt((uint8_t *)&wrap_tk, (uint8_t *)&m_tk, sizeof(m_tk), kek, iv))
+        if (!encrypt(reinterpret_cast<uint8_t *>(&wrap_tk), reinterpret_cast<uint8_t *>(&m_tk), sizeof(m_tk), kek, iv))
             break;
 
         // Generate the HMAC for the wrap_tk
-        if (!gen_hmac(&wrap_mac, kik, (uint8_t *)&wrap_tk, sizeof(wrap_tk)))
+        if (!gen_hmac(&wrap_mac, kik, reinterpret_cast<uint8_t *>(&wrap_tk), sizeof(wrap_tk)))
             break;
 
         // Generate the HMAC for the Policy bits
-        if (!gen_hmac(&policy_mac, m_tk.tik, (uint8_t *)&guest_policy, sizeof(guest_policy)))
+        if (!gen_hmac(&policy_mac, m_tk.tik, reinterpret_cast<uint8_t *>(&guest_policy), sizeof(guest_policy)))
             break;
 
         // Copy everything to the session data buffer
@@ -1479,7 +1436,7 @@ int Command::build_session_buffer(sev_session_buf *buf, uint32_t guest_policy,
         memcpy(&buf->policy_mac, &policy_mac, sizeof(buf->policy_mac));
 
         cmd_ret = STATUS_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -1507,43 +1464,41 @@ bool Command::create_launch_secret_header(sev_hdr_buf *out_header, iv_128 *iv,
     const uint8_t meas_ctx = 0x01;
     sev_hdr_buf header;
     uint32_t measurement_length = sizeof(header.mac);
-    const uint32_t buf_len = (uint32_t)buffer_len;
+    const auto buf_len = (uint32_t)buffer_len;
 
     memcpy(header.iv, iv, sizeof(iv_128));
     header.flags = hdr_flags;
 
     // Create and initialize the context
-    HMAC_CTX *ctx;
-    if (!(ctx = HMAC_CTX_new()))
+    auto ctx = create_HMAC_CTX();
+    if (!ctx)
         return ret;
 
     do {
-        if (HMAC_Init_ex(ctx, m_tk.tik, sizeof(m_tk.tik), EVP_sha256(), NULL) != 1)
+        if (HMAC_Init_ex(ctx.get(), m_tk.tik, sizeof(m_tk.tik), EVP_sha256(), nullptr) != 1)
             break;
-        if (HMAC_Update(ctx, &meas_ctx, sizeof(meas_ctx)) != 1)
+        if (HMAC_Update(ctx.get(), &meas_ctx, sizeof(meas_ctx)) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&header.flags, sizeof(header.flags)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&header.flags), sizeof(header.flags)) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&header.iv, sizeof(header.iv)) != 1)
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&header.iv), sizeof(header.iv)) != 1)
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&buf_len, sizeof(buf_len)) != 1) // Guest Length
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&buf_len), sizeof(buf_len)) != 1) // Guest Length
             break;
-        if (HMAC_Update(ctx, (uint8_t *)&buf_len, sizeof(buf_len)) != 1) // Trans Length
+        if (HMAC_Update(ctx.get(), reinterpret_cast<uint8_t const *>(&buf_len), sizeof(buf_len)) != 1) // Trans Length
             break;
-        if (HMAC_Update(ctx, buf, buf_len) != 1)                        // Data
+        if (HMAC_Update(ctx.get(), buf, buf_len) != 1)                        // Data
             break;
         if (sev::min_api_version(api_major, api_minor, 0, 17)) {
-            if (HMAC_Update(ctx, m_measurement, sizeof(m_measurement)) != 1) // Measure
+            if (HMAC_Update(ctx.get(), m_measurement, sizeof(m_measurement)) != 1) // Measure
                 break;
         }
-        if (HMAC_Final(ctx, (uint8_t *)&header.mac, &measurement_length) != 1)
+        if (HMAC_Final(ctx.get(), reinterpret_cast<uint8_t *>(&header.mac), &measurement_length) != 1)
             break;
 
         memcpy(out_header, &header, sizeof(sev_hdr_buf));
         ret = true;
-    } while (0);
-
-    HMAC_CTX_free(ctx);
+    } while (false);
 
     return ret;
 }

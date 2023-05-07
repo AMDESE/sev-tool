@@ -29,24 +29,25 @@
 #include <unistd.h>         // for close()
 #include <uuid/uuid.h>
 #include <stdexcept>        // for std::runtime_error()
+#include <memory>
 
 // -------------- Global Functions that don't require ioctls -------------- //
 void sev::get_family_model(uint32_t *family, uint32_t *model)
 {
-    std::string cmd = "";
-    std::string fam_str = "";
-    std::string model_str = "";
+    std::string cmd;
+    std::string fam_str;
+    std::string model_str;
 
     cmd = "lscpu | grep -E \"^CPU family:\" | awk {'print $3'}";
     sev::execute_system_command(cmd, &fam_str);
     cmd = "lscpu | grep -E \"^Model:\" | awk {'print $2'}";
     sev::execute_system_command(cmd, &model_str);
 
-    *family = std::stoi(fam_str, NULL, 10);
-    *model = std::stoi(model_str, NULL, 10);
+    *family = std::stoi(fam_str, nullptr, 10);
+    *model = std::stoi(model_str, nullptr, 10);
 }
 
-ePSP_DEVICE_TYPE sev::get_device_type(void)
+ePSP_DEVICE_TYPE sev::get_device_type()
 {
     uint32_t family = 0;
     uint32_t model = 0;
@@ -56,14 +57,13 @@ ePSP_DEVICE_TYPE sev::get_device_type(void)
     if (family == NAPLES_FAMILY && (int)model >= (int)NAPLES_MODEL_LOW && model <= NAPLES_MODEL_HIGH) {
         return PSP_DEVICE_TYPE_NAPLES;
     }
-    else if (family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
+    if (family == ROME_FAMILY && model >= ROME_MODEL_LOW && model <= ROME_MODEL_HIGH) {
         return PSP_DEVICE_TYPE_ROME;
     }
-    else if (family == MILAN_FAMILY && (int)model >= (int)MILAN_MODEL_LOW && model <= MILAN_MODEL_HIGH) {
+    if (family == MILAN_FAMILY && (int)model >= (int)MILAN_MODEL_LOW && model <= MILAN_MODEL_HIGH) {
         return PSP_DEVICE_TYPE_MILAN;
     }
-    else
-        return PSP_DEVICE_TYPE_INVALID;
+            return PSP_DEVICE_TYPE_INVALID;
 }
 
 /**
@@ -75,20 +75,17 @@ ePSP_DEVICE_TYPE sev::get_device_type(void)
 bool sev::min_api_version(unsigned platform_major, unsigned platform_minor,
                           unsigned api_major, unsigned api_minor)
 {
-    if ((platform_major < api_major) ||
-        (platform_major == api_major && platform_minor < api_minor))
-        return false;
-    else
-        return true;
+    return !((platform_major < api_major) ||
+        (platform_major == api_major && platform_minor < api_minor));
 }
 
 int sev::get_ask_ark(const std::string output_folder, const std::string cert_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     std::string cmd = "wget ";
-    std::string output = "";
+    std::string output;
     ePSP_DEVICE_TYPE device_type = PSP_DEVICE_TYPE_INVALID;
-    std::string cert_w_path = "";
+    std::string cert_w_path;
 
     do {
         cmd += "-O " + output_folder + cert_file + " ";
@@ -132,7 +129,7 @@ int sev::get_ask_ark(const std::string output_folder, const std::string cert_fil
         }
 
         cmd_ret = SEV_RET_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -141,9 +138,9 @@ int sev::get_ask_ark_pem(const std::string output_folder, const std::string cert
                          const std::string ask_file, const std::string ark_file)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
-    struct stat file_details;
+    struct stat file_details{};
     std::string cmd = "wget ";
-    std::string output = "";
+    std::string output;
     std::string cert_chain_w_path = output_folder + cert_chain_file;
     std::string ask_w_path = output_folder + ask_file;
     std::string ark_w_path = output_folder + ark_file;
@@ -208,7 +205,7 @@ int sev::get_ask_ark_pem(const std::string output_folder, const std::string cert
         }
 
         cmd_ret = SEV_RET_SUCCESS;
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -217,8 +214,8 @@ int sev::zip_certs(const std::string output_folder, const std::string zip_name,
                    const std::string files_to_zip)
 {
     int cmd_ret = SEV_RET_SUCCESS;
-    std::string cmd = "";
-    std::string output = "";
+    std::string cmd;
+    std::string output;
     std::string error = "zip error";
 
     cmd = "zip -j " + output_folder + zip_name + " " + files_to_zip;
@@ -241,7 +238,7 @@ SEVDevice::~SEVDevice()
     mFd = -1;
 }
 
-SEVDevice& SEVDevice::get_sev_device(void)
+SEVDevice& SEVDevice::get_sev_device()
 {
     static SEVDevice m_sev_device;
     m_sev_device.mFd = open(DEFAULT_SEV_DEVICE.c_str(), O_RDWR);
@@ -254,10 +251,10 @@ SEVDevice& SEVDevice::get_sev_device(void)
 int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
 {
     int ioctl_ret = -1;
-    sev_issue_cmd arg;
+    sev_issue_cmd arg{};
 
     arg.cmd = (uint32_t)cmd;
-    arg.data = (uint64_t)data;
+    arg.data = data;
 
     if (cmd == SEV_GET_ID) {
         /*
@@ -267,15 +264,15 @@ int SEVDevice::sev_ioctl(int cmd, void *data, int *cmd_ret)
          *       a bootup or when it's run a few seconds after switching between
          *       self-owned and externally-owned (both directions).
          */
-        sev_user_data_status status_data;  // Platform Status
-        *cmd_ret = platform_status((uint8_t *)&status_data);
+        sev_user_data_status status_data{};  // Platform Status
+        *cmd_ret = platform_status(reinterpret_cast<uint8_t *>(&status_data));
         if (*cmd_ret != 0)
             return ioctl_ret;
 
         if (status_data.api_major == 0 && status_data.api_minor <= 17 &&
             status_data.build < 19) {
             printf("Adding a 5 second delay to account for Naples GetID bug...\n");
-            ioctl_ret = ioctl(get_fd(), SEV_ISSUE_CMD, &arg);
+            ioctl(get_fd(), SEV_ISSUE_CMD, &arg);
             usleep(5000000);    // 5 seconds
         }
     }
@@ -304,12 +301,12 @@ int SEVDevice::factory_reset()
 
 int SEVDevice::get_platform_owner(void *data)
 {
-    return ((sev_user_data_status *)data)->flags & PLAT_STAT_OWNER_MASK;
+    return reinterpret_cast<sev_user_data_status *>(data)->flags & PLAT_STAT_OWNER_MASK;
 }
 
 int SEVDevice::get_platform_es(void *data)
 {
-    return ((sev_user_data_status *)data)->flags & PLAT_STAT_ES_MASK;
+    return reinterpret_cast<sev_user_data_status *>(data)->flags & PLAT_STAT_ES_MASK;
 }
 
 int SEVDevice::platform_status(uint8_t *data)
@@ -342,7 +339,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_pek_csr *data_buf = (sev_user_data_pek_csr *)data;
+    auto *data_buf = reinterpret_cast<sev_user_data_pek_csr *>(data);
     SEVCert csr_obj(csr);
 
     // Set struct to 0
@@ -350,7 +347,7 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
 
     do {
         // Populate PEKCSR buffer with CSRLength = 0
-        data_buf->address = (uint64_t)pek_mem;
+        data_buf->address = pek_mem;
         data_buf->length = 0;
 
         // Send the command. This is to get the MinSize length. If you
@@ -369,12 +366,12 @@ int SEVDevice::pek_csr(uint8_t *data, void *pek_mem, sev_cert *csr)
             break;
 
         // Verify the CSR complies to API specification
-        memcpy(csr, (sev_cert*)data_buf->address, sizeof(sev_cert));
+        memcpy(csr, reinterpret_cast<sev_cert const *>(data_buf->address), sizeof(sev_cert));
         if (csr_obj.validate_pek_csr() != STATUS_SUCCESS) {
             cmd_ret = SEV_RET_INVALID_CERTIFICATE;
             break;
         }
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -392,20 +389,20 @@ int SEVDevice::pdh_gen()
     return (int)cmd_ret;
 }
 
-int SEVDevice::pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
-                               void *cert_chain_mem)
+int SEVDevice::pdh_cert_export(uint8_t *data, sev_cert_t const *pdh_cert_mem,
+                               sev_cert_chain_buf_t const *cert_chain_mem)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_pdh_cert_export *data_buf = (sev_user_data_pdh_cert_export *)data;
+    auto *data_buf = reinterpret_cast<sev_user_data_pdh_cert_export *>(data);
 
     // Set struct to 0
     memset(data_buf, 0, sizeof(sev_user_data_pdh_cert_export));
 
     do {
-        data_buf->pdh_cert_address = (uint64_t)pdh_cert_mem;
+        data_buf->pdh_cert_address = pdh_cert_mem;
         data_buf->pdh_cert_len = sizeof(sev_cert);
-        data_buf->cert_chain_address = (uint64_t)cert_chain_mem;
+        data_buf->cert_chain_address = cert_chain_mem;
         data_buf->cert_chain_len = sizeof(sev_cert_chain_buf);
 
         // Send the command
@@ -413,7 +410,7 @@ int SEVDevice::pdh_cert_export(uint8_t *data, void *pdh_cert_mem,
         if (ioctl_ret != 0)
             break;
 
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -423,7 +420,7 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *signed_pek_csr,
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_pek_cert_import *data_buf = (sev_user_data_pek_cert_import *)data;
+    auto *data_buf = reinterpret_cast<sev_user_data_pek_cert_import *>(data);
     memset(data_buf, 0, sizeof(sev_user_data_pek_cert_import));
 
     do {
@@ -434,9 +431,9 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *signed_pek_csr,
             break;
         }
 
-        data_buf->pek_cert_address = (uint64_t)signed_pek_csr;
+        data_buf->pek_cert_address = signed_pek_csr;
         data_buf->pek_cert_len = sizeof(sev_cert);
-        data_buf->oca_cert_address = (uint64_t)oca_cert;
+        data_buf->oca_cert_address = oca_cert;
         data_buf->oca_cert_len = sizeof(sev_cert);
 
         // Send the command
@@ -444,7 +441,7 @@ int SEVDevice::pek_cert_import(uint8_t *data, sev_cert *signed_pek_csr,
         if (ioctl_ret != 0)
             break;
 
-    } while (0);
+    } while (false);
 
     return (int)cmd_ret;
 }
@@ -454,7 +451,7 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_get_id id_buf;    // Linux buffer is different than API spec. Don't point it to *data
+    sev_user_data_get_id id_buf{};    // Linux buffer is different than API spec. Don't point it to *data
 
     // Set struct to 0
     memset(&id_buf, 0, sizeof(sev_user_data_get_id));
@@ -473,40 +470,43 @@ int SEVDevice::get_id(void *data, void *id_mem, uint32_t id_length)
 
         // Copy the resulting IDs into the real buffer allocated for them
         memcpy(id_mem, &id_buf, id_length);
-    } while (0);
+    } while (false);
 
-    // The other functions in this file can do a direct mapping of the Linux
-    //   struct to the SEV API struct in sevapi.h, however, for this function,
-    //   this Linux struct doesn't match (at all) the API
-    // Hard coded hack mapping to sevapi.h. Don't want to include sevapi.h in this file
-    ((uint64_t *)data)[0] = (uint64_t)id_mem;      // Set address of id_mem as 64 bit PAddr from sevapi.h
-    ((uint32_t *)data)[2] = id_length;  // 3rd 32-bit chunk in the cmd_buf
+    using data_type = struct [[gnu::packed]] {
+        void *id_mem;
+        uint32_t id_length;
+    };
+
+    auto *dataptr = reinterpret_cast<data_type *>(data);
+    dataptr->id_mem = id_mem;
+    dataptr->id_length = id_length;
 
     return (int)cmd_ret;
 }
 
-std::string SEVDevice::display_build_info(void)
+std::string SEVDevice::display_build_info()
 {
     SEVDevice sev_device;
-    uint8_t status_data[sizeof(sev_platform_status_cmd_buf)];
-    sev_platform_status_cmd_buf *status_data_buf = (sev_platform_status_cmd_buf *)&status_data;
+    sev_platform_status_cmd_buf status;
     int cmd_ret = -1;
 
     std::string api_major_ver = "API_Major: xxx";
     std::string api_minor_ver = "API_Minor: xxx";
     std::string build_id_ver  = "BuildID: xxx";
 
-    cmd_ret = sev_device.platform_status(status_data);
+    cmd_ret = sev_device.platform_status(reinterpret_cast<uint8_t *>(&status));
     if (cmd_ret != 0)
         return "";
 
-    char major_buf[4], minor_buf[4], build_id_buf[4];   // +1 for Null char
-    sprintf(major_buf, "%d", status_data_buf->api_major);
-    sprintf(minor_buf, "%d", status_data_buf->api_minor);
-    sprintf(build_id_buf, "%d", status_data_buf->build_id);
-    api_major_ver.replace(11, 3, major_buf);
-    api_minor_ver.replace(11, 3, minor_buf);
-    build_id_ver.replace(9, 3, build_id_buf);
+    std::array<char, 4> major_buf{};
+    std::array<char, 4> minor_buf{};
+    std::array<char, 4> build_id_buf{};   // +1 for Null char
+    sprintf(major_buf.data(), "%d", status.api_major);
+    sprintf(minor_buf.data(), "%d", status.api_minor);
+    sprintf(build_id_buf.data(), "%d", status.build_id);
+    api_major_ver.replace(11, 3, major_buf.data());
+    api_minor_ver.replace(11, 3, minor_buf.data());
+    build_id_ver.replace(9, 3, build_id_buf.data());
 
     return api_major_ver + ", " + api_minor_ver + ", " + build_id_ver;
 }
@@ -514,8 +514,8 @@ std::string SEVDevice::display_build_info(void)
 int SEVDevice::sys_info()
 {
     int cmd_ret = SEV_RET_SUCCESS;
-    std::string cmd = "";
-    std::string output = "";
+    std::string cmd;
+    std::string output;
     uint32_t family = 0;
     uint32_t model = 0;
 
@@ -560,10 +560,10 @@ int SEVDevice::sys_info()
  */
 int SEVDevice::set_self_owned()
 {
-    sev_user_data_status status_data;  // Platform Status
+    sev_user_data_status status_data{};  // Platform Status
     int cmd_ret = SEV_RET_UNSUPPORTED;
 
-    cmd_ret = platform_status((uint8_t *)&status_data);
+    cmd_ret = platform_status(reinterpret_cast<uint8_t *>(&status_data));
     if (cmd_ret != SEV_RET_SUCCESS) {
         return cmd_ret;
     }
@@ -599,9 +599,9 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_get_id id_buf;
+    sev_user_data_get_id id_buf{};
     std::string cmd = "wget ";
-    std::string output = "";
+    std::string output;
     std::string to_cert_w_path = output_folder + cert_file;
 
     // Set struct to 0
@@ -620,12 +620,12 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
         // Copy the resulting IDs into the real buffer allocated for them
         // Note that Linux referrs to P0 and P1 as socket1 and socket2 (which is incorrect).
         //   So below, we are getting the ID for P0, which is the first socket
-        char id0_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
+        std::array<char, sizeof(id_buf.socket1)*2+1> id0_buf{};  // 2 chars per byte +1 for null term
         for (uint8_t i = 0; i < sizeof(id_buf.socket1); i++)
         {
-            sprintf(id0_buf+strlen(id0_buf), "%02x", id_buf.socket1[i]);
+            sprintf(id0_buf.data()+2*i, "%02x", id_buf.socket1[i]);
         }
-        cmd += id0_buf;
+        cmd += id0_buf.data();
 
         // Don't re-download the CEK from the KDS server if you already have it
         if (sev::get_file_size(to_cert_w_path) != 0) {
@@ -635,7 +635,7 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
         }
 
         // The AMD KDS server only accepts requests every 10 seconds
-        std::string cert_w_path = output_folder + id0_buf;
+        std::string cert_w_path = output_folder + id0_buf.data();
         bool cert_found = false;
         int sec_to_sleep = 6;
         int retries = 0;
@@ -668,7 +668,7 @@ int SEVDevice::generate_cek_ask(const std::string output_folder,
             cmd_ret = SEV_RET_UNSUPPORTED;
             break;
         }
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }
@@ -679,18 +679,12 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
 {
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
-    sev_user_data_get_id id_buf;
-    char cmd[235];
+    sev_user_data_get_id id_buf{};
+    std::array<char, 235> cmd{};
     std::string fmt;
-    std::string output = "";
+    std::string output;
     std::string der_cert_w_path = output_folder + vcek_der_file;
     std::string pem_cert_w_path = output_folder + vcek_pem_file;
-
-    // Set struct to 0
-    memset(&id_buf, 0, sizeof(sev_user_data_get_id));
-
-    // Zero the memory used for the URL, just in case.
-    memset(&cmd, 0, sizeof(cmd));
 
     do {
 
@@ -705,10 +699,10 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
         // Copy the resulting IDs into the real buffer allocated for them
         // Note that Linux referrs to P0 and P1 as socket1 and socket2 (which is incorrect).
         //   So below, we are getting the ID for P0, which is the first socket
-        char id0_buf[sizeof(id_buf.socket1)*2+1] = {0};  // 2 chars per byte +1 for null term
+        std::array<char, sizeof(id_buf.socket1)*2+1> id0_buf{};  // 2 chars per byte +1 for null term
         for (uint8_t i = 0; i < sizeof(id_buf.socket1); i++)
         {
-            sprintf(id0_buf+strlen(id0_buf), "%02x", id_buf.socket1[i]);
+            sprintf(id0_buf.data()+2*i, "%02x", id_buf.socket1[i]);
         }
 
         // Create a container to store the TCB Version in.
@@ -719,11 +713,11 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
 
         // Build the URL string.
         sprintf(
-            cmd,
+            cmd.data(),
             fmt.c_str(),
             der_cert_w_path.c_str(),
             KDS_VCEK,
-            id0_buf,
+            id0_buf.data(),
             tcb_data.f.boot_loader,
             tcb_data.f.tee,
             tcb_data.f.snp,
@@ -743,7 +737,7 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
         int retries = 0;
         int max_retries = (int)((10/sec_to_sleep)+2);
         while (!cert_found && retries <= max_retries) {
-            if (!sev::execute_system_command(cmd, &output)) {
+            if (!sev::execute_system_command(cmd.data(), &output)) {
                 printf("Error: pipe not opened for system command\n");
                 cmd_ret = SEV_RET_UNSUPPORTED;
                 break;
@@ -766,7 +760,7 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
 
         // Convert the file from a DER to a PEM file
         convert_der_to_pem(der_cert_w_path, pem_cert_w_path);
-    } while (0);
+    } while (false);
 
     return cmd_ret;
 }

@@ -18,6 +18,7 @@
 #define UTILITIES_H
 
 #include <string>
+#include <vector>
 
 namespace sev
 {
@@ -62,7 +63,10 @@ namespace sev
 
     static inline unsigned int cpuid_ebx(unsigned int op)
     {
-        unsigned int eax = op, ebx = 0, ecx = 0, edx = 0;
+        unsigned int eax = op;
+        unsigned int ebx = 0;
+        unsigned int ecx = 0;
+        unsigned int edx = 0;
 
         native_cpuid(&eax, &ebx, &ecx, &edx);
         return ebx;
@@ -115,7 +119,7 @@ namespace sev
      * If you have a buffer (or read in input file) that's in AsciiHexBytes,
      * such as the getid output files, this will read it back into a buffer
      */
-    void ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len);
+    std::vector<uint8_t> ascii_hex_bytes_to_binary(const char *in_bytes, size_t len);
 
     /**
      * Reverses bytes in a section of memory. Used in validating cert signatures

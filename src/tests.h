@@ -17,38 +17,40 @@
 #ifndef TESTS_H
 #define TESTS_H
 
+#include <string>
+
 class Tests {
 private:
-    std::string m_output_folder = "";
+    std::string m_output_folder;
     int m_verbose_flag = 0;
 
-    bool clear_output_folder(void);
+    bool clear_output_folder();
 
 public:
     Tests(std::string output_folder, int verbose_flag);
-    ~Tests() {};
+    ~Tests() = default;;
 
-    bool test_factory_reset(void);
-    bool test_platform_status(void);
-    bool test_pek_gen(void);
-    bool test_pek_csr(void);
-    bool test_sign_pek_csr(void);
-    bool test_pdh_gen(void);
-    bool test_pdh_cert_export(void);
-    bool test_pek_cert_import(void);
-    bool test_get_id(void);
-    bool test_set_self_owned(void);
-    bool test_set_externally_owned(void);
-    bool test_generate_cek_ask(void);
-    bool test_get_ask_ark(void);
-    bool test_export_cert_chain(void);
-    bool test_calc_measurement(void);
-    bool test_validate_cert_chain(void);
-    bool test_generate_launch_blob(void);
-    bool test_package_secret(void);
-    bool test_export_cert_chain_vcek(void);
-    bool test_validate_cert_chain_vcek(void);
-    bool test_all(void);
+    bool test_factory_reset();
+    bool test_platform_status();
+    bool test_pek_gen();
+    bool test_pek_csr();
+    bool test_sign_pek_csr();
+    bool test_pdh_gen();
+    bool test_pdh_cert_export();
+    bool test_pek_cert_import();
+    bool test_get_id();
+    bool test_set_self_owned();
+    bool test_set_externally_owned();
+    bool test_generate_cek_ask();
+    bool test_get_ask_ark();
+    bool test_export_cert_chain();
+    bool test_calc_measurement();
+    bool test_validate_cert_chain();
+    bool test_generate_launch_blob();
+    bool test_package_secret();
+    bool test_export_cert_chain_vcek();
+    bool test_validate_cert_chain_vcek();
+    bool test_all();
 };
 
 #endif /* TESTS_H */

@@ -22,26 +22,25 @@
 #include "tests.h"
 #include "utilities.h"  // for read_file
 #include <cstring>      // For memcmp
-#include <stdio.h>      // prboolf
-#include <stdlib.h>     // malloc
+#include <cstdio>      // prboolf
+#include <cstdlib>     // malloc
+#include <array>
 
 Tests::Tests(std::string output_folder, int verbose_flag)
-     : m_output_folder(output_folder),
+     : m_output_folder(std::move(output_folder)),
        m_verbose_flag(verbose_flag)
 {
     // Intentionally Empty
 }
 
-bool Tests::clear_output_folder(void)
+bool Tests::clear_output_folder()
 {
     printf("*Clearing output folder %s\n", m_output_folder.c_str());
 
     std::string cmd = "rm -rf " + m_output_folder + "*";
     // std::string cmd = "find " + m_output_folder + " -type f \\( -name \\*.cert -o -name \\*.txt -o -name \\*.pem -o -name \\*.bin \\) -delete";
-    std::string output = "";
-    if (!sev::execute_system_command(cmd, &output))
-        return false;
-    return true;
+    std::string output;
+    return sev::execute_system_command(cmd, &output);
 }
 
 /**
@@ -50,7 +49,7 @@ bool Tests::clear_output_folder(void)
  * is by checking if the Platform ownership goes back from externally-owned to
  * self-owned after sending the factory_reset command.
  */
-bool Tests::test_factory_reset(void)
+bool Tests::test_factory_reset()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -59,13 +58,13 @@ bool Tests::test_factory_reset(void)
         printf("*Starting factory_reset tests\n");
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = NULL;
-        if (!generate_ecdh_key_pair(&oca_key_pair))
+        auto oca_key_pair = generate_ecdh_key_pair();
+        if (!oca_key_pair)
             break;
 
         // Export the priv key to a pem file
         std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
-        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair.get());
 
         // The only way to go from externally owned to self-owned is to do a
         // factory reset, so that's the best way to tell factory_reset working
@@ -93,7 +92,7 @@ bool Tests::test_factory_reset(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -101,7 +100,7 @@ bool Tests::test_factory_reset(void)
 /**
  * Just check that the command succeeds
  */
-bool Tests::test_platform_status(void)
+bool Tests::test_platform_status()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -113,7 +112,7 @@ bool Tests::test_platform_status(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -122,7 +121,7 @@ bool Tests::test_platform_status(void)
  * Compare PEK and PDH certs before and after calling pek_gen, they should both
  * be new.
  */
-bool Tests::test_pek_gen(void)
+bool Tests::test_pek_gen()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -177,7 +176,7 @@ bool Tests::test_pek_gen(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -185,7 +184,7 @@ bool Tests::test_pek_gen(void)
 /**
  * Call the command to generate the CSR, do basic validation on the CSR.
  */
-bool Tests::test_pek_csr(void)
+bool Tests::test_pek_csr()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -209,7 +208,7 @@ bool Tests::test_pek_csr(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -218,7 +217,7 @@ bool Tests::test_pek_csr(void)
  * Compare PEK and PDH certs before and after calling pek_gen, PEK certs should
  * be the same and PDH cert should be new.
  */
-bool Tests::test_pdh_gen(void)
+bool Tests::test_pdh_gen()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -273,7 +272,7 @@ bool Tests::test_pdh_gen(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -282,7 +281,7 @@ bool Tests::test_pdh_gen(void)
  * Run the test_pdh_cert_export command, read in the PDH cert and cert chain,
  * and check the usages of all the certs. Not much else we can test, really.
  */
-bool Tests::test_pdh_cert_export(void)
+bool Tests::test_pdh_cert_export()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -308,15 +307,15 @@ bool Tests::test_pdh_cert_export(void)
 
         // Check the usage of all certs
         if (pdh.pub_key_usage != SEV_USAGE_PDH ||
-           ((sev_cert *)PEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_PEK ||
-           ((sev_cert *)OCA_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_OCA ||
-           ((sev_cert *)CEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_CEK) {
+            reinterpret_cast<sev_cert const *>(PEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_PEK ||
+            reinterpret_cast<sev_cert const*>(OCA_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_OCA ||
+            reinterpret_cast<sev_cert const *>(CEK_IN_CERT_CHAIN(&cert_chain))->pub_key_usage != SEV_USAGE_CEK) {
             printf("Error: Certificate Usage did not match expected value\n");
             break;
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -336,16 +335,17 @@ bool Tests::test_sign_pek_csr()
     sev_cert signed_csr;
     SEVCert SignedCSR(&signed_csr);
     sev_cert oca_cert;
-    EVP_PKEY *oca_key_pair = NULL;
+    EVP_PKEY *oca_key_pair = nullptr;
 
     do {
         printf("*Starting sign_pek_csr tests\n");
 
         // Generate a new random ECDH keypair
-        if (!generate_ecdh_key_pair(&oca_key_pair))
+        auto oca_key_pair = generate_ecdh_key_pair();
+        if (!oca_key_pair)
             break;
         // Export the priv key to a pem file
-        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair.get());
 
         // Set self-Owned
         if (cmd.set_self_owned() != STATUS_SUCCESS)
@@ -370,7 +370,7 @@ bool Tests::test_sign_pek_csr()
         if (SignedCSR.verify_signed_pek_csr((const sev_cert*) &oca_cert) != STATUS_SUCCESS)
             break;
         ret = true;
-    } while (0);
+    } while (false);
     return ret;
 }
 
@@ -378,7 +378,7 @@ bool Tests::test_sign_pek_csr()
  * Compare PEK and PDH certs before and after calling test_pek_cert_import, they
  * should both be new.
  */
-bool Tests::test_pek_cert_import(void)
+bool Tests::test_pek_cert_import()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -416,12 +416,12 @@ bool Tests::test_pek_cert_import(void)
             break;
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = NULL;
-        if (!generate_ecdh_key_pair(&oca_key_pair))
+        auto oca_key_pair = generate_ecdh_key_pair();
+        if (!oca_key_pair)
             break;
 
         // Export the priv key to a pem file
-        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair.get());
 
         // Export the new PEK/PDH certs from the Platform
         if (cmd.pdh_cert_export() != STATUS_SUCCESS) {
@@ -465,7 +465,7 @@ bool Tests::test_pek_cert_import(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -475,7 +475,7 @@ bool Tests::test_pek_cert_import(void)
  * Development parts all have the same ID, so can't even check to make sure the
  * ID's are different
  */
-bool Tests::test_get_id(void)
+bool Tests::test_get_id()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -487,7 +487,7 @@ bool Tests::test_get_id(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -498,7 +498,7 @@ bool Tests::test_get_id(void)
  *   platform_reset at the end. set_self_owned calls platform_reset, so it's
  *   really still the same test.
  */
-bool Tests::test_set_self_owned(void)
+bool Tests::test_set_self_owned()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -507,13 +507,13 @@ bool Tests::test_set_self_owned(void)
         printf("*Starting factory_reset tests\n");
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = NULL;
-        if (!generate_ecdh_key_pair(&oca_key_pair))
+        auto oca_key_pair = generate_ecdh_key_pair();
+        if (!oca_key_pair)
             break;
 
         // Export the priv key to a pem file
         std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
-        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair.get());
 
         // The only way to go from externally owned to self-owned is to do a
         // factory reset, so that's the best way to tell factory_reset working
@@ -541,7 +541,7 @@ bool Tests::test_set_self_owned(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -549,7 +549,7 @@ bool Tests::test_set_self_owned(void)
 /**
  * Call factory_reset to set Platform to self-owned, then call set_externally_owned
  */
-bool Tests::test_set_externally_owned(void)
+bool Tests::test_set_externally_owned()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -564,13 +564,13 @@ bool Tests::test_set_externally_owned(void)
         }
 
         // Generate a new random ECDH keypair
-        EVP_PKEY *oca_key_pair = NULL;
-        if (!generate_ecdh_key_pair(&oca_key_pair))
+        auto oca_key_pair = generate_ecdh_key_pair();
+        if (!oca_key_pair)
             break;
 
         //  Export the priv key to a pem file
         std::string oca_priv_key_pem = m_output_folder + "oca_priv_key.pem";
-        write_priv_key_pem(oca_priv_key_pem, oca_key_pair);
+        write_priv_key_pem(oca_priv_key_pem, oca_key_pair.get());
 
         // Call set_externally_owned which calls pek_cert_import (which needs
         //  the oca private key's pem file's location)
@@ -584,7 +584,7 @@ bool Tests::test_set_externally_owned(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -592,7 +592,7 @@ bool Tests::test_set_externally_owned(void)
 /**
  * Call function, read in cert, and check usage
  */
-bool Tests::test_generate_cek_ask(void)
+bool Tests::test_generate_cek_ask()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -616,7 +616,7 @@ bool Tests::test_generate_cek_ask(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -626,14 +626,13 @@ bool Tests::test_generate_cek_ask(void)
  * split it up in separate ask and ark certs. Then, check the certs to make sure
  * they have the correct Usage.
  */
-bool Tests::test_get_ask_ark(void)
+bool Tests::test_get_ask_ark()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
     std::string ask_ark_full = m_output_folder + ASK_ARK_FILENAME;
     amd_cert ask;
     amd_cert ark;
-    AMDCert tmp_amd;
 
     do {
         printf("*Starting get_ask_ark tests\n");
@@ -642,22 +641,22 @@ bool Tests::test_get_ask_ark(void)
             break;
 
         // Read in the ask_ark so we can split it into 2 separate cert files
-        uint8_t ask_ark_buf[sizeof(amd_cert)*2] = {0};
-        if (sev::read_file(ask_ark_full, ask_ark_buf, sizeof(ask_ark_buf)) == 0) {
+        std::array<uint8_t, sizeof(amd_cert)*2> ask_ark_buf{};
+        if (sev::read_file(ask_ark_full, ask_ark_buf.data(), sizeof(ask_ark_buf)) == 0) {
             printf("Error: Unable to read in ASK_ARK certificate\n");
             break;
         }
 
         // Initialize the ASK
-        if (tmp_amd.amd_cert_init(&ask, ask_ark_buf) != STATUS_SUCCESS) {
+        if (AMDCert::amd_cert_init(&ask, ask_ark_buf.data()) != STATUS_SUCCESS) {
             printf("Error: Failed to initialize ASK certificate\n");
             break;
         }
         // print_amd_cert_readable(&ask);
 
         // Initialize the ARK
-        size_t ask_size = tmp_amd.amd_cert_get_size(&ask);
-        if (tmp_amd.amd_cert_init(&ark, (uint8_t *)(ask_ark_buf + ask_size)) != STATUS_SUCCESS) {
+        size_t ask_size = AMDCert::amd_cert_get_size(&ask);
+        if (AMDCert::amd_cert_init(&ark, ask_ark_buf.data() + ask_size) != STATUS_SUCCESS) {
             printf("Error: Failed to initialize ARK certificate\n");
             break;
         }
@@ -670,12 +669,12 @@ bool Tests::test_get_ask_ark(void)
         }
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
 
-bool Tests::test_export_cert_chain(void)
+bool Tests::test_export_cert_chain()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -687,7 +686,7 @@ bool Tests::test_export_cert_chain(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
@@ -695,23 +694,23 @@ bool Tests::test_export_cert_chain(void)
 /**
  *  Pass in known input and check against expected output
  */
-bool Tests::test_calc_measurement(void)
+bool Tests::test_calc_measurement()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
 
-    measurement_t data;
+    measurement_t data{};
     data.meas_ctx  = 0x04;
     data.api_major = 0x00;
     data.api_minor = 0x12;
     data.build_id  = 0x0f;
     data.policy    = 0x00;
-    sev::str_to_array("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", (uint8_t *)&data.digest, sizeof(data.digest));
-    sev::str_to_array("4fbe0bedbad6c86ae8f68971d103e554", (uint8_t *)&data.mnonce, sizeof(data.mnonce));
-    sev::str_to_array("66320db73158a35a255d051758e95ed4", (uint8_t *)&data.tik, sizeof(data.tik));
+    sev::str_to_array("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", data.digest, sizeof(data.digest));
+    sev::str_to_array("4fbe0bedbad6c86ae8f68971d103e554", data.mnonce, sizeof(data.mnonce));
+    sev::str_to_array("66320db73158a35a255d051758e95ed4", data.tik, sizeof(data.tik));
 
     std::string expected_output_readable = "6faab2daae389bcd3405a05d6cafe33c0414f7bedd0bae19ba5f38b7fd1664ea";
-    uint8_t expected_output[32] = {0x6f, 0xaa, 0xb2, 0xda, 0xae, 0x38, 0x9b, 0xcd, 0x34, 0x05, 0xa0,
+    std::array<uint8_t, 32> expected_output = {0x6f, 0xaa, 0xb2, 0xda, 0xae, 0x38, 0x9b, 0xcd, 0x34, 0x05, 0xa0,
                                    0x5d, 0x6c, 0xaf, 0xe3, 0x3c, 0x04, 0x14, 0xf7, 0xbe, 0xdd, 0x0b,
                                    0xae, 0x19, 0xba, 0x5f, 0x38, 0xb7, 0xfd, 0x16, 0x64, 0xea};
 
@@ -722,9 +721,9 @@ bool Tests::test_calc_measurement(void)
             break;
 
         // Read in the actual output as a readable hex string
-        uint8_t actual_output_readable[2*sizeof(hmac_sha_256)];  // 2 chars per byte +1 for null term
+        std::array<uint8_t, 2*sizeof(hmac_sha_256)> actual_output_readable{};  // 2 chars per byte +1 for null term
         std::string meas_out_readable_full = m_output_folder + CALC_MEASUREMENT_READABLE_FILENAME;
-        if (sev::read_file(meas_out_readable_full, actual_output_readable, sizeof(actual_output_readable)) != sizeof(actual_output_readable))
+        if (sev::read_file(meas_out_readable_full, actual_output_readable.data(), sizeof(actual_output_readable)) != sizeof(actual_output_readable))
             break;
 
         // Read in the actual output as binary
@@ -734,22 +733,22 @@ bool Tests::test_calc_measurement(void)
             break;
 
         // Make sure the actual output is equal to the expected
-        printf("Expected: %s\nActual  : %s\n", expected_output_readable.c_str(), actual_output_readable);
-        if (memcmp(expected_output_readable.c_str(), actual_output_readable, sizeof(actual_output_readable)) != 0)
+        printf("Expected: %s\nActual  : %s\n", expected_output_readable.c_str(), actual_output_readable.data());
+        if (memcmp(expected_output_readable.c_str(), actual_output_readable.data(), sizeof(actual_output_readable)) != 0)
             break;
 
         // Make sure the actual output is equal to the expected
         // printf("Expected: %s\nActual  : %s\n", expected_output, actual_output);
-        if (memcmp(expected_output, actual_output, sizeof(actual_output)) != 0)
+        if (memcmp(expected_output.data(), actual_output, sizeof(actual_output)) != 0)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
 
-bool Tests::test_validate_cert_chain(void)
+bool Tests::test_validate_cert_chain()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
@@ -761,12 +760,12 @@ bool Tests::test_validate_cert_chain(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
 
-bool Tests::test_generate_launch_blob(void)
+bool Tests::test_generate_launch_blob()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -780,18 +779,18 @@ bool Tests::test_generate_launch_blob(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
 
-bool Tests::test_package_secret(void)
+bool Tests::test_package_secret()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
     uint32_t policy = 0;
-    std::string sys_cmd = "";
-    std::string output = "";
+    std::string sys_cmd;
+    std::string output;
 
     do {
         printf("*Starting package_secret tests\n");
@@ -835,12 +834,12 @@ bool Tests::test_package_secret(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
 
-bool Tests::test_export_cert_chain_vcek(void)
+bool Tests::test_export_cert_chain_vcek()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag);
@@ -858,12 +857,12 @@ bool Tests::test_export_cert_chain_vcek(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
 
-bool Tests::test_validate_cert_chain_vcek(void)
+bool Tests::test_validate_cert_chain_vcek()
 {
     bool ret = false;
     Command cmd(m_output_folder, m_verbose_flag, CCP_NOT_REQ);
@@ -881,12 +880,12 @@ bool Tests::test_validate_cert_chain_vcek(void)
             break;
 
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }
 
-bool Tests::test_all(void)
+bool Tests::test_all()
 {
     bool ret = false;
 
@@ -962,7 +961,7 @@ bool Tests::test_all(void)
 
         printf("All tests Succeeded!\n");
         ret = true;
-    } while (0);
+    } while (false);
 
     return ret;
 }

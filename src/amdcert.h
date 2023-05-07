@@ -47,33 +47,29 @@ void print_amd_cert_hex(const amd_cert *cert, std::string &out_str = amd_empty);
 
 class AMDCert {
 private:
-    SEVDevice *m_sev_device;
-    SEV_ERROR_CODE amd_cert_validate_sig(const amd_cert *cert,
+    static SEV_ERROR_CODE amd_cert_validate_sig(const amd_cert *cert,
                                          const amd_cert *parent,
                                          ePSP_DEVICE_TYPE device_type);
-    SEV_ERROR_CODE amd_cert_validate_common(const amd_cert *cert);
-    bool usage_is_valid(AMD_SIG_USAGE usage);
-    SEV_ERROR_CODE amd_cert_validate(const amd_cert *cert,
+    static SEV_ERROR_CODE amd_cert_validate_common(const amd_cert *cert);
+    static bool usage_is_valid(AMD_SIG_USAGE usage);
+    static SEV_ERROR_CODE amd_cert_validate(const amd_cert *cert,
                                      const amd_cert *parent,
                                      AMD_SIG_USAGE expected_usage,
                                      ePSP_DEVICE_TYPE device_type);
-    SEV_ERROR_CODE amd_cert_public_key_hash(const amd_cert *cert,
+    static SEV_ERROR_CODE amd_cert_public_key_hash(const amd_cert *cert,
                                             hmac_sha_256 *hash);
     // Retrieves information on device type (naples/rome/milan...) based on key id
-    ePSP_DEVICE_TYPE get_device_type(const amd_cert *ark);
+    static ePSP_DEVICE_TYPE get_device_type(const amd_cert *ark);
 
 public:
-    AMDCert() {}
-    ~AMDCert() {};
-
-    bool key_size_is_valid(size_t size);
-    SEV_ERROR_CODE amd_cert_validate_ark(const amd_cert *ark);
-    SEV_ERROR_CODE amd_cert_validate_ask(const amd_cert *ask,
+    static bool key_size_is_valid(size_t size);
+    static SEV_ERROR_CODE amd_cert_validate_ark(const amd_cert *ark);
+    static SEV_ERROR_CODE amd_cert_validate_ask(const amd_cert *ask,
                                          const amd_cert *ark);
-    size_t amd_cert_get_size(const amd_cert *cert);
-    SEV_ERROR_CODE amd_cert_export_pub_key(const amd_cert *cert,
+    static size_t amd_cert_get_size(const amd_cert *cert);
+    static SEV_ERROR_CODE amd_cert_export_pub_key(const amd_cert *cert,
                                            sev_cert *pub_key_cert);
-    SEV_ERROR_CODE amd_cert_init(amd_cert *cert, const uint8_t *buffer);
+    static SEV_ERROR_CODE amd_cert_init(amd_cert *cert, const uint8_t *buffer);
 };
 
 #endif /* AMDCERT_H */

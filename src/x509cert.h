@@ -20,12 +20,13 @@
 #include "sevapi.h"
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#include <memory>
 #include <string>
 
 // Public global functions
 void convert_txt_to_der(const std::string in_file_name, const std::string out_file_name);
 void convert_der_to_pem(const std::string in_file_name, const std::string out_file_name);
-bool read_pem_into_x509(const std::string file_name, X509 **x509_cert);
+std::unique_ptr<X509, decltype(&X509_free)> read_pem_into_x509(const std::string file_name);
 bool write_x509_pem(const std::string file_name, X509 *x509_cert);
 bool x509_validate_signature(X509 *child_cert, X509 *intermediate_cert, X509 *parent_cert);
 

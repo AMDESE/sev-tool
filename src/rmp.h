@@ -18,7 +18,7 @@
 #define RMP_H
 
 #include "sevapi.h"
-#include <stdint.h>
+#include <cstdint>
 #include <cstddef>      // For size_t
 
 enum DRAM_PAGE_SIZE : uint32_t

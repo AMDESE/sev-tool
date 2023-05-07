@@ -18,28 +18,30 @@
 #include <climits>
 #include <cstring>      // memcpy
 #include <fstream>
-#include <stdio.h>
-#include <time.h>
+#include <cstdio>
+#include <ctime>
 #include <sys/random.h>
+#include <array>
+#include <memory>
+#include <vector>
 
 bool sev::execute_system_command(const std::string cmd, std::string *log)
 {
-    FILE *pipe = popen(cmd.c_str(), "r");
+    std::unique_ptr<FILE, decltype(&pclose)> pipe{nullptr, &pclose};
+    pipe.reset(popen(cmd.c_str(), "r"));
     if (!pipe) {
         return false;
     }
 
-    while (!feof(pipe)) {
-        char output[4096];
+    while (!feof(pipe.get())) {
+        std::array<char, 4096> output{};
         size_t count;
-        if ((count = fread(output, 1, sizeof(output), pipe)) > 0) {
-            if (log) {
-                log->append(output, count);
+        if ((count = fread(output.data(), 1, output.size(), pipe.get())) > 0) {
+            if (log != nullptr) {
+                log->append(output.data(), count);
             }
         }
     }
-
-    pclose(pipe);
 
     return true;
 }
@@ -55,7 +57,7 @@ size_t sev::read_file(const std::string file_name, void *buffer, size_t len)
         printf("read_file Error: Input length too long\n");
         return 0;
     }
-    std::streamsize slen = (std::streamsize)len;
+    auto slen = (std::streamsize)len;
 
     if (!file.is_open()) {
         printf("read_file Error: Could not open file. " \
@@ -64,8 +66,8 @@ size_t sev::read_file(const std::string file_name, void *buffer, size_t len)
         return 0;
     }
 
-    file.read((char *)buffer, slen);
-    size_t count = (size_t)file.gcount();
+    file.read(reinterpret_cast<char *>(buffer), slen);
+    auto count = (size_t)file.gcount();
     file.close();
 
     return count;
@@ -83,7 +85,7 @@ size_t sev::write_file(const std::string file_name, const void *buffer, size_t l
         printf("write_file Error: Input length too long\n");
         return 0;
     }
-    std::streamsize slen = (std::streamsize)len;
+    auto slen = (std::streamsize)len;
 
     if (!file.is_open()) {
         printf("write_file Error: Could not open/create file. " \
@@ -93,7 +95,7 @@ size_t sev::write_file(const std::string file_name, const void *buffer, size_t l
     }
     printf("Writing to file: %s\n", file_name.c_str());
 
-    file.write((char *)buffer, slen);
+    file.write(reinterpret_cast<char const *>(buffer), slen);
     size_t count = (size_t)file.tellp();
     file.close();
 
@@ -125,8 +127,8 @@ void sev::gen_random_bytes(void *bytes, size_t num_bytes)
     if (num_gen_bytes != (ssize_t)num_bytes) {
         printf("Warning: getrandom failed. Generating random bytes manually\n");
         // Do it manually
-        uint8_t *addr = (uint8_t *)bytes;
-        srand((unsigned int)time(NULL));
+        auto *addr = reinterpret_cast<uint8_t *>(bytes);
+        srand((unsigned int)time(nullptr));
         while (num_bytes--) {
             *addr++ = (uint8_t)(rand() & 0xff);
         }
@@ -135,18 +137,16 @@ void sev::gen_random_bytes(void *bytes, size_t num_bytes)
 
 bool sev::verify_access(uint8_t *buf, size_t len)
 {
-    uint8_t *master = new uint8_t[len];
-    gen_random_bytes(master, len);
-    memcpy(buf, master, len);
-    bool ret = memcmp(buf, master, len) == 0;
-    delete[] master;
-    return ret;
+    std::vector<uint8_t> master(len);
+    gen_random_bytes(master.data(), len);
+    memcpy(buf, master.data(), len);
+    return memcmp(buf, master.data(), len) == 0;
 }
 
 bool sev::str_to_array(const std::string in_string, uint8_t *array,
                        uint32_t array_size)
 {
-    std::string substring = "";
+    std::string substring{};
 
     if (array_size < in_string.size() / 2) {
         return false;
@@ -154,7 +154,7 @@ bool sev::str_to_array(const std::string in_string, uint8_t *array,
 
     for (size_t i = 0; i < in_string.size()/2; i++) {
         substring = in_string.substr(i*2, 2);
-        array[i] = (uint8_t)strtol(substring.c_str(), NULL, 16);
+        array[i] = (uint8_t)strtol(substring.c_str(), nullptr, 16);
     }
 
     // printf("\nSTRING TO ARRAY: ");
@@ -166,14 +166,17 @@ bool sev::str_to_array(const std::string in_string, uint8_t *array,
     return true;
 }
 
-void sev::ascii_hex_bytes_to_binary(void *out, const char *in_bytes, size_t len)
+std::vector<uint8_t> sev::ascii_hex_bytes_to_binary(const char *in_bytes, size_t len)
 {
+    std::vector<uint8_t> result{};
+    result.reserve(len);
     std::string temp;
 
     for (size_t i = 0; i < len; i++) {
         temp = {in_bytes[i*2], in_bytes[(i*2)+1], '\0'};
-        ((uint8_t *)out)[i] = (uint8_t)stoi(temp, NULL, 16);
+        result.push_back((uint8_t)stoi(temp, nullptr, 16));
     }
+    return result;
 }
 
 bool sev::reverse_bytes(uint8_t *bytes, size_t size)
@@ -181,7 +184,7 @@ bool sev::reverse_bytes(uint8_t *bytes, size_t size)
     uint8_t *start = bytes;
     uint8_t *end = bytes + size - 1;
 
-    if (!bytes)
+    if (bytes == nullptr)
         return false;
 
     while (start < end) {

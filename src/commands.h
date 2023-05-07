@@ -92,30 +92,30 @@ enum ccp_required_t {
 
 class Command {
 private:
-    SEVDevice *m_sev_device;
-    tek_tik m_tk;                   // Unencrypted TIK/TEK. wrap_tk is this enc with KEK
-    hmac_sha_256 m_measurement;     // Measurement. Used in LaunchSecret header HMAC
-    std::string m_output_folder = "";
+    SEVDevice *m_sev_device; // non-owning pointer, don't delete it
+    tek_tik m_tk{};                   // Unencrypted TIK/TEK. wrap_tk is this enc with KEK
+    hmac_sha_256 m_measurement{};     // Measurement. Used in LaunchSecret header HMAC
+    std::string m_output_folder;
     int m_verbose_flag = 0;
 
-    int calculate_measurement(measurement_t *user_data, hmac_sha_256 *final_meas);
-    int generate_all_certs(void);
-    int generate_all_certs_vcek(void);
+    static int calculate_measurement(measurement_t *user_data, hmac_sha_256 *final_meas);
+    int generate_all_certs();
+    int generate_all_certs_vcek();
     int import_all_certs(sev_cert *pdh, sev_cert *pek, sev_cert *oca,
                          sev_cert *cek, amd_cert *ask, amd_cert *ark);
-    bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
+    static bool kdf(uint8_t *key_out, size_t key_out_length, const uint8_t *key_in,
              size_t key_in_length, const uint8_t *label, size_t label_length,
              const uint8_t *context, size_t context_length);
-    uint8_t *calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
+    static uint8_t *calculate_shared_secret(EVP_PKEY *priv_key, EVP_PKEY *peer_key,
                                      size_t& shared_key_len_out);
-    bool derive_master_secret(aes_128_key master_secret,
+    static bool derive_master_secret(aes_128_key master_secret,
                               EVP_PKEY *godh_priv_key,
                               const sev_cert *pdh_public,
-                              const uint8_t nonce[sizeof(nonce_128)]);
-    bool derive_kek(aes_128_key kek, const aes_128_key master_secret);
-    bool derive_kik(hmac_key_128 kik, const aes_128_key master_secret);
-    bool gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len);
-    bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
+                              const nonce_128 nonce);
+    static bool derive_kek(aes_128_key kek, const aes_128_key master_secret);
+    static bool derive_kik(hmac_key_128 kik, const aes_128_key master_secret);
+    static bool gen_hmac(hmac_sha_256 *out, hmac_key_128 key, uint8_t *msg, size_t msg_len);
+    static bool encrypt(uint8_t *out, const uint8_t *in, size_t length,
                  const aes_128_key Key, const uint8_t IV[128/8]);
     int build_session_buffer(sev_session_buf *buf, uint32_t guest_policy,
                              EVP_PKEY *godh_priv_key, sev_cert *pdh_pub);
@@ -131,33 +131,33 @@ public:
     Command(std::string output_folder, int verbose_flag, ccp_required_t ccp = CCP_REQ);
     ~Command();
 
-    int factory_reset(void);
-    int platform_status(void);
-    int pek_gen(void);
-    int pek_csr(void);
-    int pdh_gen(void);
-    int pdh_cert_export(void);
+    int factory_reset();
+    int platform_status();
+    int pek_gen();
+    int pek_csr();
+    int pdh_gen();
+    int pdh_cert_export();
     int pek_cert_import(std::string signed_pek_csr_file, std::string oca_cert_file);
-    int get_id(void);
+    int get_id();
 
     // Non-ioctl (custom) commands
-    int sys_info(void);
-    int get_platform_owner(void);
-    int get_platform_es(void);
+    static int sys_info();
+    int get_platform_owner();
+    int get_platform_es();
     int sign_pek_csr(std::string pek_csr_file, std::string oca_priv_key_file);
-    int set_self_owned(void);
+    int set_self_owned();
     int set_externally_owned(std::string oca_priv_key_file);
-    int generate_cek_ask(void);
-    int get_ask_ark(void);
-    int export_cert_chain(void);
-    int export_cert_chain_vcek(void);
+    int generate_cek_ask();
+    int get_ask_ark();
+    int export_cert_chain();
+    int export_cert_chain_vcek();
     int calc_measurement(measurement_t *user_data);
-    int validate_cert_chain(void);
+    int validate_cert_chain();
     int generate_launch_blob(uint32_t policy);
-    int package_secret(void);
-    int validate_attestation(void);
-    int validate_guest_report(void);
-    int validate_cert_chain_vcek(void);
+    int package_secret();
+    int validate_attestation();
+    int validate_guest_report();
+    int validate_cert_chain_vcek();
 };
 
 #endif /* COMMANDS_H */
