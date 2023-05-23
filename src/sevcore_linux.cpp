@@ -682,7 +682,6 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
     sev_user_data_get_id id_buf;
     // char cmd[235];
     std::string cmd = "wget ";
-    std::string fmt;
     std::string output = "";
     std::string der_cert_w_path = output_folder + vcek_der_file;
     std::string pem_cert_w_path = output_folder + vcek_pem_file;
@@ -695,7 +694,6 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
         cmd += KDS_VCEK;
         cmd += "Milan/";
 
-        fmt = "wget -O %s \"%sMilan/%s?blSPL=%02d&teeSPL=%02d&snpSPL=%02d&ucodeSPL=%02d\"";
 
         // Get the ID of the Platform
         // Send the command
