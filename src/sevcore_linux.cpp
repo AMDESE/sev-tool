@@ -680,8 +680,8 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
     int cmd_ret = SEV_RET_UNSUPPORTED;
     int ioctl_ret = -1;
     sev_user_data_get_id id_buf;
-    char cmd[235];
-    std::string fmt;
+    // char cmd[235];
+    std::string cmd = "wget ";
     std::string output = "";
     std::string der_cert_w_path = output_folder + vcek_der_file;
     std::string pem_cert_w_path = output_folder + vcek_pem_file;
@@ -689,12 +689,11 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
     // Set struct to 0
     memset(&id_buf, 0, sizeof(sev_user_data_get_id));
 
-    // Zero the memory used for the URL, just in case.
-    memset(&cmd, 0, sizeof(cmd));
-
     do {
+        cmd += "-O " + der_cert_w_path + " \"";
+        cmd += KDS_VCEK;
+        cmd += "Milan/";
 
-        fmt = "wget -O %s \"%sMilan/%s?blSPL=%02d&teeSPL=%02d&snpSPL=%02d&ucodeSPL=%02d\"";
 
         // Get the ID of the Platform
         // Send the command
@@ -710,25 +709,17 @@ int SEVDevice::generate_vcek_ask(const std::string output_folder,
         {
             sprintf(id0_buf+strlen(id0_buf), "%02x", id_buf.socket1[i]);
         }
-
+        cmd += id0_buf;
         // Create a container to store the TCB Version in.
         snp_tcb_version tcb_data = {.val = 0};
 
         // Get the TCB version of the Platform
         request_tcb_data(tcb_data);
 
-        // Build the URL string.
-        sprintf(
-            cmd,
-            fmt.c_str(),
-            der_cert_w_path.c_str(),
-            KDS_VCEK,
-            id0_buf,
-            tcb_data.f.boot_loader,
-            tcb_data.f.tee,
-            tcb_data.f.snp,
-            tcb_data.f.microcode
-        );
+        cmd += "?blSPL=" + std::to_string(tcb_data.f.boot_loader);
+        cmd += "&teeSPL=" + std::to_string(tcb_data.f.tee);
+        cmd += "&snpSPL=" + std::to_string(tcb_data.f.snp);
+        cmd += "&ucodeSPL=" + std::to_string(tcb_data.f.microcode) + "\"";
 
         // Don't re-download the VCEK from the KDS server if you already have it
         if (sev::get_file_size(pem_cert_w_path) != 0) {
