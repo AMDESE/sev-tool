@@ -56,7 +56,7 @@ Updated: 2021-09-17
 2. Install git, make, gcc, g++, and openssl dependencies
    - In most cases, you can run `deps-install.sh`.
      ```sh
-     $ sh deps-install.sh
+     $ bash deps-install.sh
      ```
    - If you would like to manually install dependencies, and are running Debian, Ubuntu
      ```sh
@@ -74,7 +74,7 @@ Updated: 2021-09-17
    - To run the build script
      ```sh
      $ cd sev-tool
-     $ autoreconf -vif && ./configure && make
+     $ autoreconf -vif && ./configure && make && cp src/sevtool .
      ```
 
 ## How to Run the SEV-Tool
@@ -82,7 +82,7 @@ Updated: 2021-09-17
      ```sh
      $ cd sev-tool
      $ git pull
-     $ autoreconf -vif && ./configure && make
+     $ autoreconf -vif && ./configure && make && mv src/sevtool .
      ```
 2. Run the tool with the help flag (-h or --help):
      ```sh
